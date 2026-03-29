@@ -308,7 +308,7 @@ const ShopPage = () => {
             </div>
           </section>
 
-          <aside className="lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto h-fit rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(180deg,rgba(255,251,242,0.94),rgba(248,243,232,0.9))] p-5 sm:p-6 shadow-[0_18px_34px_rgba(31,44,35,0.12)] backdrop-blur-sm">
+          <aside className="lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100dvh-7rem)] h-fit flex flex-col rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(180deg,rgba(255,251,242,0.94),rgba(248,243,232,0.9))] p-5 sm:p-6 shadow-[0_18px_34px_rgba(31,44,35,0.12)] backdrop-blur-sm">
             <div className="flex items-center justify-between mb-4">
               <Typography variant="h4" className="text-foreground">Your Cart</Typography>
               <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1">
@@ -317,7 +317,7 @@ const ShopPage = () => {
               </div>
             </div>
 
-            <div className="space-y-3 max-h-[260px] sm:max-h-[320px] lg:max-h-[34vh] overflow-auto pr-1 mb-5">
+            <div className="space-y-3 mb-5 pr-1 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
               {cartItems.length === 0 ? (
                 <p className="text-[0.9rem] text-muted-foreground">No products added yet.</p>
               ) : (
