@@ -99,6 +99,7 @@ const Navbar = () => {
               }
             }
           })}
+
           <Link to="/shop" className="px-4 py-2 rounded-lg border border-primary bg-primary text-white text-[0.76rem] xl:text-[0.8rem] font-semibold tracking-[0.1em] uppercase hover:bg-forest-800 transition-colors">
             Shop Now
           </Link>

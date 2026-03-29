@@ -2,8 +2,43 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Leaf, Factory, ShieldCheck, Handshake, Phone, Mail, MapPin } from 'lucide-react';
 import { Typography } from '../components/ui/Typography';
+import aboutPage01Image01 from '../assets/about-us/about_page_01_img_01.png';
+import aboutPage01Image02 from '../assets/about-us/about_page_01_img_02.png';
+import aboutPage01Image03 from '../assets/about-us/about_page_01_img_03.png';
+import aboutPage02Image01 from '../assets/about-us/about_page_02_img_01.png';
+import aboutPage02Image02 from '../assets/about-us/about_page_02_img_02.png';
+import aboutPage02Image03 from '../assets/about-us/about_page_02_img_03.png';
 
 const About = () => {
+  const groupCompanies = [
+    {
+      name: 'Leora Wellness (Pvt) Ltd',
+      role: 'Brand Owner and Personal Care Manufacturer',
+      description:
+        'Established in December 2025, Leora Wellness was founded as a dedicated personal care manufacturing company, built on a long-standing passion for wellness and self-care products.',
+      visualImage: aboutPage02Image03,
+      visualLabel: 'Leora Wellness Signature',
+      points: [
+        'Develops high-quality, innovative personal care products for evolving market needs',
+        'Builds and manages the Miracle Natural brand for the everyday consumer',
+        'Supported by experienced manufacturing leadership and systems',
+      ],
+    },
+    {
+      name: 'Lanka Minerals and Chemicals (Pvt) Ltd (LANMIC)',
+      role: 'Parent Company and Manufacturing Backbone',
+      description:
+        'LANMIC is the parent company behind Leora Wellness, bringing over 25 years of manufacturing experience that supports quality, process consistency, and dependable production scale.',
+      visualImage: aboutPage02Image02,
+      visualLabel: 'LANMIC and LFO Group Identity',
+      points: [
+        'Provides the strong manufacturing foundation behind Miracle Natural',
+        'Supports production discipline aligned with ISO and GMP-focused operations',
+        'Enables long-term product development and market-ready execution',
+      ],
+    },
+  ];
+
   const highlights = [
     {
       icon: Factory,
@@ -45,7 +80,8 @@ const About = () => {
           </Typography>
           <Typography variant="p" className="max-w-4xl break-words">
             Miracle Natural is a herbal-based personal care brand developed under Leora Wellness (Pvt) Ltd. Our mission is to make effective,
-            nature-inspired products accessible to everyone while maintaining quality, safety, and affordability.
+            nature-inspired products accessible to everyone while maintaining quality, safety, and affordability. The brand is built on the
+            manufacturing strength of its parent company, Lanka Minerals and Chemicals (Pvt) Ltd (LANMIC).
           </Typography>
           <div className="mt-5 flex flex-wrap gap-2.5">
             <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/70 px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
@@ -58,6 +94,65 @@ const About = () => {
               25+ Years Manufacturing Foundation
             </span>
           </div>
+
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <figure className="rounded-xl border border-[var(--color-card-border)] bg-white/80 p-3">
+              <img src={aboutPage01Image01} alt="Leora Wellness identity logo" className="h-16 w-full object-contain" loading="lazy" />
+              <figcaption className="mt-2 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">Leora Wellness Identity</figcaption>
+            </figure>
+            <figure className="rounded-xl border border-[var(--color-card-border)] bg-white/80 p-3">
+              <img src={aboutPage01Image02} alt="Miracle Natural emblem" className="h-16 w-full object-contain" loading="lazy" />
+              <figcaption className="mt-2 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">Miracle Natural Emblem</figcaption>
+            </figure>
+            <figure className="rounded-xl border border-[var(--color-card-border)] bg-white/80 p-3">
+              <img src={aboutPage01Image03} alt="Leora Wellness wordmark" className="h-16 w-full object-contain" loading="lazy" />
+              <figcaption className="mt-2 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">Leora Wordmark</figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+          {groupCompanies.map((company) => (
+            <article
+              key={company.name}
+              className="rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 sm:p-6 md:p-7 shadow-[0_12px_28px_rgba(31,44,35,0.08)]"
+            >
+              <Typography variant="label" className="mb-2 block text-primary">
+                Company Background
+              </Typography>
+              <Typography variant="h4" className="text-foreground mb-1.5">
+                {company.name}
+              </Typography>
+              <Typography variant="small" className="block mb-3 font-semibold text-text-secondary">
+                {company.role}
+              </Typography>
+              <Typography variant="small" className="block mb-4">
+                {company.description}
+              </Typography>
+              <ul className="space-y-2 text-[0.88rem] sm:text-[0.92rem] text-muted-foreground">
+                {company.points.map((point) => (
+                  <li key={point} className="flex items-start gap-2.5">
+                    <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <figure className="mt-5 overflow-hidden rounded-xl border border-[var(--color-card-border)] bg-white/80">
+                <div className="h-28 sm:h-32 p-2.5">
+                  <img
+                    src={company.visualImage}
+                    alt={`${company.visualLabel} image`}
+                    loading="lazy"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <figcaption className="border-t border-[var(--color-card-border)] px-3 py-2 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
+                  {company.visualLabel}
+                </figcaption>
+              </figure>
+            </article>
+          ))}
         </section>
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
@@ -75,6 +170,18 @@ const About = () => {
               </Typography>
             </article>
           ))}
+        </section>
+
+        <section className="rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-3 sm:p-4 shadow-[0_12px_28px_rgba(31,44,35,0.08)]">
+          <img
+            src={aboutPage02Image01}
+            alt="Leora Wellness factory and operations site"
+            loading="lazy"
+            className="w-full h-auto rounded-xl"
+          />
+          <p className="px-1 pt-3 text-[0.75rem] sm:text-[0.78rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
+            Factory and Operations Site
+          </p>
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6 lg:gap-8">
@@ -141,6 +248,13 @@ const About = () => {
                 Facebook
               </a>
             </div>
+
+            <figure className="mt-5 rounded-xl border border-[var(--color-card-border)] bg-white/75 p-3">
+              <img src={aboutPage02Image03} alt="Leora Wellness corporate logo" loading="lazy" className="h-12 w-full object-contain" />
+              <figcaption className="mt-2 text-[0.7rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
+                Corporate Identity
+              </figcaption>
+            </figure>
           </article>
         </section>
 

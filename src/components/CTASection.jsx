@@ -1,9 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Typography } from './ui/Typography';
 import { Button } from './ui/Button';
 import { ArrowRight } from 'lucide-react';
 
 const CTASection = () => {
+  const navigate = useNavigate();
+
   return (
     <section id="cta" className="relative py-14 sm:py-16 md:py-18 px-4 sm:px-6 flex flex-col items-center justify-center overflow-hidden">
 
@@ -26,7 +29,7 @@ const CTASection = () => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Button
             variant="primary"
-            onClick={() => document.getElementById('product')?.scrollIntoView({ behavior: 'smooth' })}
+            onClick={() => navigate('/shop')}
             icon={ArrowRight}
             className="w-full sm:w-auto px-8 py-3"
           >

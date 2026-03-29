@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { Typography } from './ui/Typography';
 import { Button } from './ui/Button';
@@ -15,6 +16,7 @@ const formatImageLabel = (path) => {
 };
 
 const HeroSection = () => {
+  const navigate = useNavigate();
   const textRef = useRef(null);
   const subtextRef = useRef(null);
   const buttonsRef = useRef(null);
@@ -158,7 +160,7 @@ const HeroSection = () => {
             <Button
               variant="ghost"
               className="w-full sm:w-auto px-4 py-2 text-sm sm:text-base"
-              onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => navigate('/shop')}
             >
               Start Your Ritual
             </Button>
