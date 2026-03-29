@@ -1,0 +1,21 @@
+<svg width="320" height="110" viewBox="0 0 320 110" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Miracle Natural Logo</title>
+  <desc id="desc">Circular botanical emblem with the words Miracle Natural</desc>
+  <defs>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#DCCB8F"/>
+      <stop offset="100%" stop-color="#BFA15B"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(6 8)">
+    <circle cx="43" cy="43" r="38" fill="#062E1F" stroke="url(#ring)" stroke-width="4"/>
+    <circle cx="43" cy="43" r="9" fill="#073B29" stroke="url(#ring)" stroke-width="2"/>
+    <path d="M10 43H76M43 10V34M43 52V76" stroke="url(#ring)" stroke-width="2" stroke-linecap="round"/>
+    <path d="M18 61C28 51 38 48 43 48C56 48 64 56 70 61" stroke="url(#ring)" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M14 30C23 30 29 33 34 37" stroke="url(#ring)" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M72 30C63 30 57 33 52 37" stroke="url(#ring)" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M54 18L57 14L60 18L57 22L54 18Z" fill="#F4EBC8"/>
+  </g>
+  <text x="98" y="52" fill="#0B2F22" font-family="Georgia, 'Times New Roman', serif" font-size="40" font-weight="700" letter-spacing="1">MIRACLE</text>
+  <text x="98" y="90" fill="#0B2F22" font-family="Georgia, 'Times New Roman', serif" font-size="40" font-weight="700" letter-spacing="1">NATURAL</text>
+</svg>

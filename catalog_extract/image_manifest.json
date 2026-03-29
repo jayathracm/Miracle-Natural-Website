@@ -1,0 +1,188 @@
+[
+  {
+    "page": 1,
+    "file": "page_01_img_01.png",
+    "ext": "png",
+    "bytes": 38413
+  },
+  {
+    "page": 1,
+    "file": "page_01_img_02.png",
+    "ext": "png",
+    "bytes": 24267
+  },
+  {
+    "page": 1,
+    "file": "page_01_img_03.png",
+    "ext": "png",
+    "bytes": 25735
+  },
+  {
+    "page": 2,
+    "file": "page_02_img_01.png",
+    "ext": "png",
+    "bytes": 601385
+  },
+  {
+    "page": 2,
+    "file": "page_02_img_02.png",
+    "ext": "png",
+    "bytes": 188420
+  },
+  {
+    "page": 2,
+    "file": "page_02_img_03.png",
+    "ext": "png",
+    "bytes": 17792
+  },
+  {
+    "page": 3,
+    "file": "page_03_img_01.png",
+    "ext": "png",
+    "bytes": 17792
+  },
+  {
+    "page": 4,
+    "file": "page_04_img_01.png",
+    "ext": "png",
+    "bytes": 73693
+  },
+  {
+    "page": 4,
+    "file": "page_04_img_02.png",
+    "ext": "png",
+    "bytes": 17792
+  },
+  {
+    "page": 5,
+    "file": "page_05_img_01.png",
+    "ext": "png",
+    "bytes": 563021
+  },
+  {
+    "page": 5,
+    "file": "page_05_img_02.png",
+    "ext": "png",
+    "bytes": 534540
+  },
+  {
+    "page": 5,
+    "file": "page_05_img_03.png",
+    "ext": "png",
+    "bytes": 22317
+  },
+  {
+    "page": 6,
+    "file": "page_06_img_01.png",
+    "ext": "png",
+    "bytes": 22317
+  },
+  {
+    "page": 6,
+    "file": "page_06_img_02.png",
+    "ext": "png",
+    "bytes": 961976
+  },
+  {
+    "page": 6,
+    "file": "page_06_img_03.png",
+    "ext": "png",
+    "bytes": 950105
+  },
+  {
+    "page": 7,
+    "file": "page_07_img_01.png",
+    "ext": "png",
+    "bytes": 22317
+  },
+  {
+    "page": 7,
+    "file": "page_07_img_02.png",
+    "ext": "png",
+    "bytes": 548331
+  },
+  {
+    "page": 7,
+    "file": "page_07_img_03.png",
+    "ext": "png",
+    "bytes": 609501
+  },
+  {
+    "page": 8,
+    "file": "page_08_img_01.png",
+    "ext": "png",
+    "bytes": 17792
+  },
+  {
+    "page": 8,
+    "file": "page_08_img_02.png",
+    "ext": "png",
+    "bytes": 499401
+  },
+  {
+    "page": 8,
+    "file": "page_08_img_03.png",
+    "ext": "png",
+    "bytes": 543403
+  },
+  {
+    "page": 9,
+    "file": "page_09_img_01.png",
+    "ext": "png",
+    "bytes": 17792
+  },
+  {
+    "page": 9,
+    "file": "page_09_img_02.png",
+    "ext": "png",
+    "bytes": 516668
+  },
+  {
+    "page": 9,
+    "file": "page_09_img_03.png",
+    "ext": "png",
+    "bytes": 579564
+  },
+  {
+    "page": 10,
+    "file": "page_10_img_01.png",
+    "ext": "png",
+    "bytes": 17792
+  },
+  {
+    "page": 10,
+    "file": "page_10_img_02.png",
+    "ext": "png",
+    "bytes": 604328
+  },
+  {
+    "page": 10,
+    "file": "page_10_img_03.png",
+    "ext": "png",
+    "bytes": 598522
+  },
+  {
+    "page": 11,
+    "file": "page_11_img_01.png",
+    "ext": "png",
+    "bytes": 17792
+  },
+  {
+    "page": 11,
+    "file": "page_11_img_02.png",
+    "ext": "png",
+    "bytes": 537594
+  },
+  {
+    "page": 11,
+    "file": "page_11_img_03.png",
+    "ext": "png",
+    "bytes": 650060
+  },
+  {
+    "page": 12,
+    "file": "page_12_img_01.png",
+    "ext": "png",
+    "bytes": 17792
+  }
+]

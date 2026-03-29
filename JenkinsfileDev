@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+
+    environment {
+        CURRENT_ENV = 'dev'
+        AWS_REGION = 'eu-west-2'
+        ECR_REPO = '633697711542.dkr.ecr.eu-west-2.amazonaws.com/project-sun-marketing-web'
+        CONTAINER_NAME = "projectsun-marketing-web-${CURRENT_ENV}"
+        EC2_HOST = "ubuntu@3.8.43.94"
+        GIT_CREDENTIALS_ID = 'github-creds'
+        // ENV_FILE = '/home/ubuntu/project-sun/.env'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'development',
+                    url: 'https://github.com/TCTProjectSun/website.git',
+                    credentialsId: "${GIT_CREDENTIALS_ID}"
+            }
+        }
+
+        stage('Get Commit ID') {
+            steps {
+                script {
+                    COMMIT_ID = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.IMAGE_TAG = COMMIT_ID  // set as env var
+                    env.IMAGE_NAME = "${ECR_REPO}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $IMAGE_NAME .'
+            }
+        }
+
+        stage('Login to ECR & Push') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-creds']]) {
+                    sh """
+                    aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
+                    docker push $IMAGE_NAME
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent (credentials: ['ec2-ssh']) {
+                    sh """
+                    ssh -o StrictHostKeyChecking=no $EC2_HOST 'docker rm -f $CONTAINER_NAME || true'
+                    ssh $EC2_HOST 'aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO'
+                    ssh $EC2_HOST 'docker pull $IMAGE_NAME'
+                    ssh $EC2_HOST 'docker run -d -p 5173:80 --name $CONTAINER_NAME $IMAGE_NAME'
+                    """
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                echo "Cleaning up only project-specific Docker images"
+                sh """
+                docker rmi -f $IMAGE_NAME || true
+                docker image prune -f  # This removes dangling images only, not base layers
+                """
+            }
+        }
+    }
+}

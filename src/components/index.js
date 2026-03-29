@@ -1,0 +1,10 @@
+export { default as Navbar } from './Navbar';
+export { default as HeroSection } from './HeroSection';
+export { default as MadeForSection } from './MadeForSection';
+export { default as TestimonialSection } from './TestimonialSection';
+export { default as PricingSection } from './PricingSection';
+export { default as CTASection } from './CTASection';
+export { default as Footer } from './Footer';
+export { default as FeatureGridSection } from './FeatureGridSection';
+export { default as ErrorBoundary } from './ErrorBoundary';
+export { default as NotFound } from './NotFound';

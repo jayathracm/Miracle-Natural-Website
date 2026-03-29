@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+
+    environment {
+        // Your S3 bucket & CloudFront distribution
+        S3_BUCKET = 'itsaro.com'
+        CLOUDFRONT_DIST_ID = 'EL1HJ9SKK1K8O'
+        AWS_DEFAULT_REGION = 'eu-west-2'
+        GIT_CREDENTIALS_ID = 'github-creds'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/TCTProjectSun/website.git',
+                    credentialsId: "${GIT_CREDENTIALS_ID}"
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+
+
+        stage('Deploy & Invalidate') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-creds']]) {
+                    sh '''
+                        aws s3 sync dist/ s3://$S3_BUCKET --delete
+                        aws cloudfront create-invalidation \
+                            --distribution-id $CLOUDFRONT_DIST_ID \
+                            --paths "/*"
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Frontend deployed successfully!'
+        }
+        failure {
+            echo 'Deployment failed. Check logs.'
+        }
+    }
+}

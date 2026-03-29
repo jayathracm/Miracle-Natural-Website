@@ -1,0 +1,29 @@
+[
+  {
+    "avatar": "https://randomuser.me/api/portraits/women/44.jpg",
+    "name": "A. Perera",
+    "title": "Colombo",
+    "studio": "Radiance Essentials",
+    "location": "Colombo",
+    "rating": 5,
+    "testimonial": "My skin texture feels smoother and more hydrated after just two weeks. The cleanser and moisturizer combo is now a daily must-have."
+  },
+  {
+    "avatar": "https://randomuser.me/api/portraits/men/45.jpg",
+    "name": "N. Fernando",
+    "title": "Kandy",
+    "studio": "Body Nourish Set",
+    "location": "Kandy",
+    "rating": 5,
+    "testimonial": "The body butter absorbs beautifully and keeps my skin soft all day. It feels premium without being heavy or greasy."
+  },
+  {
+    "avatar": "https://randomuser.me/api/portraits/women/46.jpg",
+    "name": "S. Jayasuriya",
+    "title": "Colombo",
+    "studio": "Hair Repair Ritual",
+    "location": "Colombo",
+    "rating": 4,
+    "testimonial": "My scalp feels calmer and my hair looks healthier after switching to the full hair ritual. The fragrance is clean and subtle too."
+  }
+]
