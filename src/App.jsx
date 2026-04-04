@@ -17,19 +17,29 @@ import { Landing, About, Pricing, Shop, ReturnPolicy, PrivacyPolicy, TermsAndCon
 import { useSEO } from './hooks/useSEO';
 
 function ScrollToTop() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
   useEffect(() => {
-    // Use instant scroll on mobile, smooth on desktop
-    const isMobile = window.innerWidth < 1024;
-    
-    if (isMobile) {
-      // Instant scroll on mobile for better performance
-      window.scrollTo(0, 0);
-    } else {
-      // Smooth scroll on desktop
-      window.scrollTo({ top: 0, behavior: 'instant' });
+    if (hash) {
+      const elementId = hash.replace('#', '');
+      const targetElement = document.getElementById(elementId);
+
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      // If the section is not mounted yet, try once after paint.
+      window.requestAnimationFrame(() => {
+        const delayedTarget = document.getElementById(elementId);
+        if (delayedTarget) {
+          delayedTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+      return;
     }
-  }, [pathname]);
+
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [pathname, hash]);
   return null;
 }
 

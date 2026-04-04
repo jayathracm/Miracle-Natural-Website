@@ -13,18 +13,40 @@ const DELIVERY_ZONES = {
   island_wide: { label: 'Other Areas in Sri Lanka', rate: 350 },
 };
 
+const PAYMENT_METHODS = {
+  cash_on_delivery: 'Cash on Delivery',
+  online_payment: 'Online Payment',
+};
+
+const SHOP_CATEGORY_ORDER = ['Face Care', 'Body Care', 'Hair Care', 'Lip Care'];
+
+const SHOP_CATEGORY_MAP = {
+  'Face Care': 'Face Care',
+  Treatment: 'Face Care',
+  'Weekly Care': 'Face Care',
+  'Body Care': 'Body Care',
+  'Hair Care': 'Hair Care',
+  'Lip Care': 'Lip Care',
+};
+
+const getShopCategory = (product) => SHOP_CATEGORY_MAP[product.category] || product.category;
+
 const ShopPage = () => {
   const [cart, setCart] = useState({});
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
   const [deliveryZone, setDeliveryZone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isSendingOrder, setIsSendingOrder] = useState(false);
   const [showOrderSuccessPopup, setShowOrderSuccessPopup] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [priceFilter, setPriceFilter] = useState('all');
+  const [sortOption, setSortOption] = useState('featured');
 
   const cartItems = useMemo(() => {
     return productCatalog
@@ -59,7 +81,94 @@ const ShopPage = () => {
     return DELIVERY_ZONES[deliveryZone]?.label || '';
   }, [deliveryZone]);
 
+  const paymentMethodLabel = useMemo(() => PAYMENT_METHODS[paymentMethod] || PAYMENT_METHODS.cash_on_delivery, [paymentMethod]);
+
   const grandTotal = useMemo(() => totalAmount + shippingCost, [totalAmount, shippingCost]);
+
+  const categoryCounts = useMemo(() => {
+    const counts = SHOP_CATEGORY_ORDER.reduce((acc, category) => {
+      acc[category] = 0;
+      return acc;
+    }, {});
+
+    productCatalog.forEach((product) => {
+      const normalizedCategory = getShopCategory(product);
+      if (Object.prototype.hasOwnProperty.call(counts, normalizedCategory)) {
+        counts[normalizedCategory] += 1;
+      }
+    });
+
+    return counts;
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    const categoryAndPriceFiltered = productCatalog.filter((product) => {
+      const normalizedCategory = getShopCategory(product);
+
+      if (categoryFilter !== 'all' && normalizedCategory !== categoryFilter) {
+        return false;
+      }
+
+      if (priceFilter === 'under_500') {
+        return product.price < 500;
+      }
+
+      if (priceFilter === '500_1500') {
+        return product.price >= 500 && product.price <= 1500;
+      }
+
+      if (priceFilter === '1501_3000') {
+        return product.price > 1500 && product.price <= 3000;
+      }
+
+      if (priceFilter === 'above_3000') {
+        return product.price > 3000;
+      }
+
+      return true;
+    });
+
+    if (sortOption === 'price_low_to_high') {
+      return [...categoryAndPriceFiltered].sort((a, b) => a.price - b.price);
+    }
+
+    if (sortOption === 'price_high_to_low') {
+      return [...categoryAndPriceFiltered].sort((a, b) => b.price - a.price);
+    }
+
+    if (sortOption === 'name_a_to_z') {
+      return [...categoryAndPriceFiltered].sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+    }
+
+    if (sortOption === 'name_z_to_a') {
+      return [...categoryAndPriceFiltered].sort((a, b) => b.name.localeCompare(a.name, 'en', { sensitivity: 'base' }));
+    }
+
+    return categoryAndPriceFiltered;
+  }, [categoryFilter, priceFilter, sortOption]);
+
+  const groupedProducts = useMemo(() => {
+    const groups = SHOP_CATEGORY_ORDER.reduce((acc, category) => {
+      acc[category] = [];
+      return acc;
+    }, {});
+
+    filteredProducts.forEach((product) => {
+      const normalizedCategory = getShopCategory(product);
+      if (!groups[normalizedCategory]) {
+        groups[normalizedCategory] = [];
+      }
+      groups[normalizedCategory].push(product);
+    });
+
+    if (categoryFilter !== 'all') {
+      return [[categoryFilter, groups[categoryFilter] || []]];
+    }
+
+    return SHOP_CATEGORY_ORDER
+      .map((category) => [category, groups[category] || []])
+      .filter(([, products]) => products.length > 0);
+  }, [filteredProducts, categoryFilter]);
 
   const addToCart = (productId) => {
     setCart((prev) => ({
@@ -158,6 +267,7 @@ const ShopPage = () => {
       `Name: ${customerName || 'Not provided'}`,
       `Phone: ${customerPhone || 'Not provided'}`,
       `Email: ${customerEmail}`,
+      `Payment Method: ${paymentMethodLabel}`,
       `Delivery Zone: ${deliveryZoneLabel}`,
       `Delivery Address: ${deliveryAddress}`,
       `Notes: ${customerNotes || 'None'}`,
@@ -185,6 +295,7 @@ const ShopPage = () => {
           name: customerName || 'Website Customer',
           phone: customerPhone || 'Not provided',
           customer_email: customerEmail.trim(),
+          payment_method: paymentMethodLabel,
           delivery_zone: deliveryZoneLabel,
           delivery_address: deliveryAddress,
           notes: customerNotes || 'None',
@@ -209,6 +320,7 @@ const ShopPage = () => {
       setCustomerPhone('');
       setCustomerEmail('');
       setCustomerNotes('');
+      setPaymentMethod('cash_on_delivery');
       setDeliveryZone('');
       setDeliveryAddress('');
     } catch {
@@ -230,7 +342,7 @@ const ShopPage = () => {
             Browse the full Miracle Natural collection, add products to your cart, and send your order list directly by email.
           </Typography>
           <div className="mt-5 flex flex-wrap items-center gap-2.5">
-            <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/70 px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">14+ Products</span>
+            <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/70 px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">{productCatalog.length} Products</span>
             <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/70 px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">Fast Email Checkout</span>
             <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/70 px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">Secure Direct Ordering</span>
           </div>
@@ -238,74 +350,155 @@ const ShopPage = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.65fr_0.95fr] gap-8 lg:gap-10">
           <section>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-              {productCatalog.map((product) => {
-                const quantity = cart[product.id] || 0;
+            <div className="mb-5 rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(140deg,rgba(255,252,245,0.94),rgba(248,243,231,0.9))] p-4 sm:p-5 shadow-[0_12px_26px_rgba(31,44,35,0.08)]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                <select
+                  value={categoryFilter}
+                  onChange={(event) => setCategoryFilter(event.target.value)}
+                  className="rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.86rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="all">All Categories</option>
+                  {SHOP_CATEGORY_ORDER.map((category) => (
+                    <option key={category} value={category}>{category} ({categoryCounts[category] || 0})</option>
+                  ))}
+                </select>
 
-                return (
-                  <article
-                    key={product.id}
-                    className="group rounded-2xl overflow-hidden border border-[var(--color-card-border)] bg-[var(--color-card-bg)] shadow-[0_12px_28px_rgba(31,44,35,0.08)] hover:shadow-[0_18px_36px_rgba(31,44,35,0.14)] hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer"
-                    onClick={() => setSelectedProduct(product)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        setSelectedProduct(product);
-                      }
-                    }}
-                  >
-                    <div className="aspect-[4/5] bg-[rgba(255,251,243,0.9)] overflow-hidden">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
-                        loading="lazy"
-                      />
-                    </div>
-                    <div className="p-4 sm:p-5 flex flex-col flex-1">
-                      <p className="text-[0.68rem] font-bold tracking-[0.16em] uppercase text-accent mb-2">{product.category}</p>
-                      <Typography variant="h4" className="text-foreground mb-1 leading-snug">{product.name}</Typography>
-                      <Typography variant="small" className="block mb-3">{product.size}</Typography>
+                <select
+                  value={priceFilter}
+                  onChange={(event) => setPriceFilter(event.target.value)}
+                  className="rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.86rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="all">All Prices</option>
+                  <option value="under_500">Under LKR 500</option>
+                  <option value="500_1500">LKR 500 - 1,500</option>
+                  <option value="1501_3000">LKR 1,501 - 3,000</option>
+                  <option value="above_3000">Above LKR 3,000</option>
+                </select>
 
-                      <div className="flex items-center justify-between mb-4 rounded-lg border border-[var(--color-border-light)] bg-white/65 px-3 py-2">
-                        <p className="font-display text-[1.45rem] text-primary">{formatCurrency(product.price)}</p>
-                        {quantity > 0 && (
-                          <p className="text-[0.8rem] font-semibold text-foreground">In Cart: {quantity}</p>
-                        )}
-                      </div>
+                <select
+                  value={sortOption}
+                  onChange={(event) => setSortOption(event.target.value)}
+                  className="rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.86rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="featured">Sort: Featured</option>
+                  <option value="price_low_to_high">Sort: Price Low to High</option>
+                  <option value="price_high_to_low">Sort: Price High to Low</option>
+                  <option value="name_a_to_z">Sort: Name A to Z</option>
+                  <option value="name_z_to_a">Sort: Name Z to A</option>
+                </select>
 
-                      <div className="flex items-center gap-2 mt-auto">
-                        <Button
-                          className="flex-1 px-3 py-2 text-[0.74rem]"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            addToCart(product.id);
-                          }}
-                          icon={Plus}
-                        >
-                          Add To Cart
-                        </Button>
-                        {quantity > 0 && (
-                          <Button
-                            variant="ghost"
-                            className="px-3 py-2 text-[0.74rem]"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              changeQuantity(product.id, -1);
-                            }}
-                            aria-label={`Remove one ${product.name}`}
-                          >
-                            <Minus size={16} />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+                <Button
+                  variant="ghost"
+                  className="px-3 py-2.5 text-[0.76rem]"
+                  onClick={() => {
+                    setCategoryFilter('all');
+                    setPriceFilter('all');
+                    setSortOption('featured');
+                  }}
+                >
+                  Reset Filters
+                </Button>
+              </div>
+
+              <p className="mt-3 text-[0.8rem] font-semibold text-text-secondary">
+                Showing {filteredProducts.length} of {productCatalog.length} products
+              </p>
             </div>
+
+            {groupedProducts.length === 0 ? (
+              <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-8 text-center text-[0.95rem] text-muted-foreground">
+                No products match your current filters.
+              </div>
+            ) : (
+              <div className="space-y-6 sm:space-y-7">
+                {groupedProducts.map(([category, products], sectionIndex) => (
+                  <section
+                    key={category}
+                    className="relative overflow-hidden rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(140deg,rgba(255,252,245,0.94),rgba(248,243,231,0.9))] p-4 sm:p-5 md:p-6 shadow-[0_14px_30px_rgba(31,44,35,0.08)]"
+                  >
+                    <div className={`pointer-events-none absolute inset-x-0 top-0 h-1 ${sectionIndex % 2 === 0 ? 'bg-[linear-gradient(90deg,rgba(79,113,84,0.86),rgba(79,113,84,0.26),transparent)]' : 'bg-[linear-gradient(90deg,rgba(184,111,67,0.82),rgba(184,111,67,0.24),transparent)]'}`} />
+
+                    <div className="mb-4 flex items-center justify-between gap-3 border-b border-[var(--color-border-light)] pb-3">
+                      <Typography variant="h4" className="text-foreground">{category}</Typography>
+                      <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/75 px-2.5 py-1 text-[0.66rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
+                        {products.length} Items
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+                      {products.map((product) => {
+                        const quantity = cart[product.id] || 0;
+
+                        return (
+                          <article
+                            key={product.id}
+                            className="group rounded-2xl overflow-hidden border border-[var(--color-card-border)] bg-[var(--color-card-bg)] shadow-[0_12px_28px_rgba(31,44,35,0.08)] hover:shadow-[0_18px_36px_rgba(31,44,35,0.14)] hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer"
+                            onClick={() => setSelectedProduct(product)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                setSelectedProduct(product);
+                              }
+                            }}
+                          >
+                            <div className="aspect-[4/5] bg-[rgba(255,251,243,0.9)] overflow-hidden">
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
+                                loading="lazy"
+                              />
+                            </div>
+                            <div className="p-4 sm:p-5 flex flex-col flex-1">
+                              <p className="text-[0.68rem] font-bold tracking-[0.16em] uppercase text-accent mb-2">{getShopCategory(product)}</p>
+                              <Typography variant="h4" className="text-foreground mb-1 leading-snug">{product.name}</Typography>
+                              <Typography variant="small" className="block mb-3">{product.size}</Typography>
+
+                              <div className="mt-auto">
+                                <div className="flex items-center justify-between mb-4 rounded-lg border border-[var(--color-border-light)] bg-white/65 px-3 py-2">
+                                  <p className="font-display text-[1.45rem] text-primary">{formatCurrency(product.price)}</p>
+                                  {quantity > 0 && (
+                                    <p className="text-[0.8rem] font-semibold text-foreground">In Cart: {quantity}</p>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    className="flex-1 px-3 py-2 text-[0.74rem]"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      addToCart(product.id);
+                                    }}
+                                    icon={Plus}
+                                  >
+                                    Add To Cart
+                                  </Button>
+                                  {quantity > 0 && (
+                                    <Button
+                                      variant="ghost"
+                                      className="px-3 py-2 text-[0.74rem]"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        changeQuantity(product.id, -1);
+                                      }}
+                                      aria-label={`Remove one ${product.name}`}
+                                    >
+                                      <Minus size={16} />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
           </section>
 
           <aside className="lg:sticky lg:top-24 lg:self-start h-fit rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(180deg,rgba(255,251,242,0.94),rgba(248,243,232,0.9))] p-5 sm:p-6 shadow-[0_18px_34px_rgba(31,44,35,0.12)] backdrop-blur-sm">
@@ -374,6 +567,38 @@ const ShopPage = () => {
                 onChange={(e) => setCustomerEmail(e.target.value)}
                 className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
+              <div className="rounded-xl border border-[var(--color-border-light)] bg-white/60 p-3">
+                <p className="mb-2 text-[0.7rem] font-bold tracking-[0.13em] uppercase text-text-secondary">Payment Method</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label className={`rounded-lg border px-3 py-2.5 text-[0.86rem] font-semibold transition-colors ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-medium)] bg-white/90 text-foreground'}`}>
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      value="cash_on_delivery"
+                      checked={paymentMethod === 'cash_on_delivery'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="sr-only"
+                    />
+                    Cash on Delivery
+                  </label>
+
+                  <label className="rounded-lg border border-[var(--color-border-medium)] bg-[rgba(226,232,240,0.55)] px-3 py-2.5 text-[0.86rem] font-semibold text-slate-500 cursor-not-allowed">
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      value="online_payment"
+                      checked={paymentMethod === 'online_payment'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      disabled
+                      className="sr-only"
+                    />
+                    Online Payment
+                  </label>
+                </div>
+                <p className="mt-2 text-[0.77rem] leading-relaxed text-muted-foreground">
+                  Online payment is unavailable right now. Only cash on delivery is possible, and sorry for any inconveniences caused.
+                </p>
+              </div>
               <select
                 value={deliveryZone}
                 onChange={(e) => setDeliveryZone(e.target.value)}
@@ -531,14 +756,11 @@ const ShopPage = () => {
               <div className="absolute inset-x-0 top-0 h-1.5 bg-[linear-gradient(90deg,rgba(189,150,79,0.9),rgba(109,131,88,0.85),rgba(189,150,79,0.9))]" />
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[0.66rem] font-bold tracking-[0.18em] uppercase text-accent mb-2">{selectedProduct.category}</p>
+                  <p className="text-[0.66rem] font-bold tracking-[0.18em] uppercase text-accent mb-2">{getShopCategory(selectedProduct)}</p>
                   <Typography variant="h4" className="text-foreground text-balance">{selectedProduct.name}</Typography>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/80 px-2.5 py-1 text-[0.66rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
                       {selectedProduct.size}
-                    </span>
-                    <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/80 px-2.5 py-1 text-[0.66rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
-                      Catalog Page {selectedProduct.sourcePage ?? 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -553,16 +775,13 @@ const ShopPage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-[0.96fr_1.04fr] gap-5 px-5 py-5 sm:px-7 sm:py-7">
-              <div className="rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(165deg,rgba(255,255,255,0.92),rgba(251,247,238,0.8))] p-4 shadow-[0_14px_28px_rgba(31,44,35,0.08)]">
+            <div className="grid grid-cols-1 items-start md:grid-cols-[0.96fr_1.04fr] gap-5 px-5 py-5 sm:px-7 sm:py-7">
+              <div className="self-start rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(165deg,rgba(255,255,255,0.92),rgba(251,247,238,0.8))] p-4 shadow-[0_14px_28px_rgba(31,44,35,0.08)]">
                 <img
                   src={selectedProduct.image}
                   alt={selectedProduct.name}
-                  className="h-72 w-full object-contain"
+                  className="block w-full h-auto rounded-xl"
                 />
-                <p className="mt-3 text-center text-[0.72rem] font-semibold tracking-[0.1em] uppercase text-text-secondary">
-                  Authentic Catalog Visual
-                </p>
               </div>
 
               <div className="space-y-4">

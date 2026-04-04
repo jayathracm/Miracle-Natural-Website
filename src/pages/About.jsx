@@ -8,6 +8,7 @@ import aboutPage01Image03 from '../assets/about-us/about_page_01_img_03.png';
 import aboutPage02Image01 from '../assets/about-us/about_page_02_img_01.png';
 import aboutPage02Image02 from '../assets/about-us/about_page_02_img_02.png';
 import aboutPage02Image03 from '../assets/about-us/about_page_02_img_03.png';
+import brandLogoMainImg from '../assets/branding-from-pdf/miracle-natural-logo-main-transparent.png';
 
 const About = () => {
   const groupCompanies = [
@@ -83,6 +84,24 @@ const About = () => {
             nature-inspired products accessible to everyone while maintaining quality, safety, and affordability. The brand is built on the
             manufacturing strength of its parent company, Lanka Minerals and Chemicals (Pvt) Ltd (LANMIC).
           </Typography>
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            <a
+              href="https://lanmic.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/75 px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary hover:text-primary transition-colors"
+            >
+              Mother Company: LANMIC
+            </a>
+            <a
+              href="https://lfo.lk/"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/75 px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary hover:text-primary transition-colors"
+            >
+              LFO
+            </a>
+          </div>
           <div className="mt-5 flex flex-wrap gap-2.5">
             <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/70 px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
               ISO Certified
@@ -98,16 +117,69 @@ const About = () => {
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <figure className="rounded-xl border border-[var(--color-card-border)] bg-white/80 p-3">
               <img src={aboutPage01Image01} alt="Leora Wellness identity logo" className="h-16 w-full object-contain" loading="lazy" />
-              <figcaption className="mt-2 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">Leora Wellness Identity</figcaption>
             </figure>
             <figure className="rounded-xl border border-[var(--color-card-border)] bg-white/80 p-3">
-              <img src={aboutPage01Image02} alt="Miracle Natural emblem" className="h-16 w-full object-contain" loading="lazy" />
-              <figcaption className="mt-2 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">Miracle Natural Emblem</figcaption>
+              <img src={brandLogoMainImg} alt="Miracle Natural emblem" className="h-16 w-full object-contain" loading="lazy" />
             </figure>
             <figure className="rounded-xl border border-[var(--color-card-border)] bg-white/80 p-3">
               <img src={aboutPage01Image03} alt="Leora Wellness wordmark" className="h-16 w-full object-contain" loading="lazy" />
-              <figcaption className="mt-2 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">Leora Wordmark</figcaption>
             </figure>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 sm:p-6 md:p-7 shadow-[0_12px_28px_rgba(31,44,35,0.08)]">
+          <Typography variant="label" className="mb-2 block text-primary">
+            Brand Logo Meaning
+          </Typography>
+          <Typography variant="h4" className="text-foreground mb-3">
+            The Story Behind The Miracle Natural Symbol
+          </Typography>
+          <Typography variant="small" className="block mb-5">
+            Based on the brand guide, the Miracle Natural emblem combines wellness, miracle, and nature into one complete identity.
+          </Typography>
+
+          <div className="mb-5 rounded-xl border border-[var(--color-card-border)] bg-white/75 p-4">
+            <img
+              src={brandLogoMainImg}
+              alt="Miracle Natural official brand logo"
+              loading="lazy"
+              className="mx-auto h-auto w-full max-w-[220px] object-contain"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <article className="rounded-xl border border-[var(--color-border-light)] bg-white/70 p-4">
+              <p className="text-[0.72rem] font-bold tracking-[0.1em] uppercase text-primary mb-2">Sun With 8 Pillars</p>
+              <p className="text-[0.9rem] leading-relaxed text-muted-foreground">
+                Represents life-force energy (Prana) and the 8 pillars of wellness: nutrition, movement, sleep, mindfulness,
+                connection, purpose, environment, and self-care.
+              </p>
+            </article>
+
+            <article className="rounded-xl border border-[var(--color-border-light)] bg-white/70 p-4">
+              <p className="text-[0.72rem] font-bold tracking-[0.1em] uppercase text-primary mb-2">Glowing Star</p>
+              <p className="text-[0.9rem] leading-relaxed text-muted-foreground">
+                Symbolizes miracle, wonder, and divine guidance, reflecting the extraordinary moments that inspire the brand.
+              </p>
+            </article>
+
+            <article className="rounded-xl border border-[var(--color-border-light)] bg-white/70 p-4">
+              <p className="text-[0.72rem] font-bold tracking-[0.1em] uppercase text-primary mb-2">Earth With 4 Separations</p>
+              <p className="text-[0.9rem] leading-relaxed text-muted-foreground">
+                Represents nature and holistic balance through Body, Mind, Spirit, and Environment unified in one circle.
+              </p>
+            </article>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-[rgba(58,93,69,0.28)] bg-[rgba(225,238,226,0.72)] px-4 py-3">
+              <p className="text-[0.7rem] font-bold tracking-[0.1em] uppercase text-[rgb(45,79,58)] mb-1">Dark Green</p>
+              <p className="text-[0.88rem] text-[rgb(45,79,58)]">Nature, purity, and holistic healing.</p>
+            </div>
+            <div className="rounded-xl border border-[rgba(176,145,63,0.35)] bg-[rgba(252,243,214,0.8)] px-4 py-3">
+              <p className="text-[0.7rem] font-bold tracking-[0.1em] uppercase text-[rgb(137,106,27)] mb-1">Gold</p>
+              <p className="text-[0.88rem] text-[rgb(137,106,27)]">Luxury, premium quality, and inner radiance.</p>
+            </div>
           </div>
         </section>
 
@@ -147,9 +219,6 @@ const About = () => {
                     className="h-full w-full object-contain"
                   />
                 </div>
-                <figcaption className="border-t border-[var(--color-card-border)] px-3 py-2 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
-                  {company.visualLabel}
-                </figcaption>
               </figure>
             </article>
           ))}
@@ -179,9 +248,6 @@ const About = () => {
             loading="lazy"
             className="w-full h-auto rounded-xl"
           />
-          <p className="px-1 pt-3 text-[0.75rem] sm:text-[0.78rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
-            Factory and Operations Site
-          </p>
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6 lg:gap-8">
@@ -222,7 +288,7 @@ const About = () => {
               </p>
               <p className="flex items-start gap-2.5">
                 <Phone size={16} className="text-primary" />
-                <span className="break-words">WhatsApp: +94 768 501 111 / +94 772 061 111</span>
+                <span className="break-words">WhatsApp: +94 768 502 222 / +94 76 838 6699</span>
               </p>
               <p className="flex items-center gap-2.5">
                 <Mail size={16} className="text-primary" />
@@ -251,9 +317,6 @@ const About = () => {
 
             <figure className="mt-5 rounded-xl border border-[var(--color-card-border)] bg-white/75 p-3">
               <img src={aboutPage02Image03} alt="Leora Wellness corporate logo" loading="lazy" className="h-12 w-full object-contain" />
-              <figcaption className="mt-2 text-[0.7rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
-                Corporate Identity
-              </figcaption>
             </figure>
           </article>
         </section>

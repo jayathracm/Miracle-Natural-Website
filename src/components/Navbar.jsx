@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import logoImage from '/miracle-natural-logo.svg';
+import logoIcon from '../assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
+import logoWordmark from '../assets/branding-from-pdf/miracle-natural-wordmark-transparent.png';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -58,18 +59,34 @@ const Navbar = () => {
     >
       <div className="max-w-[1320px] mx-auto px-4 sm:px-6">
         <div className={cn(
-          "flex justify-between items-center px-4 sm:px-5 py-2.5 rounded-xl border transition-all duration-300",
+          "flex justify-between items-center px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl border transition-all duration-300",
           scrolled ? "bg-[rgba(255,251,242,0.94)] border-[var(--color-border-medium)] shadow-[0_12px_25px_rgba(31,44,35,0.1)]" : "bg-[rgba(255,251,242,0.76)] border-[var(--color-border-light)]"
         )}>
         {/* Logo */}
-        <Link to={location.pathname === '/' ? '#hero' : '/'} className="relative z-50 flex-shrink-0">
-          <img 
-            src={logoImage} 
-            alt="Miracle Natural" 
-            width="220" 
-            height="76"
-            className={cn("w-auto transition-all duration-300", scrolled ? "h-9 sm:h-10 md:h-11 lg:h-12" : "h-10 sm:h-11 md:h-12 lg:h-14 xl:h-16")} 
-          />
+        <Link
+          to={location.pathname === '/' ? '#hero' : '/'}
+          aria-label="Miracle Natural Home"
+          className="relative z-50 flex items-center flex-shrink-0"
+        >
+          <div className="flex items-center gap-2 sm:gap-3">
+            <img
+              src={logoIcon}
+              alt=""
+              aria-hidden="true"
+              className={cn(
+                "w-auto object-contain transition-all duration-300",
+                scrolled ? "h-8 sm:h-9" : "h-9 sm:h-10"
+              )}
+            />
+            <img
+              src={logoWordmark}
+              alt="Miracle Natural"
+              className={cn(
+                "w-auto max-w-[220px] sm:max-w-[280px] object-contain transition-all duration-300",
+                scrolled ? "h-8 sm:h-9" : "h-9 sm:h-10"
+              )}
+            />
+          </div>
         </Link>
 
         {/* Desktop Menu - Only show on lg+ (1024px) */}

@@ -107,14 +107,7 @@ const Footer = () => {
               </li>
               <li className="flex items-start gap-3">
                 <Phone size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--color-footer-text)' }} />
-                <a
-                  href="tel:+94768501111"
-                  className="transition-colors duration-200 break-words"
-                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text-muted)'}
-                >
-                  WhatsApp: +94 768 501 111
-                </a>
+                <span className="break-words">WhatsApp: +94 768 502 222 / +94 76 838 6699</span>
               </li>
               <li className="flex items-start gap-3">
                 <Mail size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--color-footer-text)' }} />
@@ -130,6 +123,10 @@ const Footer = () => {
               <li className="flex items-start gap-3">
                 <MapPin size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--color-footer-text)' }} />
                 <span className="break-words">No. 15A, Kandawala Mawatha, Ratmalana</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <MapPin size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--color-footer-text)' }} />
+                <span className="break-words">Factory: Lot E7, Seethawaka Export Processing Zone, Avissawella</span>
               </li>
             </ul>
           </div>
