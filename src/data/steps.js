@@ -2,7 +2,7 @@ import faceWashImg from '../assets/catalog/golden-glow-face-wash.png';
 import dayGelImg from '../assets/catalog/golden-glow-day-gel.png';
 import serumImg from '../assets/catalog/golden-glow-serum-24k.png';
 import nightCreamImg from '../assets/catalog/golden-glow-night-cream.png';
-import acneGelImg from '../assets/catalog/acne-treatment-gel.png';
+import acneGelImg from '../assets/catalog/under-eye-gel.png';
 import packImg from '../assets/catalog/herbal-face-treatment-pack.png';
 
 const steps = [
@@ -54,7 +54,7 @@ const steps = [
     highlight: 'Benefit: Controls excess oil and helps smooth oily or combination skin.',
     highlightColor: 'bg-forest-500/20 text-forest-700 border-forest-500/30',
     image: acneGelImg,
-    imagePosition: 'center 70%',
+    imagePosition: 'center 60%',
   },
   {
     number: 6,
