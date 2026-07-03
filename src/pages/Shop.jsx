@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Mail, Minus, Plus, ShoppingCart, Sparkles, Trash2, X } from 'lucide-react';
 import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
-import productCatalog from '../data/productCatalog';
+import { fetchProducts } from '../lib/products';
+import PRODUCT_IMAGES from '../data/productImages';
 
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 
@@ -32,6 +33,9 @@ const SHOP_CATEGORY_MAP = {
 const getShopCategory = (product) => SHOP_CATEGORY_MAP[product.category] || product.category;
 
 const ShopPage = () => {
+  const [productCatalog, setProductCatalog] = useState([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [productsError, setProductsError] = useState(null);
   const [cart, setCart] = useState({});
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -48,6 +52,35 @@ const ShopPage = () => {
   const [priceFilter, setPriceFilter] = useState('all');
   const [sortOption, setSortOption] = useState('featured');
 
+  // Products now live in Supabase (see supabase/schema.sql + seed.sql).
+  // Images stay bundled locally (see src/data/productImages.js) and are
+  // merged in here by product id.
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchProducts()
+      .then((rows) => {
+        if (!isMounted) return;
+        const withImages = rows.map((product) => ({
+          ...product,
+          image: PRODUCT_IMAGES[product.id],
+        }));
+        setProductCatalog(withImages);
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        setProductsError(error.message || 'Could not load products. Please refresh the page.');
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setIsLoadingProducts(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const cartItems = useMemo(() => {
     return productCatalog
       .filter((product) => (cart[product.id] || 0) > 0)
@@ -59,7 +92,7 @@ const ShopPage = () => {
           lineTotal: product.price * quantity,
         };
       });
-  }, [cart]);
+  }, [cart, productCatalog]);
 
   const totalItems = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
@@ -99,7 +132,7 @@ const ShopPage = () => {
     });
 
     return counts;
-  }, []);
+  }, [productCatalog]);
 
   const filteredProducts = useMemo(() => {
     const categoryAndPriceFiltered = productCatalog.filter((product) => {
@@ -145,7 +178,7 @@ const ShopPage = () => {
     }
 
     return categoryAndPriceFiltered;
-  }, [categoryFilter, priceFilter, sortOption]);
+  }, [categoryFilter, priceFilter, sortOption, productCatalog]);
 
   const groupedProducts = useMemo(() => {
     const groups = SHOP_CATEGORY_ORDER.reduce((acc, category) => {
@@ -348,6 +381,15 @@ const ShopPage = () => {
           </div>
         </div>
 
+        {productsError ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-8 text-center text-[0.95rem] text-red-700">
+            {productsError}
+          </div>
+        ) : isLoadingProducts ? (
+          <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-16 text-center text-[0.95rem] text-muted-foreground">
+            Loading products...
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[1.65fr_0.95fr] gap-8 lg:gap-10">
           <section>
             <div className="mb-5 rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(140deg,rgba(255,252,245,0.94),rgba(248,243,231,0.9))] p-4 sm:p-5 shadow-[0_12px_26px_rgba(31,44,35,0.08)]">
@@ -664,6 +706,7 @@ const ShopPage = () => {
 
           </aside>
         </div>
+        )}
       </div>
 
       {toasts.length > 0 && (

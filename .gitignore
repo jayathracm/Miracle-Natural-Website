@@ -137,3 +137,6 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Project tracking docs (not part of the codebase)
+Miracle_Natural_Thesis_Checklist.docx
