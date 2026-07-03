@@ -45,6 +45,24 @@ export const SEO_CONFIG = {
       'natural body care',
     ],
   },
+  '/login': {
+    title: 'Sign In | Miracle Natural',
+    description: 'Sign in to your Miracle Natural account.',
+    canonical: '/login',
+    keywords: ['Miracle Natural sign in', 'Miracle Natural login'],
+  },
+  '/signup': {
+    title: 'Create Account | Miracle Natural',
+    description: 'Create a Miracle Natural account to track orders and check out faster.',
+    canonical: '/signup',
+    keywords: ['Miracle Natural sign up', 'Miracle Natural create account'],
+  },
+  '/account': {
+    title: 'My Account | Miracle Natural',
+    description: 'View and manage your Miracle Natural account.',
+    canonical: '/account',
+    keywords: ['Miracle Natural account'],
+  },
   '/pricing': {
     title: 'Shop Bundles | Miracle Natural',
     description:

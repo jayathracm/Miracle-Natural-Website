@@ -13,8 +13,9 @@ import {
   useNavigate,
 } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
-import { Landing, About, Pricing, Shop, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
+import { Landing, About, Pricing, Shop, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
 import { useSEO } from './hooks/useSEO';
+import { AuthProvider } from './context/AuthContext';
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
@@ -59,41 +60,47 @@ const Redirect = ({ to }) => {
 const App = () => {
   return (
     <ErrorBoundary>
-      <Router>
-        <SEOEffect />
-        <ScrollToTop />
-        <MainLayout>
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <main className="flex-grow">
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/about" element={<About />} />
+      <AuthProvider>
+        <Router>
+          <SEOEffect />
+          <ScrollToTop />
+          <MainLayout>
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-grow">
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/about" element={<About />} />
 
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/pricing" element={<Pricing />} />
 
-                <Route path="/return-policy" element={<ReturnPolicy />} />
-                <Route path="/return" element={<Redirect to="/return-policy" />} />
-                <Route path="/returns" element={<Redirect to="/return-policy" />} />
-                <Route path="/returnpolicy" element={<Redirect to="/return-policy" />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route path="/account" element={<Account />} />
 
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/privacy" element={<Redirect to="/privacy-policy" />} />
-                <Route path="/privacypolicy" element={<Redirect to="/privacy-policy" />} />
+                  <Route path="/return-policy" element={<ReturnPolicy />} />
+                  <Route path="/return" element={<Redirect to="/return-policy" />} />
+                  <Route path="/returns" element={<Redirect to="/return-policy" />} />
+                  <Route path="/returnpolicy" element={<Redirect to="/return-policy" />} />
 
-                <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
-                <Route path="/terms" element={<Redirect to="/terms-and-conditions" />} />
-                <Route path="/conditions" element={<Redirect to="/terms-and-conditions" />} />
-                <Route path="/termsandconditions" element={<Redirect to="/terms-and-conditions" />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/privacy" element={<Redirect to="/privacy-policy" />} />
+                  <Route path="/privacypolicy" element={<Redirect to="/privacy-policy" />} />
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
-        </MainLayout>
-      </Router>
+                  <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+                  <Route path="/terms" element={<Redirect to="/terms-and-conditions" />} />
+                  <Route path="/conditions" element={<Redirect to="/terms-and-conditions" />} />
+                  <Route path="/termsandconditions" element={<Redirect to="/terms-and-conditions" />} />
+
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </main>
+              <Footer />
+            </div>
+          </MainLayout>
+        </Router>
+      </AuthProvider>
     </ErrorBoundary>
   );
 };

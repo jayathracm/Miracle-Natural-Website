@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, User, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import logoIcon from '../assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
 import logoWordmark from '../assets/branding-from-pdf/miracle-natural-wordmark-transparent.png';
 import { cn } from '../lib/utils';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.nav>, <motion.div>)
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const NAV_SECTIONS = [
   { href: '#hero', label: 'Home', id: 'hero' },
@@ -18,6 +19,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
 
   // Optimized scroll handler - only updates when crossing threshold
   const handleScroll = useCallback(() => {
@@ -118,6 +120,11 @@ const Navbar = () => {
             }
           })}
 
+          <Link to="/account" className="inline-flex items-center gap-1.5 text-[0.78rem] xl:text-[0.8rem] font-semibold tracking-[0.1em] uppercase text-muted-foreground hover:text-primary transition-colors">
+            <User size={16} />
+            {user ? 'My Account' : 'Sign In'}
+          </Link>
+
           <Link to="/shop" className="px-4 py-2 rounded-lg border border-primary bg-primary text-white text-[0.76rem] xl:text-[0.8rem] font-semibold tracking-[0.1em] uppercase hover:bg-forest-800 transition-colors">
             Shop Now
           </Link>
@@ -168,6 +175,14 @@ const Navbar = () => {
                     }
                   }
                 })}
+                <Link
+                  to="/account"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left inline-flex items-center gap-2"
+                >
+                  <User size={18} />
+                  {user ? 'My Account' : 'Sign In'}
+                </Link>
                 <Link
                   to="/shop"
                   onClick={() => setIsMenuOpen(false)}
