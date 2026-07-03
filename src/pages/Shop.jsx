@@ -4,7 +4,7 @@ import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
 import productCatalog from '../data/productCatalog';
 
-const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'jayathracm@gmail.com';
+const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 
 const formatCurrency = (amount) => `LKR ${amount.toLocaleString('en-LK')}`;
 

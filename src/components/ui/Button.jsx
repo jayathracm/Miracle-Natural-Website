@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.button>)
 import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
 

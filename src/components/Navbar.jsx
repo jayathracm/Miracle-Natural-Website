@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import logoIcon from '../assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
 import logoWordmark from '../assets/branding-from-pdf/miracle-natural-wordmark-transparent.png';
 import { cn } from '../lib/utils';
+// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.nav>, <motion.div>)
 import { motion, AnimatePresence } from 'framer-motion';
 
 const NAV_SECTIONS = [
@@ -51,7 +52,7 @@ const Navbar = () => {
         "fixed w-full top-0 z-50 transition-all duration-300",
         scrolled ? "py-2" : "py-3 sm:py-4"
       )}
-      style={scrolled ? { 
+      style={scrolled ? {
         backgroundColor: 'rgba(247, 241, 227, 0.78)'
       } : {
         backgroundColor: 'transparent'
@@ -123,8 +124,8 @@ const Navbar = () => {
         </div>
 
         {/* Hamburger Menu - Show on all sizes below 1024px */}
-        <button 
-          className="lg:hidden z-50 text-foreground p-1.5 -mr-1" 
+        <button
+          className="lg:hidden z-50 text-foreground p-1.5 -mr-1"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
           aria-expanded={isMenuOpen}

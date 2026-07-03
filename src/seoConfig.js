@@ -19,6 +19,32 @@ export const SEO_CONFIG = {
       'moisturizer bundle',
     ],
   },
+  '/about': {
+    title: 'About Us | Miracle Natural',
+    description:
+      'Learn about Miracle Natural, a herbal-based personal care brand by Leora Wellness (Pvt) Ltd, backed by 25+ years of manufacturing experience through LANMIC.',
+    canonical: '/about',
+    keywords: [
+      'Miracle Natural about',
+      'Leora Wellness',
+      'LANMIC',
+      'herbal personal care manufacturer',
+      'Sri Lanka skincare manufacturer',
+    ],
+  },
+  '/shop': {
+    title: 'Shop | Miracle Natural',
+    description:
+      'Shop the full Miracle Natural range of herbal face, body, hair, and lip care products with fast email checkout and island-wide delivery.',
+    canonical: '/shop',
+    keywords: [
+      'Miracle Natural shop',
+      'buy herbal skincare Sri Lanka',
+      'natural face care',
+      'natural hair care',
+      'natural body care',
+    ],
+  },
   '/pricing': {
     title: 'Shop Bundles | Miracle Natural',
     description:

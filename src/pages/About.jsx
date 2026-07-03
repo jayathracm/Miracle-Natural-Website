@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Leaf, Factory, ShieldCheck, Handshake, Phone, Mail, MapPin } from 'lucide-react';
 import { Typography } from '../components/ui/Typography';
 import aboutPage01Image01 from '../assets/about-us/about_page_01_img_01.png';
-import aboutPage01Image02 from '../assets/about-us/about_page_01_img_02.png';
 import aboutPage01Image03 from '../assets/about-us/about_page_01_img_03.png';
 import aboutPage02Image01 from '../assets/about-us/about_page_02_img_01.png';
 import aboutPage02Image02 from '../assets/about-us/about_page_02_img_02.png';

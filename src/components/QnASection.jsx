@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus } from 'lucide-react';
 import { Typography } from './ui/Typography';
@@ -29,7 +30,7 @@ const faqs = [
 
 const AccordionItem = ({ question, answer, isOpen, onClick, isMobile }) => {
   return (
-    <div 
+    <div
       className={cn(
         "group relative overflow-hidden transition-all duration-300 rounded-lg border border-[var(--color-border-light)]",
         isOpen ? "bg-[rgba(255,252,245,0.96)] border-[var(--color-primary)]" : "bg-[rgba(255,252,245,0.75)] hover:border-[var(--color-border-medium)]"
@@ -39,8 +40,8 @@ const AccordionItem = ({ question, answer, isOpen, onClick, isMobile }) => {
         onClick={onClick}
         className="w-full flex items-center justify-between p-4 sm:p-5 md:p-5 text-left focus:outline-none"
       >
-        <Typography 
-          variant="h4" 
+        <Typography
+          variant="h4"
           className={cn(
             "transition-colors duration-300 pr-3",
             isOpen ? "text-primary" : "text-foreground group-hover:text-primary"
@@ -85,7 +86,7 @@ const QnASection = () => {
     <section className="relative py-16 sm:py-20 md:py-24 px-4 sm:px-6 overflow-hidden">
       {/* Decorative background element */}
       <div className="absolute top-0 right-0 w-[420px] h-[420px] bg-primary/10 blur-[110px] rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-      
+
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10 sm:mb-12 md:mb-14 space-y-5">
           <div className="space-y-4">
@@ -95,7 +96,7 @@ const QnASection = () => {
               <span className="text-primary">Questions.</span>
             </Typography>
           </div>
-          
+
           <Typography variant="p" className="max-w-2xl mx-auto text-center">
             Everything you need to know before choosing your Miracle Natural routine.
           </Typography>
