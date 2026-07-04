@@ -121,9 +121,62 @@
   }
 }
 
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes blob-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(18px, -14px) scale(1.06);
+  }
+  66% {
+    transform: translate(-14px, 16px) scale(0.96);
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(120deg, var(--color-primary) 15%, var(--color-accent) 85%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .animate-blob-drift {
+    animation: blob-drift 16s ease-in-out infinite;
+  }
+
+  .animate-blob-drift-slow {
+    animation: blob-drift 22s ease-in-out infinite reverse;
+  }
+
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-muted);
+  }
+
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    animation: shimmer 1.6s infinite;
   }
 
   .glass-panel {

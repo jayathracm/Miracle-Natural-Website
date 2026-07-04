@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, PackageSearch, RefreshCw } from 'lucide-react';
 import { Typography } from '../../components/ui/Typography';
 import { Button } from '../../components/ui/Button';
+import { RowSkeletonList } from '../../components/ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
 
 const STATUS_OPTIONS = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
@@ -122,9 +123,7 @@ const AdminOrders = () => {
             {error}
           </div>
         ) : isLoading ? (
-          <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-16 text-center text-[0.95rem] text-muted-foreground">
-            Loading orders...
-          </div>
+          <RowSkeletonList count={4} />
         ) : filteredOrders.length === 0 ? (
           <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-16 text-center text-muted-foreground flex flex-col items-center gap-3">
             <PackageSearch size={28} className="text-text-tertiary" />

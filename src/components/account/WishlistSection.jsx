@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Heart, ImageOff, ShoppingBag } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
+import { ProductGridSkeleton } from '../ui/Skeleton';
 import { fetchWishlist, removeFromWishlist } from '../../lib/wishlist';
 import PRODUCT_IMAGES from '../../data/productImages';
 
@@ -48,11 +49,7 @@ const WishlistSection = () => {
   }
 
   if (isLoading) {
-    return (
-      <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-12 text-center text-[0.9rem] text-muted-foreground">
-        Loading your wishlist...
-      </div>
-    );
+    return <ProductGridSkeleton count={3} />;
   }
 
   if (items.length === 0) {

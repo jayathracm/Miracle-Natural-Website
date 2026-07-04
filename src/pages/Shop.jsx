@@ -1,8 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>, <motion.article>)
+import { motion } from 'framer-motion';
 import { CheckCircle2, Heart, ImageOff, Mail, Minus, Plus, ShoppingCart, Sparkles, Trash2, X } from 'lucide-react';
 import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Textarea } from '../components/ui/Textarea';
+import { TiltCard } from '../components/ui/TiltCard';
+import { ProductGridSkeleton, Skeleton } from '../components/ui/Skeleton';
 import { fetchProducts } from '../lib/products';
 import PRODUCT_IMAGES from '../data/productImages';
 import { supabase } from '../lib/supabaseClient';
@@ -10,6 +16,18 @@ import { useAuth } from '../context/AuthContext';
 import DELIVERY_ZONES from '../data/deliveryZones';
 import { addToWishlist, fetchWishlistProductIds, removeFromWishlist } from '../lib/wishlist';
 import { fetchAddresses } from '../lib/addresses';
+
+// Parent/child variants for a staggered grid reveal — children fade+rise in
+// sequence instead of all animating independently at once.
+const gridRevealVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.07 } },
+};
+
+const gridItemVariants = {
+  hidden: { opacity: 0, y: 22 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
+};
 
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 
@@ -545,8 +563,21 @@ const ShopPage = () => {
             {productsError}
           </div>
         ) : isLoadingProducts ? (
-          <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-16 text-center text-[0.95rem] text-muted-foreground">
-            Loading products...
+          <div className="grid grid-cols-1 lg:grid-cols-[1.65fr_0.95fr] gap-8 lg:gap-10">
+            <section>
+              <div className="mb-5 rounded-2xl border border-[var(--color-card-border)] bg-white/60 p-4 sm:p-5">
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <ProductGridSkeleton count={6} />
+            </section>
+            <aside className="rounded-2xl border border-[var(--color-card-border)] bg-white/60 p-5 space-y-3">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </aside>
           </div>
         ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[1.65fr_0.95fr] gap-8 lg:gap-10">
@@ -626,93 +657,101 @@ const ShopPage = () => {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+                    <motion.div
+                      className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
+                      variants={gridRevealVariants}
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true, margin: '-60px' }}
+                    >
                       {products.map((product) => {
                         const quantity = cart[product.id] || 0;
 
                         return (
-                          <article
-                            key={product.id}
-                            className="group rounded-2xl overflow-hidden border border-[var(--color-card-border)] bg-[var(--color-card-bg)] shadow-[0_12px_28px_rgba(31,44,35,0.08)] hover:shadow-[0_18px_36px_rgba(31,44,35,0.14)] hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer"
-                            onClick={() => setSelectedProduct(product)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault();
-                                setSelectedProduct(product);
-                              }
-                            }}
-                          >
-                            <div className="relative aspect-[4/5] bg-[rgba(255,251,243,0.9)] overflow-hidden">
-                              {product.image ? (
-                                <img
-                                  src={product.image}
-                                  alt={product.name}
-                                  className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <div className="h-full w-full flex items-center justify-center text-text-tertiary">
-                                  <ImageOff size={28} />
-                                </div>
-                              )}
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  toggleWishlist(product.id);
-                                }}
-                                aria-label={wishlistIds.has(product.id) ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
-                                className={`absolute top-2.5 right-2.5 h-8 w-8 rounded-full border inline-flex items-center justify-center backdrop-blur-sm transition-colors ${wishlistIds.has(product.id) ? 'border-red-300 bg-white/90 text-red-600' : 'border-white/60 bg-white/70 text-foreground hover:text-red-600'}`}
-                              >
-                                <Heart size={14} fill={wishlistIds.has(product.id) ? 'currentColor' : 'none'} />
-                              </button>
-                            </div>
-                            <div className="p-4 sm:p-5 flex flex-col flex-1">
-                              <p className="text-[0.68rem] font-bold tracking-[0.16em] uppercase text-accent mb-2">{getShopCategory(product)}</p>
-                              <Typography variant="h4" className="text-foreground mb-1 leading-snug">{product.name}</Typography>
-                              <Typography variant="small" className="block mb-3">{product.size}</Typography>
+                          <motion.div key={product.id} variants={gridItemVariants} className="h-full">
+                            <TiltCard
+                              as="article"
+                              className="group h-full rounded-2xl overflow-hidden border border-[var(--color-card-border)] bg-[var(--color-card-bg)] shadow-[0_12px_28px_rgba(31,44,35,0.08)] hover:shadow-[0_18px_36px_rgba(31,44,35,0.14)] flex flex-col cursor-pointer"
+                              onClick={() => setSelectedProduct(product)}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                  event.preventDefault();
+                                  setSelectedProduct(product);
+                                }
+                              }}
+                            >
+                              <div className="relative aspect-[4/5] bg-[rgba(255,251,243,0.9)] overflow-hidden">
+                                {product.image ? (
+                                  <img
+                                    src={product.image}
+                                    alt={product.name}
+                                    className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <div className="h-full w-full flex items-center justify-center text-text-tertiary">
+                                    <ImageOff size={28} />
+                                  </div>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    toggleWishlist(product.id);
+                                  }}
+                                  aria-label={wishlistIds.has(product.id) ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+                                  className={`absolute top-2.5 right-2.5 h-8 w-8 rounded-full border inline-flex items-center justify-center backdrop-blur-sm transition-colors ${wishlistIds.has(product.id) ? 'border-red-300 bg-white/90 text-red-600' : 'border-white/60 bg-white/70 text-foreground hover:text-red-600'}`}
+                                >
+                                  <Heart size={14} fill={wishlistIds.has(product.id) ? 'currentColor' : 'none'} />
+                                </button>
+                              </div>
+                              <div className="p-4 sm:p-5 flex flex-col flex-1">
+                                <p className="text-[0.68rem] font-bold tracking-[0.16em] uppercase text-accent mb-2">{getShopCategory(product)}</p>
+                                <Typography variant="h4" className="text-foreground mb-1 leading-snug">{product.name}</Typography>
+                                <Typography variant="small" className="block mb-3">{product.size}</Typography>
 
-                              <div className="mt-auto">
-                                <div className="flex items-center justify-between mb-4 rounded-lg border border-[var(--color-border-light)] bg-white/65 px-3 py-2">
-                                  <p className="font-display text-[1.45rem] text-primary">{formatCurrency(product.price)}</p>
-                                  {quantity > 0 && (
-                                    <p className="text-[0.8rem] font-semibold text-foreground">In Cart: {quantity}</p>
-                                  )}
-                                </div>
+                                <div className="mt-auto">
+                                  <div className="flex items-center justify-between mb-4 rounded-lg border border-[var(--color-border-light)] bg-white/65 px-3 py-2">
+                                    <p className="font-display text-[1.45rem] text-primary">{formatCurrency(product.price)}</p>
+                                    {quantity > 0 && (
+                                      <p className="text-[0.8rem] font-semibold text-foreground">In Cart: {quantity}</p>
+                                    )}
+                                  </div>
 
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    className="flex-1 px-3 py-2 text-[0.74rem]"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      addToCart(product.id);
-                                    }}
-                                    icon={Plus}
-                                  >
-                                    Add To Cart
-                                  </Button>
-                                  {quantity > 0 && (
+                                  <div className="flex items-center gap-2">
                                     <Button
-                                      variant="ghost"
-                                      className="px-3 py-2 text-[0.74rem]"
+                                      className="flex-1 px-3 py-2 text-[0.74rem]"
                                       onClick={(event) => {
                                         event.stopPropagation();
-                                        changeQuantity(product.id, -1);
+                                        addToCart(product.id);
                                       }}
-                                      aria-label={`Remove one ${product.name}`}
+                                      icon={Plus}
                                     >
-                                      <Minus size={16} />
+                                      Add To Cart
                                     </Button>
-                                  )}
+                                    {quantity > 0 && (
+                                      <Button
+                                        variant="ghost"
+                                        className="px-3 py-2 text-[0.74rem]"
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          changeQuantity(product.id, -1);
+                                        }}
+                                        aria-label={`Remove one ${product.name}`}
+                                      >
+                                        <Minus size={16} />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </article>
+                            </TiltCard>
+                          </motion.div>
                         );
                       })}
-                    </div>
+                    </motion.div>
                   </section>
                 ))}
               </div>
@@ -764,26 +803,23 @@ const ShopPage = () => {
             </div>
 
             <div className="space-y-3 mb-5">
-              <input
+              <Input
                 type="text"
                 placeholder="Your Name"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
-              <input
+              <Input
                 type="text"
                 placeholder="Phone Number"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
-                className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
-              <input
+              <Input
                 type="email"
                 placeholder="Your Email"
                 value={customerEmail}
                 onChange={(e) => setCustomerEmail(e.target.value)}
-                className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
               <div className="rounded-xl border border-[var(--color-border-light)] bg-white/60 p-3">
                 <p className="mb-2 text-[0.7rem] font-bold tracking-[0.13em] uppercase text-text-secondary">Payment Method</p>
@@ -845,7 +881,7 @@ const ShopPage = () => {
                 <option value="colombo_1_15">Colombo 1-15</option>
                 <option value="island_wide">Other Areas in Sri Lanka</option>
               </select>
-              <textarea
+              <Textarea
                 placeholder="Delivery Address"
                 value={deliveryAddress}
                 onChange={(e) => {
@@ -853,19 +889,17 @@ const ShopPage = () => {
                   setSelectedAddressId('manual');
                 }}
                 rows={3}
-                className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none"
               />
               {user && (
                 <Link to="/account?tab=addresses" className="inline-block text-[0.74rem] font-semibold text-primary underline underline-offset-2">
                   Manage saved addresses
                 </Link>
               )}
-              <textarea
+              <Textarea
                 placeholder="Notes (optional)"
                 value={customerNotes}
                 onChange={(e) => setCustomerNotes(e.target.value)}
                 rows={3}
-                className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none"
               />
             </div>
 

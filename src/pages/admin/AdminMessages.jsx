@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Inbox, RefreshCw } from 'lucide-react';
 import { Typography } from '../../components/ui/Typography';
 import { Button } from '../../components/ui/Button';
+import { RowSkeletonList } from '../../components/ui/Skeleton';
 import { fetchAllMessages, updateMessageStatus } from '../../lib/messages';
 
 const STATUS_OPTIONS = ['new', 'read', 'replied'];
@@ -113,9 +114,7 @@ const AdminMessages = () => {
             {error}
           </div>
         ) : isLoading ? (
-          <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-16 text-center text-[0.95rem] text-muted-foreground">
-            Loading messages...
-          </div>
+          <RowSkeletonList count={4} />
         ) : filteredMessages.length === 0 ? (
           <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-16 text-center text-muted-foreground flex flex-col items-center gap-3">
             <Inbox size={28} className="text-text-tertiary" />

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, PackageSearch } from 'lucide-react';
 import { Typography } from '../ui/Typography';
+import { RowSkeletonList } from '../ui/Skeleton';
 import { fetchMyOrders } from '../../lib/orders';
 
 const STATUS_STYLES = {
@@ -48,11 +49,7 @@ const OrdersSection = () => {
   }
 
   if (isLoading) {
-    return (
-      <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-12 text-center text-[0.9rem] text-muted-foreground">
-        Loading your orders...
-      </div>
-    );
+    return <RowSkeletonList count={3} />;
   }
 
   if (orders.length === 0) {

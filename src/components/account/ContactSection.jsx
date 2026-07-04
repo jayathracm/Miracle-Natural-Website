@@ -2,13 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Send } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Textarea } from '../ui/Textarea';
 import { useAuth } from '../../context/AuthContext';
 import { fetchMyMessages, sendMessage } from '../../lib/messages';
 
 const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
-
-const inputClasses = "w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
-const labelClasses = "mb-1.5 block text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary";
 
 const STATUS_STYLES = {
   new: 'border-amber-300 bg-amber-50 text-amber-800',
@@ -100,26 +99,20 @@ const ContactSection = () => {
           Questions about an order, a product, or anything else — we'll reply to {user?.email}.
         </p>
         <form onSubmit={handleSubmit} className="space-y-3.5">
-          <div>
-            <label className={labelClasses} htmlFor="contact-subject">Subject</label>
-            <input
-              id="contact-subject"
-              type="text"
-              value={subject}
-              onChange={(event) => setSubject(event.target.value)}
-              className={inputClasses}
-            />
-          </div>
-          <div>
-            <label className={labelClasses} htmlFor="contact-message">Message</label>
-            <textarea
-              id="contact-message"
-              rows={4}
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              className={`${inputClasses} resize-none`}
-            />
-          </div>
+          <Input
+            id="contact-subject"
+            label="Subject"
+            type="text"
+            value={subject}
+            onChange={(event) => setSubject(event.target.value)}
+          />
+          <Textarea
+            id="contact-message"
+            label="Message"
+            rows={4}
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+          />
           {formStatus && (
             <p className={`text-[0.82rem] ${formStatus.type === 'error' ? 'text-red-600' : 'text-emerald-700'}`}>
               {formStatus.text}

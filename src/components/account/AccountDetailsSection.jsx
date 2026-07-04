@@ -2,11 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 
-const inputClasses = "w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
-const labelClasses = "mb-1.5 block text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary";
 const cardClasses = "rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 sm:p-6 shadow-[0_10px_24px_rgba(31,44,35,0.06)]";
 
 const StatusMessage = ({ status }) => {
@@ -139,26 +138,20 @@ const AccountDetailsSection = () => {
       <div className={cardClasses}>
         <Typography variant="h4" className="text-foreground mb-4">Profile Details</Typography>
         <form onSubmit={handleSaveProfile} className="space-y-3.5">
-          <div>
-            <label className={labelClasses} htmlFor="account-name">Full Name</label>
-            <input
-              id="account-name"
-              type="text"
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-              className={inputClasses}
-            />
-          </div>
-          <div>
-            <label className={labelClasses} htmlFor="account-phone">Phone Number</label>
-            <input
-              id="account-phone"
-              type="text"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              className={inputClasses}
-            />
-          </div>
+          <Input
+            id="account-name"
+            label="Full Name"
+            type="text"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+          />
+          <Input
+            id="account-phone"
+            label="Phone Number"
+            type="text"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+          />
           <Button type="submit" className="px-5 py-2.5 text-[0.74rem]" icon={Save} disabled={savingProfile}>
             {savingProfile ? 'Saving...' : 'Save Details'}
           </Button>
@@ -170,16 +163,13 @@ const AccountDetailsSection = () => {
         <Typography variant="h4" className="text-foreground mb-1.5">Email Address</Typography>
         <p className="text-[0.8rem] text-muted-foreground mb-4">Current: {user?.email}</p>
         <form onSubmit={handleUpdateEmail} className="space-y-3.5">
-          <div>
-            <label className={labelClasses} htmlFor="account-email">New Email Address</label>
-            <input
-              id="account-email"
-              type="email"
-              value={newEmail}
-              onChange={(event) => setNewEmail(event.target.value)}
-              className={inputClasses}
-            />
-          </div>
+          <Input
+            id="account-email"
+            label="New Email Address"
+            type="email"
+            value={newEmail}
+            onChange={(event) => setNewEmail(event.target.value)}
+          />
           <Button type="submit" variant="secondary" className="px-5 py-2.5 text-[0.74rem]" disabled={savingEmail}>
             {savingEmail ? 'Sending...' : 'Update Email'}
           </Button>
@@ -190,26 +180,20 @@ const AccountDetailsSection = () => {
       <div className={cardClasses}>
         <Typography variant="h4" className="text-foreground mb-4">Password</Typography>
         <form onSubmit={handleUpdatePassword} className="space-y-3.5">
-          <div>
-            <label className={labelClasses} htmlFor="account-new-password">New Password</label>
-            <input
-              id="account-new-password"
-              type="password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              className={inputClasses}
-            />
-          </div>
-          <div>
-            <label className={labelClasses} htmlFor="account-confirm-password">Confirm New Password</label>
-            <input
-              id="account-confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              className={inputClasses}
-            />
-          </div>
+          <Input
+            id="account-new-password"
+            label="New Password"
+            type="password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+          />
+          <Input
+            id="account-confirm-password"
+            label="Confirm New Password"
+            type="password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+          />
           <Button type="submit" variant="secondary" className="px-5 py-2.5 text-[0.74rem]" disabled={savingPassword}>
             {savingPassword ? 'Updating...' : 'Update Password'}
           </Button>

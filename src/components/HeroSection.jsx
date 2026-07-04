@@ -107,8 +107,8 @@ const HeroSection = () => {
     <section id="hero" className="relative min-h-[82vh] md:min-h-[90vh] pt-34 sm:pt-36 md:pt-38 lg:pt-42 pb-8 sm:pb-10 md:pb-12 lg:pb-14 px-4 sm:px-6 lg:px-8 flex flex-col items-center bg-transparent">
 
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[12%] left-[4%] w-64 h-64 rounded-full bg-secondary/25 blur-[70px]" />
-        <div className="absolute top-[20%] right-[2%] w-72 h-72 rounded-full bg-primary/16 blur-[80px]" />
+        <div className="absolute top-[12%] left-[4%] w-64 h-64 rounded-full bg-secondary/25 blur-[70px] animate-blob-drift" />
+        <div className="absolute top-[20%] right-[2%] w-72 h-72 rounded-full bg-primary/16 blur-[80px] animate-blob-drift-slow" />
       </div>
 
       {/* Asymmetric Layout Wrapper */}
@@ -122,7 +122,7 @@ const HeroSection = () => {
               variant="h1"
               className="text-foreground tracking-tight pt-1 sm:pt-2 md:pt-3 pb-0 text-[2.55rem] sm:text-[3.1rem] md:text-[3.6rem] lg:text-[4.2rem] xl:text-[4.9rem] leading-[1.04]"
             >
-              <span className="text-primary">Botanical Personal Care</span><br />
+              <span className="text-gradient-brand">Botanical Personal Care</span><br />
               crafted for<br />
               <span className="text-foreground">everyday rituals</span>
             </Typography>

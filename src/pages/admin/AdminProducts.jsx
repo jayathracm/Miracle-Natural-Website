@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ImageOff, Pencil, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { Typography } from '../../components/ui/Typography';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Textarea } from '../../components/ui/Textarea';
+import { ProductGridSkeleton } from '../../components/ui/Skeleton';
 import PRODUCT_IMAGES from '../../data/productImages';
 import { createProduct, fetchAllProductsForAdmin, updateProduct } from '../../lib/products';
 
@@ -9,9 +12,6 @@ import { createProduct, fetchAllProductsForAdmin, updateProduct } from '../../li
 // column; Shop.jsx groups anything unrecognized under its own name rather
 // than breaking, so a brand-new category here is safe, just ungrouped.
 const KNOWN_CATEGORIES = ['Face Care', 'Treatment', 'Weekly Care', 'Body Care', 'Hair Care', 'Lip Care'];
-
-const inputClasses = "w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
-const labelClasses = "mb-1.5 block text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary";
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
@@ -217,12 +217,12 @@ const AdminProducts = () => {
             </div>
             <div className="relative ml-auto w-full sm:w-64">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
-              <input
+              <Input
                 type="text"
                 placeholder="Search by name..."
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className={`${inputClasses} pl-8`}
+                className="pl-8"
               />
             </div>
           </div>
@@ -243,51 +243,37 @@ const AdminProducts = () => {
             </div>
 
             {!editingId && (
-              <div>
-                <label className={labelClasses} htmlFor="product-id">
-                  Product ID (slug — leave blank to generate from name)
-                </label>
-                <input
-                  id="product-id"
-                  type="text"
-                  placeholder="e.g. golden-glow-face-wash"
-                  value={form.id}
-                  onChange={(event) => setForm((prev) => ({ ...prev, id: event.target.value }))}
-                  className={inputClasses}
-                />
-                <p className="mt-1 text-[0.72rem] text-muted-foreground">
-                  Can't be changed after creation — used to link orders, wishlists, and the bundled product image.
-                </p>
-              </div>
+              <Input
+                id="product-id"
+                label="Product ID (slug — leave blank to generate from name)"
+                type="text"
+                placeholder="e.g. golden-glow-face-wash"
+                value={form.id}
+                onChange={(event) => setForm((prev) => ({ ...prev, id: event.target.value }))}
+                hint="Can't be changed after creation — used to link orders, wishlists, and the bundled product image."
+              />
             )}
 
             {editingId && (
-              <div>
-                <label className={labelClasses}>Product ID</label>
-                <input type="text" value={editingId} disabled className={`${inputClasses} opacity-60`} />
-              </div>
+              <Input label="Product ID" type="text" value={editingId} disabled />
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <Input
+                id="product-name"
+                label="Name"
+                type="text"
+                value={form.name}
+                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              />
               <div>
-                <label className={labelClasses} htmlFor="product-name">Name</label>
-                <input
-                  id="product-name"
-                  type="text"
-                  value={form.name}
-                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                  className={inputClasses}
-                />
-              </div>
-              <div>
-                <label className={labelClasses} htmlFor="product-category">Category</label>
-                <input
+                <Input
                   id="product-category"
+                  label="Category"
                   type="text"
                   list="known-categories"
                   value={form.category}
                   onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
-                  className={inputClasses}
                 />
                 <datalist id="known-categories">
                   {KNOWN_CATEGORIES.map((category) => (
@@ -295,80 +281,60 @@ const AdminProducts = () => {
                   ))}
                 </datalist>
               </div>
-              <div>
-                <label className={labelClasses} htmlFor="product-size">Size</label>
-                <input
-                  id="product-size"
-                  type="text"
-                  placeholder="e.g. 100ml"
-                  value={form.size}
-                  onChange={(event) => setForm((prev) => ({ ...prev, size: event.target.value }))}
-                  className={inputClasses}
-                />
-              </div>
-              <div>
-                <label className={labelClasses} htmlFor="product-price">Price (LKR)</label>
-                <input
-                  id="product-price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
-                  className={inputClasses}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className={labelClasses} htmlFor="product-image-url">
-                Image URL (optional)
-              </label>
-              <input
-                id="product-image-url"
+              <Input
+                id="product-size"
+                label="Size"
                 type="text"
-                placeholder="https://..."
-                value={form.imageUrl}
-                onChange={(event) => setForm((prev) => ({ ...prev, imageUrl: event.target.value }))}
-                className={inputClasses}
+                placeholder="e.g. 100ml"
+                value={form.size}
+                onChange={(event) => setForm((prev) => ({ ...prev, size: event.target.value }))}
               />
-              <p className="mt-1 text-[0.72rem] text-muted-foreground">
-                {PRODUCT_IMAGES[editingId]
-                  ? 'This product has a bundled local image, which takes priority over this URL.'
-                  : "There's no bundled local image for this product yet — this URL is what the storefront will show until one is added to the codebase."}
-              </p>
+              <Input
+                id="product-price"
+                label="Price (LKR)"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.price}
+                onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
+              />
             </div>
 
-            <div>
-              <label className={labelClasses} htmlFor="product-description">Description</label>
-              <textarea
-                id="product-description"
-                rows={2}
-                value={form.description}
-                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                className={`${inputClasses} resize-none`}
-              />
-            </div>
-            <div>
-              <label className={labelClasses} htmlFor="product-ingredients">Ingredients</label>
-              <textarea
-                id="product-ingredients"
-                rows={2}
-                value={form.ingredients}
-                onChange={(event) => setForm((prev) => ({ ...prev, ingredients: event.target.value }))}
-                className={`${inputClasses} resize-none`}
-              />
-            </div>
-            <div>
-              <label className={labelClasses} htmlFor="product-benefits">Benefits</label>
-              <textarea
-                id="product-benefits"
-                rows={2}
-                value={form.benefits}
-                onChange={(event) => setForm((prev) => ({ ...prev, benefits: event.target.value }))}
-                className={`${inputClasses} resize-none`}
-              />
-            </div>
+            <Input
+              id="product-image-url"
+              label="Image URL (optional)"
+              type="text"
+              placeholder="https://..."
+              value={form.imageUrl}
+              onChange={(event) => setForm((prev) => ({ ...prev, imageUrl: event.target.value }))}
+              hint={
+                PRODUCT_IMAGES[editingId]
+                  ? 'This product has a bundled local image, which takes priority over this URL.'
+                  : "There's no bundled local image for this product yet — this URL is what the storefront will show until one is added to the codebase."
+              }
+            />
+
+            <Textarea
+              id="product-description"
+              label="Description"
+              rows={2}
+              value={form.description}
+              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+            />
+            <Textarea
+              id="product-ingredients"
+              label="Ingredients"
+              rows={2}
+              value={form.ingredients}
+              onChange={(event) => setForm((prev) => ({ ...prev, ingredients: event.target.value }))}
+            />
+            <Textarea
+              id="product-benefits"
+              label="Benefits"
+              rows={2}
+              value={form.benefits}
+              onChange={(event) => setForm((prev) => ({ ...prev, benefits: event.target.value }))}
+            />
 
             <label className="inline-flex items-center gap-2 text-[0.84rem] text-foreground">
               <input
@@ -392,9 +358,7 @@ const AdminProducts = () => {
             {error}
           </div>
         ) : isLoading ? (
-          <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-16 text-center text-[0.95rem] text-muted-foreground">
-            Loading products...
-          </div>
+          <ProductGridSkeleton count={6} />
         ) : filteredProducts.length === 0 ? (
           <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-16 text-center text-muted-foreground">
             No products match this filter.

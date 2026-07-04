@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { MapPin, Pencil, Plus, Star, Trash2, X } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Textarea } from '../ui/Textarea';
+import { RowSkeletonList } from '../ui/Skeleton';
 import DELIVERY_ZONES from '../../data/deliveryZones';
 import {
   createAddress,
@@ -146,17 +149,14 @@ const AddressesSection = () => {
             </button>
           </div>
 
-          <div>
-            <label className={labelClasses} htmlFor="address-label">Label</label>
-            <input
-              id="address-label"
-              type="text"
-              placeholder="Home, Work, ..."
-              value={form.label}
-              onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
-              className={inputClasses}
-            />
-          </div>
+          <Input
+            id="address-label"
+            label="Label"
+            type="text"
+            placeholder="Home, Work, ..."
+            value={form.label}
+            onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
+          />
 
           <div>
             <label className={labelClasses} htmlFor="address-zone">Delivery Zone</label>
@@ -173,16 +173,13 @@ const AddressesSection = () => {
             </select>
           </div>
 
-          <div>
-            <label className={labelClasses} htmlFor="address-text">Address</label>
-            <textarea
-              id="address-text"
-              rows={3}
-              value={form.addressText}
-              onChange={(event) => setForm((prev) => ({ ...prev, addressText: event.target.value }))}
-              className={`${inputClasses} resize-none`}
-            />
-          </div>
+          <Textarea
+            id="address-text"
+            label="Address"
+            rows={3}
+            value={form.addressText}
+            onChange={(event) => setForm((prev) => ({ ...prev, addressText: event.target.value }))}
+          />
 
           {formError && <p className="text-[0.82rem] text-red-600">{formError}</p>}
 
@@ -193,9 +190,7 @@ const AddressesSection = () => {
       )}
 
       {isLoading ? (
-        <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-12 text-center text-[0.9rem] text-muted-foreground">
-          Loading your addresses...
-        </div>
+        <RowSkeletonList count={2} />
       ) : addresses.length === 0 && !formOpen ? (
         <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-12 text-center text-muted-foreground flex flex-col items-center gap-3">
           <MapPin size={26} className="text-text-tertiary" />
