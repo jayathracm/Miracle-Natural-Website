@@ -1,20 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Mail, Minus, Plus, ShoppingCart, Sparkles, Trash2, X } from 'lucide-react';
+import { CheckCircle2, Heart, Mail, Minus, Plus, ShoppingCart, Sparkles, Trash2, X } from 'lucide-react';
 import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
 import { fetchProducts } from '../lib/products';
 import PRODUCT_IMAGES from '../data/productImages';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import DELIVERY_ZONES from '../data/deliveryZones';
+import { addToWishlist, fetchWishlistProductIds, removeFromWishlist } from '../lib/wishlist';
 
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 
 const formatCurrency = (amount) => `LKR ${amount.toLocaleString('en-LK')}`;
-
-const DELIVERY_ZONES = {
-  colombo_1_15: { label: 'Colombo 1-15', rate: 300 },
-  island_wide: { label: 'Other Areas in Sri Lanka', rate: 350 },
-};
 
 const PAYMENT_METHODS = {
   cash_on_delivery: 'Cash on Delivery',
@@ -54,6 +51,30 @@ const ShopPage = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [priceFilter, setPriceFilter] = useState('all');
   const [sortOption, setSortOption] = useState('featured');
+  const [wishlistIds, setWishlistIds] = useState(() => new Set());
+
+  // Wishlist requires an account — load it when someone's signed in, clear
+  // it on sign-out rather than leaving stale heart icons filled in.
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!user) {
+      setWishlistIds(new Set());
+      return undefined;
+    }
+
+    fetchWishlistProductIds()
+      .then((ids) => {
+        if (isMounted) setWishlistIds(new Set(ids));
+      })
+      .catch(() => {
+        // Non-fatal — heart icons just won't reflect saved state this load.
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   // Products now live in Supabase (see supabase/schema.sql + seed.sql).
   // Images stay bundled locally (see src/data/productImages.js) and are
@@ -239,6 +260,47 @@ const ShopPage = () => {
     window.setTimeout(() => {
       removeToast(id);
     }, 4200);
+  };
+
+  const toggleWishlist = async (productId) => {
+    if (!user) {
+      pushToast('error', 'Sign in to save items to your wishlist.');
+      return;
+    }
+
+    const isWishlisted = wishlistIds.has(productId);
+
+    // Optimistic update — the DB call below can fail, in which case we
+    // revert instead of leaving the heart icon in a state that lies about
+    // what's actually saved.
+    setWishlistIds((prev) => {
+      const next = new Set(prev);
+      if (isWishlisted) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+
+    try {
+      if (isWishlisted) {
+        await removeFromWishlist(productId);
+      } else {
+        await addToWishlist(productId);
+      }
+    } catch {
+      setWishlistIds((prev) => {
+        const reverted = new Set(prev);
+        if (isWishlisted) {
+          reverted.add(productId);
+        } else {
+          reverted.delete(productId);
+        }
+        return reverted;
+      });
+      pushToast('error', 'Could not update your wishlist. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -530,13 +592,24 @@ const ShopPage = () => {
                               }
                             }}
                           >
-                            <div className="aspect-[4/5] bg-[rgba(255,251,243,0.9)] overflow-hidden">
+                            <div className="relative aspect-[4/5] bg-[rgba(255,251,243,0.9)] overflow-hidden">
                               <img
                                 src={product.image}
                                 alt={product.name}
                                 className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
                                 loading="lazy"
                               />
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleWishlist(product.id);
+                                }}
+                                aria-label={wishlistIds.has(product.id) ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+                                className={`absolute top-2.5 right-2.5 h-8 w-8 rounded-full border inline-flex items-center justify-center backdrop-blur-sm transition-colors ${wishlistIds.has(product.id) ? 'border-red-300 bg-white/90 text-red-600' : 'border-white/60 bg-white/70 text-foreground hover:text-red-600'}`}
+                              >
+                                <Heart size={14} fill={wishlistIds.has(product.id) ? 'currentColor' : 'none'} />
+                              </button>
                             </div>
                             <div className="p-4 sm:p-5 flex flex-col flex-1">
                               <p className="text-[0.68rem] font-bold tracking-[0.16em] uppercase text-accent mb-2">{getShopCategory(product)}</p>
@@ -852,14 +925,24 @@ const ShopPage = () => {
                     </span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedProduct(null)}
-                  className="h-10 w-10 rounded-xl border border-[var(--color-border-medium)] bg-white/85 text-foreground inline-flex items-center justify-center transition-colors hover:bg-white"
-                  aria-label="Close product details"
-                >
-                  <X size={16} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleWishlist(selectedProduct.id)}
+                    aria-label={wishlistIds.has(selectedProduct.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                    className={`h-10 w-10 rounded-xl border inline-flex items-center justify-center transition-colors ${wishlistIds.has(selectedProduct.id) ? 'border-red-300 bg-white/90 text-red-600' : 'border-[var(--color-border-medium)] bg-white/85 text-foreground hover:text-red-600'}`}
+                  >
+                    <Heart size={16} fill={wishlistIds.has(selectedProduct.id) ? 'currentColor' : 'none'} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProduct(null)}
+                    className="h-10 w-10 rounded-xl border border-[var(--color-border-medium)] bg-white/85 text-foreground inline-flex items-center justify-center transition-colors hover:bg-white"
+                    aria-label="Close product details"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
             </div>
 

@@ -28,33 +28,32 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // Fetch the profile row (name, role) for whoever's currently signed in, so
-  // the rest of the app can gate admin-only UI without a separate call.
-  useEffect(() => {
-    let isMounted = true;
-    const userId = session?.user?.id;
-
+  // Fetch the profile row (name, phone, role) for whoever's currently signed
+  // in, so the rest of the app can gate admin-only UI and prefill account
+  // forms without a separate call. profiles.full_name/phone are the single
+  // source of truth for display purposes — not auth user_metadata, which is
+  // only ever a snapshot from signup time.
+  const loadProfile = async (userId) => {
     if (!userId) {
       setProfile(null);
       setProfileLoading(false);
-      return undefined;
+      return;
     }
 
     setProfileLoading(true);
-    supabase
+    const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, role')
+      .select('id, full_name, phone, role')
       .eq('id', userId)
-      .single()
-      .then(({ data, error }) => {
-        if (!isMounted) return;
-        setProfile(error ? null : data);
-        setProfileLoading(false);
-      });
+      .single();
 
-    return () => {
-      isMounted = false;
-    };
+    setProfile(error ? null : data);
+    setProfileLoading(false);
+  };
+
+  useEffect(() => {
+    loadProfile(session?.user?.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
   const value = {
@@ -66,6 +65,9 @@ export const AuthProvider = ({ children }) => {
     role: profile?.role ?? 'customer',
     isAdmin: profile?.role === 'admin',
     signOut: () => supabase.auth.signOut(),
+    // Lets a component re-pull the profile row after editing it (name/phone
+    // changes), without waiting for a full auth-state change event.
+    refreshProfile: () => loadProfile(session?.user?.id),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

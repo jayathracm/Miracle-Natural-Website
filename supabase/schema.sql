@@ -197,3 +197,95 @@ $$;
 
 revoke all on function private.is_admin() from public;
 grant execute on function private.is_admin() to authenticated, anon;
+
+-- ----------------------------------------------------------------------------
+-- 6. ADDRESSES
+-- Multiple saved delivery addresses per customer, managed from the profile
+-- page. set_default_address() flips the default atomically.
+-- ----------------------------------------------------------------------------
+create table if not exists public.addresses (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  label text not null default 'Home',
+  delivery_zone text not null check (delivery_zone in ('colombo_1_15', 'island_wide')),
+  address_text text not null,
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.addresses enable row level security;
+
+drop policy if exists "Users manage their own addresses" on public.addresses;
+create policy "Users manage their own addresses"
+  on public.addresses for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create or replace function public.set_default_address(target_address_id uuid)
+returns void
+language plpgsql
+set search_path = public
+as $$
+begin
+  update public.addresses set is_default = false, updated_at = now()
+    where user_id = auth.uid() and is_default = true;
+  update public.addresses set is_default = true, updated_at = now()
+    where id = target_address_id and user_id = auth.uid();
+end;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- 7. WISHLIST ITEMS
+-- ----------------------------------------------------------------------------
+create table if not exists public.wishlist_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  product_id text not null references public.products (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (user_id, product_id)
+);
+
+alter table public.wishlist_items enable row level security;
+
+drop policy if exists "Users manage their own wishlist" on public.wishlist_items;
+create policy "Users manage their own wishlist"
+  on public.wishlist_items for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- ----------------------------------------------------------------------------
+-- 8. CONTACT MESSAGES — customer-to-admin messages
+-- ----------------------------------------------------------------------------
+create table if not exists public.contact_messages (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users (id) on delete set null,
+  customer_name text not null,
+  customer_email text not null,
+  subject text not null,
+  message text not null,
+  status text not null default 'new' check (status in ('new', 'read', 'replied')),
+  created_at timestamptz not null default now()
+);
+
+alter table public.contact_messages enable row level security;
+
+drop policy if exists "Users can view their own messages" on public.contact_messages;
+create policy "Users can view their own messages"
+  on public.contact_messages for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can send a message" on public.contact_messages;
+create policy "Users can send a message"
+  on public.contact_messages for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Admins can view all messages" on public.contact_messages;
+create policy "Admins can view all messages"
+  on public.contact_messages for select
+  using (private.is_admin());
+
+drop policy if exists "Admins can update messages" on public.contact_messages;
+create policy "Admins can update messages"
+  on public.contact_messages for update
+  using (private.is_admin());
