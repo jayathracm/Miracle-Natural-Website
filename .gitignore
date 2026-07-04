@@ -140,3 +140,4 @@ vite.config.ts.timestamp-*
 
 # Project tracking docs (not part of the codebase)
 Miracle_Natural_Thesis_Checklist.docx
+docs/functional-requirements.md

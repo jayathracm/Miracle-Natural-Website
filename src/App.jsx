@@ -14,6 +14,8 @@ import {
 } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import { Landing, About, Pricing, Shop, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
+import AdminOrders from './pages/admin/AdminOrders';
+import RequireAdmin from './components/RequireAdmin';
 import { useSEO } from './hooks/useSEO';
 import { AuthProvider } from './context/AuthContext';
 
@@ -78,6 +80,15 @@ const App = () => {
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/account" element={<Account />} />
+
+                  <Route
+                    path="/admin/orders"
+                    element={(
+                      <RequireAdmin>
+                        <AdminOrders />
+                      </RequireAdmin>
+                    )}
+                  />
 
                   <Route path="/return-policy" element={<ReturnPolicy />} />
                   <Route path="/return" element={<Redirect to="/return-policy" />} />

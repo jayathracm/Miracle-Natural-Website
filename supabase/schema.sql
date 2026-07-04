@@ -21,6 +21,7 @@ create table if not exists public.profiles (
   phone text,
   default_delivery_zone text check (default_delivery_zone in ('colombo_1_15', 'island_wide')),
   default_delivery_address text,
+  role text not null default 'customer' check (role in ('customer', 'corporate_partner', 'admin')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -123,6 +124,16 @@ create policy "Anyone can place an order"
   on public.orders for insert
   with check (auth.uid() = user_id or user_id is null);
 
+drop policy if exists "Admins can view all orders" on public.orders;
+create policy "Admins can view all orders"
+  on public.orders for select
+  using (private.is_admin());
+
+drop policy if exists "Admins can update orders" on public.orders;
+create policy "Admins can update orders"
+  on public.orders for update
+  using (private.is_admin());
+
 -- ----------------------------------------------------------------------------
 -- 4. ORDER ITEMS
 -- product_name/unit_price are captured at order time (denormalized) so an
@@ -155,3 +166,34 @@ drop policy if exists "Anyone can add items to an order" on public.order_items;
 create policy "Anyone can add items to an order"
   on public.order_items for insert
   with check (true);
+
+drop policy if exists "Admins can view all order items" on public.order_items;
+create policy "Admins can view all order items"
+  on public.order_items for select
+  using (private.is_admin());
+
+-- ----------------------------------------------------------------------------
+-- 5. ADMIN HELPER
+-- private.is_admin() lives outside the `public` schema on purpose: it's used
+-- inside RLS policies above, but must NOT be directly callable via the
+-- PostgREST API (Supabase auto-exposes any function with EXECUTE granted in
+-- an exposed schema as /rest/v1/rpc/<name>). Keeping it in `private` (not an
+-- exposed schema) avoids that while still working fine inside policies.
+-- ----------------------------------------------------------------------------
+create schema if not exists private;
+
+create or replace function private.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+revoke all on function private.is_admin() from public;
+grant execute on function private.is_admin() to authenticated, anon;

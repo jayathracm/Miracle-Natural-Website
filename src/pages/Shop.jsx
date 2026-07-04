@@ -4,6 +4,8 @@ import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
 import { fetchProducts } from '../lib/products';
 import PRODUCT_IMAGES from '../data/productImages';
+import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 
@@ -33,6 +35,7 @@ const SHOP_CATEGORY_MAP = {
 const getShopCategory = (product) => SHOP_CATEGORY_MAP[product.category] || product.category;
 
 const ShopPage = () => {
+  const { user } = useAuth();
   const [productCatalog, setProductCatalog] = useState([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState(null);
@@ -312,9 +315,51 @@ const ShopPage = () => {
       `Order Date: ${new Date().toLocaleString()}`,
     ].join('\n');
 
-    try {
-      setIsSendingOrder(true);
+    setIsSendingOrder(true);
 
+    // Save the order to the database first — this is the source of truth
+    // for the admin dashboard and the customer's order history. The email
+    // below is just a staff notification and is best-effort on top of it.
+    const { data: orderRow, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: user?.id ?? null,
+        customer_name: customerName.trim(),
+        customer_email: customerEmail.trim(),
+        customer_phone: customerPhone.trim(),
+        payment_method: paymentMethod,
+        delivery_zone: deliveryZone,
+        delivery_address: deliveryAddress.trim(),
+        subtotal: totalAmount,
+        shipping_cost: shippingCost,
+        grand_total: grandTotal,
+        notes: customerNotes.trim() || null,
+      })
+      .select('id')
+      .single();
+
+    if (orderError || !orderRow) {
+      pushToast('error', 'Could not save your order. Please try again.');
+      setIsSendingOrder(false);
+      return;
+    }
+
+    const { error: itemsError } = await supabase.from('order_items').insert(
+      cartItems.map((item) => ({
+        order_id: orderRow.id,
+        product_id: item.id,
+        product_name: item.name,
+        quantity: item.quantity,
+        unit_price: item.price,
+        line_total: item.lineTotal,
+      }))
+    );
+
+    if (itemsError) {
+      pushToast('error', 'Order saved, but item details failed to record. Our team will follow up with you directly.');
+    }
+
+    try {
       const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(ORDER_EMAIL)}`, {
         method: 'POST',
         headers: {
@@ -345,22 +390,22 @@ const ShopPage = () => {
       if (!response.ok || result?.success === 'false') {
         throw new Error(result?.message || 'Failed to send order email.');
       }
-
-      setShowOrderSuccessPopup(true);
-      pushToast('success', 'Order sent successfully.');
-      setCart({});
-      setCustomerName('');
-      setCustomerPhone('');
-      setCustomerEmail('');
-      setCustomerNotes('');
-      setPaymentMethod('cash_on_delivery');
-      setDeliveryZone('');
-      setDeliveryAddress('');
     } catch {
-      pushToast('error', 'Could not send automatically. Please try again or use WhatsApp ordering.');
-    } finally {
-      setIsSendingOrder(false);
+      // Non-fatal: the order is already saved in the database and will show
+      // up for admins regardless of whether this notification email went out.
     }
+
+    setShowOrderSuccessPopup(true);
+    pushToast('success', 'Order placed successfully.');
+    setCart({});
+    setCustomerName('');
+    setCustomerPhone('');
+    setCustomerEmail('');
+    setCustomerNotes('');
+    setPaymentMethod('cash_on_delivery');
+    setDeliveryZone('');
+    setDeliveryAddress('');
+    setIsSendingOrder(false);
   };
 
   return (
