@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CheckCircle2, Heart, Mail, Minus, Plus, ShoppingCart, Sparkles, Trash2, X } from 'lucide-react';
 import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
@@ -8,6 +9,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import DELIVERY_ZONES from '../data/deliveryZones';
 import { addToWishlist, fetchWishlistProductIds, removeFromWishlist } from '../lib/wishlist';
+import { fetchAddresses } from '../lib/addresses';
 
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 
@@ -52,6 +54,8 @@ const ShopPage = () => {
   const [priceFilter, setPriceFilter] = useState('all');
   const [sortOption, setSortOption] = useState('featured');
   const [wishlistIds, setWishlistIds] = useState(() => new Set());
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('manual');
 
   // Wishlist requires an account — load it when someone's signed in, clear
   // it on sign-out rather than leaving stale heart icons filled in.
@@ -75,6 +79,50 @@ const ShopPage = () => {
       isMounted = false;
     };
   }, [user]);
+
+  // Prefill checkout from the signed-in user's saved addresses (managed at
+  // /account?tab=addresses). Auto-fills from their default address if they
+  // have one; the zone/address fields below stay freely editable either way
+  // — the picker is just a convenience fill, not a lock.
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!user) {
+      setSavedAddresses([]);
+      setSelectedAddressId('manual');
+      return undefined;
+    }
+
+    fetchAddresses()
+      .then((addresses) => {
+        if (!isMounted) return;
+        setSavedAddresses(addresses);
+        const defaultAddress = addresses.find((address) => address.is_default);
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress.id);
+          setDeliveryZone(defaultAddress.delivery_zone);
+          setDeliveryAddress(defaultAddress.address_text);
+        }
+      })
+      .catch(() => {
+        // Non-fatal — checkout still works with manual entry.
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  const handleSelectSavedAddress = (addressId) => {
+    setSelectedAddressId(addressId);
+    if (addressId === 'manual') return;
+
+    const address = savedAddresses.find((item) => item.id === addressId);
+    if (address) {
+      setDeliveryZone(address.delivery_zone);
+      setDeliveryAddress(address.address_text);
+    }
+  };
 
   // Products now live in Supabase (see supabase/schema.sql + seed.sql).
   // Images stay bundled locally (see src/data/productImages.js) and are
@@ -759,9 +807,28 @@ const ShopPage = () => {
                   Online payment is unavailable right now. Only cash on delivery is possible, and sorry for any inconveniences caused.
                 </p>
               </div>
+
+              {user && savedAddresses.length > 0 && (
+                <select
+                  value={selectedAddressId}
+                  onChange={(e) => handleSelectSavedAddress(e.target.value)}
+                  className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="manual">Enter a different address</option>
+                  {savedAddresses.map((address) => (
+                    <option key={address.id} value={address.id}>
+                      {address.label} — {DELIVERY_ZONES[address.delivery_zone]?.label || address.delivery_zone}
+                    </option>
+                  ))}
+                </select>
+              )}
+
               <select
                 value={deliveryZone}
-                onChange={(e) => setDeliveryZone(e.target.value)}
+                onChange={(e) => {
+                  setDeliveryZone(e.target.value);
+                  setSelectedAddressId('manual');
+                }}
                 className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Select Delivery Zone</option>
@@ -771,10 +838,18 @@ const ShopPage = () => {
               <textarea
                 placeholder="Delivery Address"
                 value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
+                onChange={(e) => {
+                  setDeliveryAddress(e.target.value);
+                  setSelectedAddressId('manual');
+                }}
                 rows={3}
                 className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none"
               />
+              {user && (
+                <Link to="/account?tab=addresses" className="inline-block text-[0.74rem] font-semibold text-primary underline underline-offset-2">
+                  Manage saved addresses
+                </Link>
+              )}
               <textarea
                 placeholder="Notes (optional)"
                 value={customerNotes}

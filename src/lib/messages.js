@@ -39,3 +39,28 @@ export async function fetchMyMessages() {
 
   return data || [];
 }
+
+/**
+ * Same query as fetchMyMessages, named separately for the admin inbox call
+ * site: the "Admins can view all messages" RLS policy means an admin's
+ * session sees every customer's messages here, not just their own.
+ */
+export async function fetchAllMessages() {
+  const { data, error } = await supabase
+    .from('contact_messages')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
+export async function updateMessageStatus(id, status) {
+  const { error } = await supabase.from('contact_messages').update({ status }).eq('id', id);
+  if (error) {
+    throw error;
+  }
+}

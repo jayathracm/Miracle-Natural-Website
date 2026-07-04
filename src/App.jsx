@@ -15,6 +15,7 @@ import {
 import MainLayout from './components/layout/MainLayout';
 import { Landing, About, Pricing, Shop, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminMessages from './pages/admin/AdminMessages';
 import RequireAdmin from './components/RequireAdmin';
 import { useSEO } from './hooks/useSEO';
 import { AuthProvider } from './context/AuthContext';
@@ -86,6 +87,15 @@ const App = () => {
                     element={(
                       <RequireAdmin>
                         <AdminOrders />
+                      </RequireAdmin>
+                    )}
+                  />
+
+                  <Route
+                    path="/admin/messages"
+                    element={(
+                      <RequireAdmin>
+                        <AdminMessages />
                       </RequireAdmin>
                     )}
                   />
