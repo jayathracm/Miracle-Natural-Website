@@ -64,7 +64,35 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 -- ----------------------------------------------------------------------------
--- 2. PRODUCTS
+-- 2. ADMIN HELPER
+-- private.is_admin() lives outside the `public` schema on purpose: it's used
+-- inside RLS policies throughout this file, but must NOT be directly
+-- callable via the PostgREST API (Supabase auto-exposes any function with
+-- EXECUTE granted in an exposed schema as /rest/v1/rpc/<name>). Keeping it
+-- in `private` (not an exposed schema) avoids that while still working fine
+-- inside policies. Defined early, right after profiles, since every table
+-- below this point references it in an admin policy.
+-- ----------------------------------------------------------------------------
+create schema if not exists private;
+
+create or replace function private.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+revoke all on function private.is_admin() from public;
+grant execute on function private.is_admin() to authenticated, anon;
+
+-- ----------------------------------------------------------------------------
+-- 3. PRODUCTS
 -- Mirrors src/data/productCatalog.js. `id` uses the same slugs already used
 -- in the frontend so the two can be matched up later.
 -- ----------------------------------------------------------------------------
@@ -90,8 +118,27 @@ create policy "Anyone can view active products"
   on public.products for select
   using (is_active = true);
 
+-- Admins manage the full catalog, including deactivated products the policy
+-- above hides from everyone else. No delete policy on purpose — the admin
+-- UI only supports create/edit/deactivate, to avoid orphaning
+-- order_items/wishlist_items rows that reference a product id.
+drop policy if exists "Admins can view all products" on public.products;
+create policy "Admins can view all products"
+  on public.products for select
+  using (private.is_admin());
+
+drop policy if exists "Admins can insert products" on public.products;
+create policy "Admins can insert products"
+  on public.products for insert
+  with check (private.is_admin());
+
+drop policy if exists "Admins can update products" on public.products;
+create policy "Admins can update products"
+  on public.products for update
+  using (private.is_admin());
+
 -- ----------------------------------------------------------------------------
--- 3. ORDERS
+-- 4. ORDERS
 -- user_id is nullable so guest checkout (no account) keeps working exactly
 -- like the current email-based Shop checkout.
 -- ----------------------------------------------------------------------------
@@ -135,7 +182,7 @@ create policy "Admins can update orders"
   using (private.is_admin());
 
 -- ----------------------------------------------------------------------------
--- 4. ORDER ITEMS
+-- 5. ORDER ITEMS
 -- product_name/unit_price are captured at order time (denormalized) so an
 -- order's history stays accurate even if a product's price changes later.
 -- ----------------------------------------------------------------------------
@@ -171,32 +218,6 @@ drop policy if exists "Admins can view all order items" on public.order_items;
 create policy "Admins can view all order items"
   on public.order_items for select
   using (private.is_admin());
-
--- ----------------------------------------------------------------------------
--- 5. ADMIN HELPER
--- private.is_admin() lives outside the `public` schema on purpose: it's used
--- inside RLS policies above, but must NOT be directly callable via the
--- PostgREST API (Supabase auto-exposes any function with EXECUTE granted in
--- an exposed schema as /rest/v1/rpc/<name>). Keeping it in `private` (not an
--- exposed schema) avoids that while still working fine inside policies.
--- ----------------------------------------------------------------------------
-create schema if not exists private;
-
-create or replace function private.is_admin()
-returns boolean
-language sql
-security definer
-set search_path = public
-stable
-as $$
-  select exists (
-    select 1 from public.profiles
-    where id = auth.uid() and role = 'admin'
-  );
-$$;
-
-revoke all on function private.is_admin() from public;
-grant execute on function private.is_admin() to authenticated, anon;
 
 -- ----------------------------------------------------------------------------
 -- 6. ADDRESSES

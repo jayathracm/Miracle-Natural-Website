@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Heart, Mail, Minus, Plus, ShoppingCart, Sparkles, Trash2, X } from 'lucide-react';
+import { CheckCircle2, Heart, ImageOff, Mail, Minus, Plus, ShoppingCart, Sparkles, Trash2, X } from 'lucide-react';
 import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
 import { fetchProducts } from '../lib/products';
@@ -133,9 +133,13 @@ const ShopPage = () => {
     fetchProducts()
       .then((rows) => {
         if (!isMounted) return;
+        // Bundled local image takes priority (Vite needs statically
+        // analyzable imports, see productImages.js). Products added through
+        // /admin/products won't have one yet — image_url is the fallback
+        // for those until a real upload pipeline exists.
         const withImages = rows.map((product) => ({
           ...product,
-          image: PRODUCT_IMAGES[product.id],
+          image: PRODUCT_IMAGES[product.id] || product.image_url || null,
         }));
         setProductCatalog(withImages);
       })
@@ -641,12 +645,18 @@ const ShopPage = () => {
                             }}
                           >
                             <div className="relative aspect-[4/5] bg-[rgba(255,251,243,0.9)] overflow-hidden">
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
-                                loading="lazy"
-                              />
+                              {product.image ? (
+                                <img
+                                  src={product.image}
+                                  alt={product.name}
+                                  className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center text-text-tertiary">
+                                  <ImageOff size={28} />
+                                </div>
+                              )}
                               <button
                                 type="button"
                                 onClick={(event) => {
@@ -1023,11 +1033,17 @@ const ShopPage = () => {
 
             <div className="grid grid-cols-1 items-start md:grid-cols-[0.96fr_1.04fr] gap-5 px-5 py-5 sm:px-7 sm:py-7">
               <div className="self-start rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(165deg,rgba(255,255,255,0.92),rgba(251,247,238,0.8))] p-4 shadow-[0_14px_28px_rgba(31,44,35,0.08)]">
-                <img
-                  src={selectedProduct.image}
-                  alt={selectedProduct.name}
-                  className="block w-full h-auto rounded-xl"
-                />
+                {selectedProduct.image ? (
+                  <img
+                    src={selectedProduct.image}
+                    alt={selectedProduct.name}
+                    className="block w-full h-auto rounded-xl"
+                  />
+                ) : (
+                  <div className="aspect-square w-full flex items-center justify-center text-text-tertiary">
+                    <ImageOff size={40} />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingBag } from 'lucide-react';
+import { Heart, ImageOff, ShoppingBag } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
 import { fetchWishlist, removeFromWishlist } from '../../lib/wishlist';
@@ -71,18 +71,23 @@ const WishlistSection = () => {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {items.map((item) => {
         const product = item.products;
+        const image = PRODUCT_IMAGES[product.id] || product.image_url || null;
         return (
           <div
             key={item.id}
             className="rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] shadow-[0_10px_24px_rgba(31,44,35,0.06)] overflow-hidden flex flex-col"
           >
-            <div className="aspect-[4/3] bg-[rgba(255,251,243,0.9)] overflow-hidden">
-              <img
-                src={PRODUCT_IMAGES[product.id]}
-                alt={product.name}
-                className="h-full w-full object-cover object-center"
-                loading="lazy"
-              />
+            <div className="aspect-[4/3] bg-[rgba(255,251,243,0.9)] overflow-hidden flex items-center justify-center">
+              {image ? (
+                <img
+                  src={image}
+                  alt={product.name}
+                  className="h-full w-full object-cover object-center"
+                  loading="lazy"
+                />
+              ) : (
+                <ImageOff size={24} className="text-text-tertiary" />
+              )}
             </div>
             <div className="p-4 flex flex-col flex-1">
               <p className="text-[0.66rem] font-bold tracking-[0.14em] uppercase text-accent mb-1">{product.category}</p>
