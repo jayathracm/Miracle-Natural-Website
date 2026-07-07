@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 const NAV_SECTIONS = [
   { href: '#hero', label: 'Home', id: 'hero' },
   { href: '#product', label: 'Collections', id: 'product' },
+  { to: '/ritual-builder', label: 'Ritual Builder', type: 'route' },
   { href: '#testimonials', label: 'Reviews', id: 'testimonials' },
   { to: '/about', label: 'About Us', type: 'route' },
 ];
