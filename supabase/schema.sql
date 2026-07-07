@@ -310,3 +310,258 @@ drop policy if exists "Admins can update messages" on public.contact_messages;
 create policy "Admins can update messages"
   on public.contact_messages for update
   using (private.is_admin());
+
+-- ----------------------------------------------------------------------------
+-- 9. INVENTORY (basic, single-pool)
+-- Per the Decisions Log: a single stock-count field per product, with a
+-- per-product low-stock threshold (not a single global number). Separate
+-- retail/wholesale/raw-material pools stay a [Stretch] item.
+-- ----------------------------------------------------------------------------
+alter table public.products
+  add column if not exists stock_count integer not null default 0 check (stock_count >= 0),
+  add column if not exists low_stock_threshold integer not null default 10 check (low_stock_threshold >= 0);
+
+-- ----------------------------------------------------------------------------
+-- 10. BUNDLES + BUNDLE_ITEMS
+-- Productionizes the bundle cards currently hardcoded in PricingSection.jsx.
+-- bundle_items links a bundle to real product rows (with quantities).
+-- ----------------------------------------------------------------------------
+create table if not exists public.bundles (
+  id text primary key,
+  name text not null,
+  description text,
+  price numeric(10, 2) not null,
+  points text[] not null default '{}',
+  is_featured boolean not null default false,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.bundles enable row level security;
+
+drop policy if exists "Anyone can view active bundles" on public.bundles;
+create policy "Anyone can view active bundles"
+  on public.bundles for select
+  using (is_active = true);
+
+drop policy if exists "Admins can view all bundles" on public.bundles;
+create policy "Admins can view all bundles"
+  on public.bundles for select
+  using (private.is_admin());
+
+drop policy if exists "Admins can insert bundles" on public.bundles;
+create policy "Admins can insert bundles"
+  on public.bundles for insert
+  with check (private.is_admin());
+
+drop policy if exists "Admins can update bundles" on public.bundles;
+create policy "Admins can update bundles"
+  on public.bundles for update
+  using (private.is_admin());
+
+create table if not exists public.bundle_items (
+  id uuid primary key default gen_random_uuid(),
+  bundle_id text not null references public.bundles (id) on delete cascade,
+  product_id text not null references public.products (id),
+  quantity integer not null default 1 check (quantity > 0),
+  unique (bundle_id, product_id)
+);
+
+alter table public.bundle_items enable row level security;
+
+drop policy if exists "Anyone can view items of active bundles" on public.bundle_items;
+create policy "Anyone can view items of active bundles"
+  on public.bundle_items for select
+  using (
+    exists (
+      select 1 from public.bundles
+      where bundles.id = bundle_items.bundle_id
+      and bundles.is_active = true
+    )
+  );
+
+drop policy if exists "Admins can view all bundle items" on public.bundle_items;
+create policy "Admins can view all bundle items"
+  on public.bundle_items for select
+  using (private.is_admin());
+
+drop policy if exists "Admins can insert bundle items" on public.bundle_items;
+create policy "Admins can insert bundle items"
+  on public.bundle_items for insert
+  with check (private.is_admin());
+
+drop policy if exists "Admins can update bundle items" on public.bundle_items;
+create policy "Admins can update bundle items"
+  on public.bundle_items for update
+  using (private.is_admin());
+
+drop policy if exists "Admins can delete bundle items" on public.bundle_items;
+create policy "Admins can delete bundle items"
+  on public.bundle_items for delete
+  using (private.is_admin());
+
+-- ----------------------------------------------------------------------------
+-- 11. QUOTATIONS + QUOTATION_ITEMS
+-- Corporate Partners request a formal quote for a custom product list
+-- rather than placing an order outright (§2.4). Status flow: requested ->
+-- quoted -> accepted/declined.
+-- ----------------------------------------------------------------------------
+create table if not exists public.quotations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  status text not null default 'requested' check (status in ('requested', 'quoted', 'accepted', 'declined')),
+  customer_notes text,
+  admin_notes text,
+  quoted_total numeric(10, 2),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.quotations enable row level security;
+
+drop policy if exists "Corporate partners can request quotations" on public.quotations;
+create policy "Corporate partners can request quotations"
+  on public.quotations for insert
+  with check (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.role in ('corporate_partner', 'admin')
+    )
+  );
+
+drop policy if exists "Users can view their own quotations" on public.quotations;
+create policy "Users can view their own quotations"
+  on public.quotations for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Admins can view all quotations" on public.quotations;
+create policy "Admins can view all quotations"
+  on public.quotations for select
+  using (private.is_admin());
+
+drop policy if exists "Admins can update quotations" on public.quotations;
+create policy "Admins can update quotations"
+  on public.quotations for update
+  using (private.is_admin())
+  with check (private.is_admin());
+
+create table if not exists public.quotation_items (
+  id uuid primary key default gen_random_uuid(),
+  quotation_id uuid not null references public.quotations (id) on delete cascade,
+  product_id text references public.products (id) on delete set null,
+  product_name text not null,
+  quantity integer not null check (quantity > 0),
+  quoted_unit_price numeric(10, 2),
+  quoted_line_total numeric(10, 2)
+);
+
+alter table public.quotation_items enable row level security;
+
+drop policy if exists "Owners can add items to their own quotation" on public.quotation_items;
+create policy "Owners can add items to their own quotation"
+  on public.quotation_items for insert
+  with check (
+    exists (
+      select 1 from public.quotations
+      where quotations.id = quotation_items.quotation_id
+      and quotations.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Owners can view items of their own quotation" on public.quotation_items;
+create policy "Owners can view items of their own quotation"
+  on public.quotation_items for select
+  using (
+    exists (
+      select 1 from public.quotations
+      where quotations.id = quotation_items.quotation_id
+      and quotations.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Admins can view all quotation items" on public.quotation_items;
+create policy "Admins can view all quotation items"
+  on public.quotation_items for select
+  using (private.is_admin());
+
+drop policy if exists "Admins can update quotation items" on public.quotation_items;
+create policy "Admins can update quotation items"
+  on public.quotation_items for update
+  using (private.is_admin())
+  with check (private.is_admin());
+
+-- ----------------------------------------------------------------------------
+-- 12. AI_CONVERSATIONS + AI_MESSAGES
+-- History storage for the future AI Customer Support Chatbot (§4.2) — the
+-- Ritual Builder doesn't use this, it's deliberately single-shot/stateless.
+-- No client-facing RLS policies on purpose: only the chatbot's Edge
+-- Function (via the service-role key, which bypasses RLS) reads/writes
+-- these — the frontend never talks to them directly. RLS stays enabled so
+-- they fail closed if that assumption ever changes. An admin read policy is
+-- included so a future "review chat logs" screen needs no new migration.
+-- ----------------------------------------------------------------------------
+create table if not exists public.ai_conversations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users (id) on delete set null,
+  session_id text,
+  started_at timestamptz not null default now(),
+  last_message_at timestamptz not null default now()
+);
+
+alter table public.ai_conversations enable row level security;
+
+drop policy if exists "Admins can view all ai conversations" on public.ai_conversations;
+create policy "Admins can view all ai conversations"
+  on public.ai_conversations for select
+  using (private.is_admin());
+
+create table if not exists public.ai_messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.ai_conversations (id) on delete cascade,
+  role text not null check (role in ('user', 'assistant')),
+  content text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.ai_messages enable row level security;
+
+drop policy if exists "Admins can view all ai messages" on public.ai_messages;
+create policy "Admins can view all ai messages"
+  on public.ai_messages for select
+  using (private.is_admin());
+
+-- ----------------------------------------------------------------------------
+-- 13. ANALYTICS_EVENTS
+-- Lightweight behavioral event log — write-only from the frontend,
+-- admin-only to read. Basic Analytics (§3.5) is computed directly from
+-- orders/order_items and does not depend on this table; this feeds richer
+-- signal (funnel drop-off, product-view interest) into the AI Business
+-- Analytics Assistant (§4.3) later. No tracking calls are wired into the
+-- frontend yet.
+-- ----------------------------------------------------------------------------
+create table if not exists public.analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  event_type text not null,
+  user_id uuid references auth.users (id) on delete set null,
+  session_id text,
+  product_id text references public.products (id) on delete set null,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.analytics_events enable row level security;
+
+drop policy if exists "Anyone can log an analytics event" on public.analytics_events;
+create policy "Anyone can log an analytics event"
+  on public.analytics_events for insert
+  with check (true);
+
+drop policy if exists "Admins can view analytics events" on public.analytics_events;
+create policy "Admins can view analytics events"
+  on public.analytics_events for select
+  using (private.is_admin());
+
+create index if not exists analytics_events_created_at_idx on public.analytics_events (created_at desc);
+create index if not exists analytics_events_event_type_idx on public.analytics_events (event_type);

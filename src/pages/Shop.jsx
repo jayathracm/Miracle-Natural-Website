@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>, <motion.article>)
+// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion } from 'framer-motion';
-import { CheckCircle2, Heart, ImageOff, Mail, Minus, Plus, ShoppingCart, Sparkles, Trash2, X } from 'lucide-react';
+import { CheckCircle2, Sparkles, X } from 'lucide-react';
 import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Textarea } from '../components/ui/Textarea';
-import { TiltCard } from '../components/ui/TiltCard';
 import { ProductGridSkeleton, Skeleton } from '../components/ui/Skeleton';
+import { ProductCard } from '../components/shop/ProductCard';
+import { ProductDetailModal } from '../components/shop/ProductDetailModal';
+import { ShopCart } from '../components/shop/ShopCart';
 import { fetchProducts } from '../lib/products';
 import PRODUCT_IMAGES from '../data/productImages';
 import { supabase } from '../lib/supabaseClient';
@@ -16,27 +15,12 @@ import { useAuth } from '../context/AuthContext';
 import DELIVERY_ZONES from '../data/deliveryZones';
 import { addToWishlist, fetchWishlistProductIds, removeFromWishlist } from '../lib/wishlist';
 import { fetchAddresses } from '../lib/addresses';
-
-// Parent/child variants for a staggered grid reveal — children fade+rise in
-// sequence instead of all animating independently at once.
-const gridRevealVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.07 } },
-};
-
-const gridItemVariants = {
-  hidden: { opacity: 0, y: 22 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
-};
+import { staggerContainer } from '../lib/motionVariants';
 
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
+const CART_STORAGE_KEY = 'miracleNatural.cart';
 
 const formatCurrency = (amount) => `LKR ${amount.toLocaleString('en-LK')}`;
-
-const PAYMENT_METHODS = {
-  cash_on_delivery: 'Cash on Delivery',
-  online_payment: 'Online Payment',
-};
 
 const SHOP_CATEGORY_ORDER = ['Face Care', 'Body Care', 'Hair Care', 'Lip Care'];
 
@@ -51,17 +35,27 @@ const SHOP_CATEGORY_MAP = {
 
 const getShopCategory = (product) => SHOP_CATEGORY_MAP[product.category] || product.category;
 
+// Cart persists across reloads via localStorage — nothing modern-ecommerce
+// feels worse than an accidental refresh wiping out a cart.
+const readStoredCart = () => {
+  try {
+    const raw = window.localStorage.getItem(CART_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
 const ShopPage = () => {
   const { user } = useAuth();
   const [productCatalog, setProductCatalog] = useState([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState(null);
-  const [cart, setCart] = useState({});
+  const [cart, setCart] = useState(readStoredCart);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
   const [deliveryZone, setDeliveryZone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -75,8 +69,14 @@ const ShopPage = () => {
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('manual');
 
-  // Wishlist requires an account — load it when someone's signed in, clear
-  // it on sign-out rather than leaving stale heart icons filled in.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    } catch {
+      // Non-fatal — cart just won't survive a refresh this session.
+    }
+  }, [cart]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -98,10 +98,6 @@ const ShopPage = () => {
     };
   }, [user]);
 
-  // Prefill checkout from the signed-in user's saved addresses (managed at
-  // /account?tab=addresses). Auto-fills from their default address if they
-  // have one; the zone/address fields below stay freely editable either way
-  // — the picker is just a convenience fill, not a lock.
   useEffect(() => {
     let isMounted = true;
 
@@ -142,19 +138,12 @@ const ShopPage = () => {
     }
   };
 
-  // Products now live in Supabase (see supabase/schema.sql + seed.sql).
-  // Images stay bundled locally (see src/data/productImages.js) and are
-  // merged in here by product id.
   useEffect(() => {
     let isMounted = true;
 
     fetchProducts()
       .then((rows) => {
         if (!isMounted) return;
-        // Bundled local image takes priority (Vite needs statically
-        // analyzable imports, see productImages.js). Products added through
-        // /admin/products won't have one yet — image_url is the fallback
-        // for those until a real upload pipeline exists.
         const withImages = rows.map((product) => ({
           ...product,
           image: PRODUCT_IMAGES[product.id] || product.image_url || null,
@@ -207,8 +196,6 @@ const ShopPage = () => {
     if (!deliveryZone) return '';
     return DELIVERY_ZONES[deliveryZone]?.label || '';
   }, [deliveryZone]);
-
-  const paymentMethodLabel = useMemo(() => PAYMENT_METHODS[paymentMethod] || PAYMENT_METHODS.cash_on_delivery, [paymentMethod]);
 
   const grandTotal = useMemo(() => totalAmount + shippingCost, [totalAmount, shippingCost]);
 
@@ -274,29 +261,6 @@ const ShopPage = () => {
     return categoryAndPriceFiltered;
   }, [categoryFilter, priceFilter, sortOption, productCatalog]);
 
-  const groupedProducts = useMemo(() => {
-    const groups = SHOP_CATEGORY_ORDER.reduce((acc, category) => {
-      acc[category] = [];
-      return acc;
-    }, {});
-
-    filteredProducts.forEach((product) => {
-      const normalizedCategory = getShopCategory(product);
-      if (!groups[normalizedCategory]) {
-        groups[normalizedCategory] = [];
-      }
-      groups[normalizedCategory].push(product);
-    });
-
-    if (categoryFilter !== 'all') {
-      return [[categoryFilter, groups[categoryFilter] || []]];
-    }
-
-    return SHOP_CATEGORY_ORDER
-      .map((category) => [category, groups[category] || []])
-      .filter(([, products]) => products.length > 0);
-  }, [filteredProducts, categoryFilter]);
-
   const addToCart = (productId) => {
     setCart((prev) => ({
       ...prev,
@@ -318,8 +282,6 @@ const ShopPage = () => {
     });
   };
 
-  const clearCart = () => setCart({});
-
   const removeToast = (id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
@@ -340,9 +302,6 @@ const ShopPage = () => {
 
     const isWishlisted = wishlistIds.has(productId);
 
-    // Optimistic update — the DB call below can fail, in which case we
-    // revert instead of leaving the heart icon in a state that lies about
-    // what's actually saved.
     setWishlistIds((prev) => {
       const next = new Set(prev);
       if (isWishlisted) {
@@ -372,19 +331,6 @@ const ShopPage = () => {
       pushToast('error', 'Could not update your wishlist. Please try again.');
     }
   };
-
-  useEffect(() => {
-    if (!selectedProduct) return undefined;
-
-    const handleEsc = (event) => {
-      if (event.key === 'Escape') {
-        setSelectedProduct(null);
-      }
-    };
-
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [selectedProduct]);
 
   const handleEmailOrder = async () => {
     if (cartItems.length === 0) {
@@ -435,7 +381,7 @@ const ShopPage = () => {
       `Name: ${customerName || 'Not provided'}`,
       `Phone: ${customerPhone || 'Not provided'}`,
       `Email: ${customerEmail}`,
-      `Payment Method: ${paymentMethodLabel}`,
+      `Payment Method: Cash on Delivery`,
       `Delivery Zone: ${deliveryZoneLabel}`,
       `Delivery Address: ${deliveryAddress}`,
       `Notes: ${customerNotes || 'None'}`,
@@ -449,9 +395,6 @@ const ShopPage = () => {
 
     setIsSendingOrder(true);
 
-    // Save the order to the database first — this is the source of truth
-    // for the admin dashboard and the customer's order history. The email
-    // below is just a staff notification and is best-effort on top of it.
     const { data: orderRow, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -459,7 +402,7 @@ const ShopPage = () => {
         customer_name: customerName.trim(),
         customer_email: customerEmail.trim(),
         customer_phone: customerPhone.trim(),
-        payment_method: paymentMethod,
+        payment_method: 'cash_on_delivery',
         delivery_zone: deliveryZone,
         delivery_address: deliveryAddress.trim(),
         subtotal: totalAmount,
@@ -505,7 +448,7 @@ const ShopPage = () => {
           name: customerName || 'Website Customer',
           phone: customerPhone || 'Not provided',
           customer_email: customerEmail.trim(),
-          payment_method: paymentMethodLabel,
+          payment_method: 'Cash on Delivery',
           delivery_zone: deliveryZoneLabel,
           delivery_address: deliveryAddress,
           notes: customerNotes || 'None',
@@ -534,28 +477,52 @@ const ShopPage = () => {
     setCustomerPhone('');
     setCustomerEmail('');
     setCustomerNotes('');
-    setPaymentMethod('cash_on_delivery');
     setDeliveryZone('');
     setDeliveryAddress('');
     setIsSendingOrder(false);
   };
 
+  const cartProps = {
+    cartItems,
+    totalItems,
+    subtotal: totalAmount,
+    shippingCost,
+    deliveryZoneLabel,
+    grandTotal,
+    onChangeQuantity: changeQuantity,
+    user,
+    customerName,
+    setCustomerName,
+    customerPhone,
+    setCustomerPhone,
+    customerEmail,
+    setCustomerEmail,
+    customerNotes,
+    setCustomerNotes,
+    deliveryZone,
+    setDeliveryZone,
+    deliveryAddress,
+    setDeliveryAddress,
+    savedAddresses,
+    selectedAddressId,
+    onSelectSavedAddress: handleSelectSavedAddress,
+    isSendingOrder,
+    onSubmitOrder: handleEmailOrder,
+  };
+
   return (
-    <div className="pt-30 sm:pt-32 md:pt-34 pb-14 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8">
+    <div className="pt-28 sm:pt-30 md:pt-32 pb-14 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-[1320px] mx-auto">
-        <div className="mb-8 sm:mb-10 md:mb-12 rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(120deg,rgba(255,251,242,0.95),rgba(247,241,227,0.86))] px-5 py-6 sm:px-7 sm:py-8 md:px-10 md:py-9 shadow-[0_20px_42px_rgba(31,44,35,0.08)]">
-          <Typography variant="label" className="mb-3 block">Shop All Products</Typography>
-          <Typography variant="h2" className="mb-4 text-foreground text-balance">
-            Build your cart and order directly by email
-          </Typography>
-          <Typography variant="p" className="max-w-3xl">
-            Browse the full Miracle Natural collection, add products to your cart, and send your order list directly by email.
-          </Typography>
-          <div className="mt-5 flex flex-wrap items-center gap-2.5">
-            <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/70 px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">{productCatalog.length} Products</span>
-            <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/70 px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">Fast Email Checkout</span>
-            <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/70 px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">Secure Direct Ordering</span>
+        <div className="mb-6 sm:mb-8 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <Typography variant="label" className="mb-2 block">Shop</Typography>
+            <Typography variant="h2" className="text-foreground">All Products</Typography>
           </div>
+          {!isLoadingProducts && !productsError && (
+            <p className="text-[0.82rem] text-muted-foreground">
+              Showing {filteredProducts.length} of {productCatalog.length} products
+            </p>
+          )}
         </div>
 
         {productsError ? (
@@ -563,31 +530,20 @@ const ShopPage = () => {
             {productsError}
           </div>
         ) : isLoadingProducts ? (
-          <div className="grid grid-cols-1 lg:grid-cols-[1.65fr_0.95fr] gap-8 lg:gap-10">
-            <section>
-              <div className="mb-5 rounded-2xl border border-[var(--color-card-border)] bg-white/60 p-4 sm:p-5">
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <ProductGridSkeleton count={6} />
-            </section>
-            <aside className="rounded-2xl border border-[var(--color-card-border)] bg-white/60 p-5 space-y-3">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </aside>
-          </div>
-        ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[1.65fr_0.95fr] gap-8 lg:gap-10">
           <section>
-            <div className="mb-5 rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(140deg,rgba(255,252,245,0.94),rgba(248,243,231,0.9))] p-4 sm:p-5 shadow-[0_12px_26px_rgba(31,44,35,0.08)]">
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div className="mb-5">
+              <Skeleton className="h-11 w-full" />
+            </div>
+            <ProductGridSkeleton count={10} />
+          </section>
+        ) : (
+          <>
+            <section>
+              <div className="mb-5 flex flex-wrap items-center gap-2.5">
                 <select
                   value={categoryFilter}
                   onChange={(event) => setCategoryFilter(event.target.value)}
-                  className="rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.86rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="rounded-lg border border-[var(--color-border-medium)] bg-white px-3 py-2 text-[0.84rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="all">All Categories</option>
                   {SHOP_CATEGORY_ORDER.map((category) => (
@@ -598,7 +554,7 @@ const ShopPage = () => {
                 <select
                   value={priceFilter}
                   onChange={(event) => setPriceFilter(event.target.value)}
-                  className="rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.86rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="rounded-lg border border-[var(--color-border-medium)] bg-white px-3 py-2 text-[0.84rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="all">All Prices</option>
                   <option value="under_500">Under LKR 500</option>
@@ -610,344 +566,65 @@ const ShopPage = () => {
                 <select
                   value={sortOption}
                   onChange={(event) => setSortOption(event.target.value)}
-                  className="rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.86rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="rounded-lg border border-[var(--color-border-medium)] bg-white px-3 py-2 text-[0.84rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="featured">Sort: Featured</option>
-                  <option value="price_low_to_high">Sort: Price Low to High</option>
-                  <option value="price_high_to_low">Sort: Price High to Low</option>
-                  <option value="name_a_to_z">Sort: Name A to Z</option>
-                  <option value="name_z_to_a">Sort: Name Z to A</option>
+                  <option value="price_low_to_high">Price: Low to High</option>
+                  <option value="price_high_to_low">Price: High to Low</option>
+                  <option value="name_a_to_z">Name: A to Z</option>
+                  <option value="name_z_to_a">Name: Z to A</option>
                 </select>
 
-                <Button
-                  variant="ghost"
-                  className="px-3 py-2.5 text-[0.76rem]"
-                  onClick={() => {
-                    setCategoryFilter('all');
-                    setPriceFilter('all');
-                    setSortOption('featured');
-                  }}
-                >
-                  Reset Filters
-                </Button>
-              </div>
-
-              <p className="mt-3 text-[0.8rem] font-semibold text-text-secondary">
-                Showing {filteredProducts.length} of {productCatalog.length} products
-              </p>
-            </div>
-
-            {groupedProducts.length === 0 ? (
-              <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-8 text-center text-[0.95rem] text-muted-foreground">
-                No products match your current filters.
-              </div>
-            ) : (
-              <div className="space-y-6 sm:space-y-7">
-                {groupedProducts.map(([category, products], sectionIndex) => (
-                  <section
-                    key={category}
-                    className="relative overflow-hidden rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(140deg,rgba(255,252,245,0.94),rgba(248,243,231,0.9))] p-4 sm:p-5 md:p-6 shadow-[0_14px_30px_rgba(31,44,35,0.08)]"
+                {(categoryFilter !== 'all' || priceFilter !== 'all' || sortOption !== 'featured') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCategoryFilter('all');
+                      setPriceFilter('all');
+                      setSortOption('featured');
+                    }}
+                    className="text-[0.78rem] font-semibold text-primary underline underline-offset-2"
                   >
-                    <div className={`pointer-events-none absolute inset-x-0 top-0 h-1 ${sectionIndex % 2 === 0 ? 'bg-[linear-gradient(90deg,rgba(79,113,84,0.86),rgba(79,113,84,0.26),transparent)]' : 'bg-[linear-gradient(90deg,rgba(184,111,67,0.82),rgba(184,111,67,0.24),transparent)]'}`} />
-
-                    <div className="mb-4 flex items-center justify-between gap-3 border-b border-[var(--color-border-light)] pb-3">
-                      <Typography variant="h4" className="text-foreground">{category}</Typography>
-                      <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/75 px-2.5 py-1 text-[0.66rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
-                        {products.length} Items
-                      </span>
-                    </div>
-
-                    <motion.div
-                      className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
-                      variants={gridRevealVariants}
-                      initial="hidden"
-                      whileInView="visible"
-                      viewport={{ once: true, margin: '-60px' }}
-                    >
-                      {products.map((product) => {
-                        const quantity = cart[product.id] || 0;
-
-                        return (
-                          <motion.div key={product.id} variants={gridItemVariants} className="h-full">
-                            <TiltCard
-                              as="article"
-                              className="group h-full rounded-2xl overflow-hidden border border-[var(--color-card-border)] bg-[var(--color-card-bg)] shadow-[0_12px_28px_rgba(31,44,35,0.08)] hover:shadow-[0_18px_36px_rgba(31,44,35,0.14)] flex flex-col cursor-pointer"
-                              onClick={() => setSelectedProduct(product)}
-                              role="button"
-                              tabIndex={0}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter' || event.key === ' ') {
-                                  event.preventDefault();
-                                  setSelectedProduct(product);
-                                }
-                              }}
-                            >
-                              <div className="relative aspect-[4/5] bg-[rgba(255,251,243,0.9)] overflow-hidden">
-                                {product.image ? (
-                                  <img
-                                    src={product.image}
-                                    alt={product.name}
-                                    className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <div className="h-full w-full flex items-center justify-center text-text-tertiary">
-                                    <ImageOff size={28} />
-                                  </div>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    toggleWishlist(product.id);
-                                  }}
-                                  aria-label={wishlistIds.has(product.id) ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
-                                  className={`absolute top-2.5 right-2.5 h-8 w-8 rounded-full border inline-flex items-center justify-center backdrop-blur-sm transition-colors ${wishlistIds.has(product.id) ? 'border-red-300 bg-white/90 text-red-600' : 'border-white/60 bg-white/70 text-foreground hover:text-red-600'}`}
-                                >
-                                  <Heart size={14} fill={wishlistIds.has(product.id) ? 'currentColor' : 'none'} />
-                                </button>
-                              </div>
-                              <div className="p-4 sm:p-5 flex flex-col flex-1">
-                                <p className="text-[0.68rem] font-bold tracking-[0.16em] uppercase text-accent mb-2">{getShopCategory(product)}</p>
-                                <Typography variant="h4" className="text-foreground mb-1 leading-snug">{product.name}</Typography>
-                                <Typography variant="small" className="block mb-3">{product.size}</Typography>
-
-                                <div className="mt-auto">
-                                  <div className="flex items-center justify-between mb-4 rounded-lg border border-[var(--color-border-light)] bg-white/65 px-3 py-2">
-                                    <p className="font-display text-[1.45rem] text-primary">{formatCurrency(product.price)}</p>
-                                    {quantity > 0 && (
-                                      <p className="text-[0.8rem] font-semibold text-foreground">In Cart: {quantity}</p>
-                                    )}
-                                  </div>
-
-                                  <div className="flex items-center gap-2">
-                                    <Button
-                                      className="flex-1 px-3 py-2 text-[0.74rem]"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        addToCart(product.id);
-                                      }}
-                                      icon={Plus}
-                                    >
-                                      Add To Cart
-                                    </Button>
-                                    {quantity > 0 && (
-                                      <Button
-                                        variant="ghost"
-                                        className="px-3 py-2 text-[0.74rem]"
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          changeQuantity(product.id, -1);
-                                        }}
-                                        aria-label={`Remove one ${product.name}`}
-                                      >
-                                        <Minus size={16} />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </TiltCard>
-                          </motion.div>
-                        );
-                      })}
-                    </motion.div>
-                  </section>
-                ))}
+                    Reset
+                  </button>
+                )}
               </div>
-            )}
-          </section>
 
-          <aside className="lg:sticky lg:top-24 lg:self-start h-fit rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(180deg,rgba(255,251,242,0.94),rgba(248,243,232,0.9))] p-5 sm:p-6 shadow-[0_18px_34px_rgba(31,44,35,0.12)] backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-4">
-              <Typography variant="h4" className="text-foreground">Your Cart</Typography>
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1">
-                <ShoppingCart size={14} className="text-primary" />
-                <span className="text-[0.75rem] font-semibold text-primary">{totalItems} items</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 mb-5 pr-1">
-              {cartItems.length === 0 ? (
-                <p className="text-[0.9rem] text-muted-foreground">No products added yet.</p>
+              {filteredProducts.length === 0 ? (
+                <div className="rounded-2xl border border-[var(--color-border-light)] bg-white px-5 py-10 text-center text-[0.95rem] text-muted-foreground">
+                  No products match your current filters.
+                </div>
               ) : (
-                cartItems.map((item) => (
-                  <div key={item.id} className="rounded-xl border border-[var(--color-border-light)] bg-white/75 p-3">
-                    <p className="text-[0.88rem] font-semibold text-foreground">{item.name}</p>
-                    <p className="text-[0.75rem] text-muted-foreground mb-2">{item.size}</p>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="inline-flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => changeQuantity(item.id, -1)}
-                          className="h-7 w-7 rounded-md border border-[var(--color-border-medium)] text-foreground inline-flex items-center justify-center"
-                          aria-label={`Decrease quantity for ${item.name}`}
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className="text-[0.82rem] font-semibold min-w-4 text-center">{item.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => changeQuantity(item.id, 1)}
-                          className="h-7 w-7 rounded-md border border-[var(--color-border-medium)] text-foreground inline-flex items-center justify-center"
-                          aria-label={`Increase quantity for ${item.name}`}
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                      <p className="text-[0.82rem] font-semibold text-primary">{formatCurrency(item.lineTotal)}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="space-y-3 mb-5">
-              <Input
-                type="text"
-                placeholder="Your Name"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-              />
-              <Input
-                type="text"
-                placeholder="Phone Number"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-              />
-              <Input
-                type="email"
-                placeholder="Your Email"
-                value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
-              />
-              <div className="rounded-xl border border-[var(--color-border-light)] bg-white/60 p-3">
-                <p className="mb-2 text-[0.7rem] font-bold tracking-[0.13em] uppercase text-text-secondary">Payment Method</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <label className={`rounded-lg border px-3 py-2.5 text-[0.86rem] font-semibold transition-colors ${paymentMethod === 'cash_on_delivery' ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-medium)] bg-white/90 text-foreground'}`}>
-                    <input
-                      type="radio"
-                      name="payment-method"
-                      value="cash_on_delivery"
-                      checked={paymentMethod === 'cash_on_delivery'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="sr-only"
-                    />
-                    Cash on Delivery
-                  </label>
-
-                  <label className="rounded-lg border border-[var(--color-border-medium)] bg-[rgba(226,232,240,0.55)] px-3 py-2.5 text-[0.86rem] font-semibold text-slate-500 cursor-not-allowed">
-                    <input
-                      type="radio"
-                      name="payment-method"
-                      value="online_payment"
-                      checked={paymentMethod === 'online_payment'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      disabled
-                      className="sr-only"
-                    />
-                    Online Payment
-                  </label>
-                </div>
-                <p className="mt-2 text-[0.77rem] leading-relaxed text-muted-foreground">
-                  Online payment is unavailable right now. Only cash on delivery is possible, and sorry for any inconveniences caused.
-                </p>
-              </div>
-
-              {user && savedAddresses.length > 0 && (
-                <select
-                  value={selectedAddressId}
-                  onChange={(e) => handleSelectSavedAddress(e.target.value)}
-                  className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                <motion.div
+                  key={`${categoryFilter}-${priceFilter}-${sortOption}`}
+                  className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-4"
+                  variants={staggerContainer(0.05)}
+                  initial="hidden"
+                  animate="visible"
                 >
-                  <option value="manual">Enter a different address</option>
-                  {savedAddresses.map((address) => (
-                    <option key={address.id} value={address.id}>
-                      {address.label} — {DELIVERY_ZONES[address.delivery_zone]?.label || address.delivery_zone}
-                    </option>
+                  {filteredProducts.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      category={getShopCategory(product)}
+                      quantity={cart[product.id] || 0}
+                      isWishlisted={wishlistIds.has(product.id)}
+                      onAddToCart={addToCart}
+                      onToggleWishlist={toggleWishlist}
+                      onOpenDetail={setSelectedProduct}
+                    />
                   ))}
-                </select>
+                </motion.div>
               )}
+            </section>
 
-              <select
-                value={deliveryZone}
-                onChange={(e) => {
-                  setDeliveryZone(e.target.value);
-                  setSelectedAddressId('manual');
-                }}
-                className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white/80 px-3 py-2.5 text-[0.9rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">Select Delivery Zone</option>
-                <option value="colombo_1_15">Colombo 1-15</option>
-                <option value="island_wide">Other Areas in Sri Lanka</option>
-              </select>
-              <Textarea
-                placeholder="Delivery Address"
-                value={deliveryAddress}
-                onChange={(e) => {
-                  setDeliveryAddress(e.target.value);
-                  setSelectedAddressId('manual');
-                }}
-                rows={3}
-              />
-              {user && (
-                <Link to="/account?tab=addresses" className="inline-block text-[0.74rem] font-semibold text-primary underline underline-offset-2">
-                  Manage saved addresses
-                </Link>
-              )}
-              <Textarea
-                placeholder="Notes (optional)"
-                value={customerNotes}
-                onChange={(e) => setCustomerNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <div className="rounded-xl border border-[var(--color-border-light)] bg-white/60 p-3 mb-4">
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <p className="text-[0.83rem] text-muted-foreground">Subtotal</p>
-                  <p className="text-[0.92rem] font-semibold text-foreground">{formatCurrency(totalAmount)}</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-[0.83rem] text-muted-foreground">Shipping</p>
-                  <p className="text-[0.92rem] font-semibold text-foreground">{deliveryZone ? formatCurrency(shippingCost) : 'Select zone'}</p>
-                </div>
-                <div className="h-px bg-[var(--color-border-light)] my-1.5" />
-                <div className="flex items-center justify-between">
-                  <p className="text-[0.85rem] text-muted-foreground">Grand Total</p>
-                  <p className="font-display text-[1.4rem] text-foreground">{formatCurrency(grandTotal)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
-              <Button
-                className="w-full px-4 py-2.5 text-[0.76rem]"
-                icon={Mail}
-                onClick={handleEmailOrder}
-                disabled={isSendingOrder}
-              >
-                {isSendingOrder ? 'Sending Order...' : 'Send Order Email'}
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full px-4 py-2.5 text-[0.76rem]"
-                icon={Trash2}
-                onClick={clearCart}
-                disabled={cartItems.length === 0}
-              >
-                Clear Cart
-              </Button>
-            </div>
-
-          </aside>
-        </div>
+            <ShopCart {...cartProps} />
+          </>
         )}
       </div>
 
       {toasts.length > 0 && (
-        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[110] flex w-[min(92vw,390px)] flex-col-reverse gap-2.5">
+        <div className="fixed bottom-20 right-4 sm:right-6 lg:bottom-24 z-[110] flex w-[min(92vw,390px)] flex-col-reverse gap-2.5">
           {toasts.map((toast) => (
             <div
               key={toast.id}
@@ -990,9 +667,6 @@ const ShopPage = () => {
             <div className="pointer-events-none absolute top-3 right-3 text-primary/55">
               <Sparkles size={18} />
             </div>
-            <div className="pointer-events-none absolute bottom-8 right-8 text-secondary/70">
-              <Sparkles size={14} />
-            </div>
 
             <div className="relative z-10">
               <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-primary/12 border border-primary/25 inline-flex items-center justify-center">
@@ -1021,100 +695,14 @@ const ShopPage = () => {
       )}
 
       {selectedProduct && (
-        <div
-          className="fixed inset-0 z-[80] bg-[rgba(17,24,20,0.55)] backdrop-blur-sm px-4 py-6 sm:px-6 sm:py-10 overflow-y-auto"
-          onClick={() => setSelectedProduct(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${selectedProduct.name} details`}
-        >
-          <div
-            className="mx-auto w-full max-w-4xl overflow-hidden rounded-3xl border border-[var(--color-card-border)] bg-[linear-gradient(160deg,rgba(255,253,248,0.98),rgba(249,244,233,0.97))] shadow-[0_34px_80px_rgba(8,14,10,0.34)]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="relative border-b border-[var(--color-card-border)] px-5 py-4 sm:px-7 sm:py-6">
-              <div className="absolute inset-x-0 top-0 h-1.5 bg-[linear-gradient(90deg,rgba(189,150,79,0.9),rgba(109,131,88,0.85),rgba(189,150,79,0.9))]" />
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[0.66rem] font-bold tracking-[0.18em] uppercase text-accent mb-2">{getShopCategory(selectedProduct)}</p>
-                  <Typography variant="h4" className="text-foreground text-balance">{selectedProduct.name}</Typography>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex rounded-full border border-[var(--color-border-light)] bg-white/80 px-2.5 py-1 text-[0.66rem] font-semibold tracking-[0.08em] uppercase text-text-secondary">
-                      {selectedProduct.size}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => toggleWishlist(selectedProduct.id)}
-                    aria-label={wishlistIds.has(selectedProduct.id) ? 'Remove from wishlist' : 'Add to wishlist'}
-                    className={`h-10 w-10 rounded-xl border inline-flex items-center justify-center transition-colors ${wishlistIds.has(selectedProduct.id) ? 'border-red-300 bg-white/90 text-red-600' : 'border-[var(--color-border-medium)] bg-white/85 text-foreground hover:text-red-600'}`}
-                  >
-                    <Heart size={16} fill={wishlistIds.has(selectedProduct.id) ? 'currentColor' : 'none'} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedProduct(null)}
-                    className="h-10 w-10 rounded-xl border border-[var(--color-border-medium)] bg-white/85 text-foreground inline-flex items-center justify-center transition-colors hover:bg-white"
-                    aria-label="Close product details"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 items-start md:grid-cols-[0.96fr_1.04fr] gap-5 px-5 py-5 sm:px-7 sm:py-7">
-              <div className="self-start rounded-2xl border border-[var(--color-card-border)] bg-[linear-gradient(165deg,rgba(255,255,255,0.92),rgba(251,247,238,0.8))] p-4 shadow-[0_14px_28px_rgba(31,44,35,0.08)]">
-                {selectedProduct.image ? (
-                  <img
-                    src={selectedProduct.image}
-                    alt={selectedProduct.name}
-                    className="block w-full h-auto rounded-xl"
-                  />
-                ) : (
-                  <div className="aspect-square w-full flex items-center justify-center text-text-tertiary">
-                    <ImageOff size={40} />
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <div className="rounded-2xl border border-[var(--color-border-light)] bg-white/75 px-4 py-3.5 shadow-[0_10px_24px_rgba(31,44,35,0.06)]">
-                  <p className="text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-text-secondary mb-1">Price</p>
-                  <p className="font-display text-[1.7rem] leading-none text-primary">{formatCurrency(selectedProduct.price)}</p>
-                </div>
-
-                <div className="rounded-2xl border border-[var(--color-border-light)] bg-white/65 px-4 py-3.5">
-                  <p className="text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-text-secondary mb-1.5">Overview</p>
-                  <p className="text-[0.92rem] leading-relaxed text-muted-foreground">{selectedProduct.description || 'Product details available in catalog.'}</p>
-                </div>
-
-                <div className="rounded-2xl border border-[var(--color-border-light)] bg-white/65 px-4 py-3.5">
-                  <p className="text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-text-secondary mb-1.5">Key Ingredients</p>
-                  <p className="text-[0.9rem] leading-relaxed text-muted-foreground">{selectedProduct.ingredients || 'Refer to product catalog for ingredient details.'}</p>
-                </div>
-
-                <div className="rounded-2xl border border-[var(--color-border-light)] bg-white/65 px-4 py-3.5">
-                  <p className="text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-text-secondary mb-1.5">Benefits</p>
-                  <p className="text-[0.9rem] leading-relaxed text-muted-foreground">{selectedProduct.benefits || 'Refer to product catalog for benefits and usage guidance.'}</p>
-                </div>
-
-                <Button
-                  className="w-full sm:w-auto px-5 py-2.5 text-[0.74rem] rounded-xl"
-                  icon={Plus}
-                  onClick={() => {
-                    addToCart(selectedProduct.id);
-                    setSelectedProduct(null);
-                  }}
-                >
-                  Add To Cart
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProductDetailModal
+          product={selectedProduct}
+          category={getShopCategory(selectedProduct)}
+          isWishlisted={wishlistIds.has(selectedProduct.id)}
+          onClose={() => setSelectedProduct(null)}
+          onToggleWishlist={toggleWishlist}
+          onAddToCart={addToCart}
+        />
       )}
     </div>
   );

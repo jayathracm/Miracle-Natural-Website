@@ -66,12 +66,12 @@ const MadeForSection = () => {
             </motion.div>
           </div>
 
-          <div className="relative bg-[linear-gradient(165deg,#223026,#172117)] p-7 sm:p-10 md:p-14 flex flex-col justify-center gap-6 sm:gap-7">
+          <div className="relative bg-[linear-gradient(165deg,#223026,#172117)] p-7 sm:p-10 md:p-14 flex flex-col justify-center">
             <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-secondary/18 blur-3xl animate-blob-drift-slow" />
             <div className="pointer-events-none absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-primary/22 blur-3xl animate-blob-drift" />
 
             <motion.div
-              className="contents"
+              className="space-y-6 sm:space-y-7"
               variants={staggerContainer(0.12)}
               initial="hidden"
               whileInView="visible"
