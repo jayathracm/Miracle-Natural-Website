@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { gsap } from 'gsap';
 import { Typography } from './ui/Typography';
 import { Button } from './ui/Button';
@@ -21,7 +22,17 @@ const HeroSection = () => {
   const subtextRef = useRef(null);
   const buttonsRef = useRef(null);
   const rotateRef = useRef(null);
+  const heroRef = useRef(null);
   const [activeSlide, setActiveSlide] = useState(0);
+
+  // Scroll-linked parallax (separate from the blobs' own CSS time-based
+  // drift) — as the hero scrolls out of view, the two blobs and the product
+  // photo panel each move at a slightly different rate, giving the scroll
+  // itself a bit of depth instead of the whole hero moving as one flat block.
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+  const blob1Y = useTransform(scrollYProgress, [0, 1], [0, 70]);
+  const blob2Y = useTransform(scrollYProgress, [0, 1], [0, -90]);
+  const imageY = useTransform(scrollYProgress, [0, 1], [0, 46]);
 
   const slides = useMemo(() => {
     return Object.entries(catalogImageModules)
@@ -104,11 +115,15 @@ const HeroSection = () => {
   }, [slides.length]);
 
   return (
-    <section id="hero" className="relative min-h-[82vh] md:min-h-[90vh] pt-34 sm:pt-36 md:pt-38 lg:pt-42 pb-8 sm:pb-10 md:pb-12 lg:pb-14 px-4 sm:px-6 lg:px-8 flex flex-col items-center bg-transparent">
+    <section id="hero" ref={heroRef} className="relative min-h-[82vh] md:min-h-[90vh] pt-34 sm:pt-36 md:pt-38 lg:pt-42 pb-8 sm:pb-10 md:pb-12 lg:pb-14 px-4 sm:px-6 lg:px-8 flex flex-col items-center bg-transparent">
 
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[12%] left-[4%] w-64 h-64 rounded-full bg-secondary/25 blur-[70px] animate-blob-drift" />
-        <div className="absolute top-[20%] right-[2%] w-72 h-72 rounded-full bg-primary/16 blur-[80px] animate-blob-drift-slow" />
+        <motion.div style={{ y: blob1Y }} className="absolute top-[12%] left-[4%] w-64 h-64">
+          <div className="w-full h-full rounded-full bg-secondary/25 blur-[70px] animate-blob-drift" />
+        </motion.div>
+        <motion.div style={{ y: blob2Y }} className="absolute top-[20%] right-[2%] w-72 h-72">
+          <div className="w-full h-full rounded-full bg-primary/16 blur-[80px] animate-blob-drift-slow" />
+        </motion.div>
       </div>
 
       {/* Asymmetric Layout Wrapper */}
@@ -168,7 +183,7 @@ const HeroSection = () => {
         </div>
 
         {/* Visual/Abstract Content */}
-        <div className="relative hidden lg:block justify-self-end w-full max-w-[460px] xl:max-w-[520px]">
+        <motion.div style={{ y: imageY }} className="relative hidden lg:block justify-self-end w-full max-w-[460px] xl:max-w-[520px]">
           <div className="relative z-10 aspect-[4/5] w-full rounded-[2.1rem] overflow-hidden border border-[var(--color-border-light)] shadow-[0_20px_44px_rgba(31,44,35,0.2)] bg-[rgba(255,252,245,0.95)]">
             {slides.map((slide, index) => (
               <img
@@ -200,7 +215,7 @@ const HeroSection = () => {
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-text-secondary whitespace-nowrap">ISO & GMP Certified</p>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
     </section>

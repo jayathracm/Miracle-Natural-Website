@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus } from 'lucide-react';
 import { Typography } from './ui/Typography';
 import { cn } from '../lib/utils';
+import { staggerContainer, fadeUpItem, viewportOnce } from '../lib/motionVariants';
 
 const faqs = [
   {
@@ -103,18 +104,25 @@ const QnASection = () => {
         </div>
 
         {/* Accordion List */}
-        <div className="space-y-3 md:space-y-4">
+        <motion.div
+          className="space-y-3 md:space-y-4"
+          variants={staggerContainer(0.1)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+        >
           {faqs.map((faq, i) => (
-            <AccordionItem
-              key={i}
-              question={faq.question}
-              answer={faq.answer}
-              isOpen={openIndex === i}
-              onClick={() => setOpenIndex(openIndex === i ? -1 : i)}
-              isMobile={isMobile}
-            />
+            <motion.div key={i} variants={fadeUpItem}>
+              <AccordionItem
+                question={faq.question}
+                answer={faq.answer}
+                isOpen={openIndex === i}
+                onClick={() => setOpenIndex(openIndex === i ? -1 : i)}
+                isMobile={isMobile}
+              />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

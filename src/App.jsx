@@ -13,6 +13,7 @@ import {
   useNavigate,
 } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
+import ScrollProgressBar from './components/ScrollProgressBar';
 import { Landing, About, Pricing, Shop, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminMessages from './pages/admin/AdminMessages';
@@ -68,6 +69,7 @@ const App = () => {
         <Router>
           <SEOEffect />
           <ScrollToTop />
+          <ScrollProgressBar />
           <MainLayout>
             <div className="flex flex-col min-h-screen">
               <Navbar />

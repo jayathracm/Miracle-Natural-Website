@@ -78,10 +78,10 @@ const ProductSection = () => {
             viewport={{ once: true, margin: '-80px' }}
           >
             {products.map((product, index) => (
-              <motion.div key={product.title} variants={gridItemVariants}>
+              <motion.div key={product.title} variants={gridItemVariants} className="h-full">
                 <TiltCard
                   as="article"
-                  className="group relative overflow-hidden rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] shadow-[0_14px_36px_rgba(24,37,28,0.08)] transition-colors duration-500 hover:border-[var(--color-card-border-hover)]"
+                  className="group h-full flex flex-col overflow-hidden rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] shadow-[0_14px_36px_rgba(24,37,28,0.08)] transition-colors duration-500 hover:border-[var(--color-card-border-hover)]"
                 >
                   <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${index % 2 === 0 ? 'from-[rgba(79,113,84,0.55)] via-[rgba(79,113,84,0.22)] to-transparent' : 'from-[rgba(184,111,67,0.5)] via-[rgba(184,111,67,0.2)] to-transparent'}`} />
 
@@ -98,11 +98,11 @@ const ProductSection = () => {
                     </div>
                   </div>
 
-                  <div className="p-3.5 sm:p-4">
+                  <div className="p-3.5 sm:p-4 flex flex-col flex-1">
                     <Typography variant="h4" className="mb-2 text-foreground text-[0.92rem] sm:text-[1rem] leading-snug">{product.title}</Typography>
                     <Typography variant="small" className="text-muted-foreground leading-relaxed mb-3 text-[0.72rem] sm:text-[0.76rem]">{product.description}</Typography>
 
-                    <div className="rounded-lg border border-[var(--color-border-light)] bg-white/70 px-2.5 py-2">
+                    <div className="mt-auto rounded-lg border border-[var(--color-border-light)] bg-white/70 px-2.5 py-2">
                       <p className="text-[0.58rem] uppercase tracking-[0.18em] font-semibold text-text-tertiary">Signature Benefit</p>
                       <p className="mt-1 text-[0.7rem] sm:text-[0.74rem] text-text-secondary font-medium leading-snug">{product.stat}</p>
                     </div>

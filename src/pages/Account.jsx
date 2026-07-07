@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import {
+  ArrowLeft,
   CheckCircle2,
+  ChevronRight,
   LogOut,
   Mail,
   MapPin,
@@ -17,29 +19,105 @@ import OrdersSection from '../components/account/OrdersSection';
 import AddressesSection from '../components/account/AddressesSection';
 import WishlistSection from '../components/account/WishlistSection';
 import ContactSection from '../components/account/ContactSection';
+import { fetchMyOrders } from '../lib/orders';
+import { fetchAddresses } from '../lib/addresses';
+import { fetchWishlistProductIds } from '../lib/wishlist';
+import { fetchMyMessages } from '../lib/messages';
 
 const primaryLinkClasses = "inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-primary bg-primary text-white text-[0.76rem] font-semibold tracking-[0.1em] uppercase hover:bg-forest-800 transition-colors";
 const ghostButtonClasses = "inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-[var(--color-border-medium)] text-foreground text-[0.76rem] font-semibold tracking-[0.1em] uppercase hover:bg-[var(--color-hover-overlay)] transition-colors";
 const ghostLinkClasses = "inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-[var(--color-border-medium)] text-foreground text-[0.76rem] font-semibold tracking-[0.1em] uppercase hover:bg-[var(--color-hover-overlay)] transition-colors";
 
-const TABS = [
-  { id: 'details', label: 'Account Details', icon: Settings, Component: AccountDetailsSection },
-  { id: 'orders', label: 'Orders', icon: ShoppingBag, Component: OrdersSection },
-  { id: 'addresses', label: 'Addresses', icon: MapPin, Component: AddressesSection },
-  { id: 'wishlist', label: 'Wishlist', icon: Heart, Component: WishlistSection },
-  { id: 'contact', label: 'Contact Us', icon: Mail, Component: ContactSection },
+// Amazon-style "hub" pattern: the account page opens on a grid of feature
+// cards rather than dropping straight into a form. Each card carries a live
+// count where it makes sense (orders placed, addresses saved, etc.) so the
+// hub itself is useful at a glance, not just a menu.
+const HUB_ITEMS = [
+  {
+    id: 'details',
+    label: 'Account Details',
+    desc: 'Edit your name, phone number, email, and password.',
+    icon: Settings,
+    tone: 'primary',
+    Component: AccountDetailsSection,
+  },
+  {
+    id: 'orders',
+    label: 'Orders',
+    desc: 'Track past orders and see what you bought and when.',
+    icon: ShoppingBag,
+    tone: 'accent',
+    countKey: 'orders',
+    Component: OrdersSection,
+  },
+  {
+    id: 'addresses',
+    label: 'Addresses',
+    desc: 'Manage saved delivery addresses for faster checkout.',
+    icon: MapPin,
+    tone: 'primary',
+    countKey: 'addresses',
+    Component: AddressesSection,
+  },
+  {
+    id: 'wishlist',
+    label: 'Wishlist',
+    desc: 'Products you have saved to shop later.',
+    icon: Heart,
+    tone: 'accent',
+    countKey: 'wishlist',
+    Component: WishlistSection,
+  },
+  {
+    id: 'contact',
+    label: 'Contact Us',
+    desc: 'Send a message to our team and track replies.',
+    icon: Mail,
+    tone: 'primary',
+    countKey: 'messages',
+    Component: ContactSection,
+  },
 ];
+
+const TONE_STYLES = {
+  primary: 'bg-primary/12 text-primary border-primary/20',
+  accent: 'bg-accent/12 text-accent border-accent/20',
+};
 
 const Account = () => {
   const location = useLocation();
   const { user, loading, profile, signOut } = useAuth();
   const { needsEmailConfirmation } = location.state || {};
   const [searchParams, setSearchParams] = useSearchParams();
+  const [counts, setCounts] = useState({});
 
-  const activeTabId = TABS.some((tab) => tab.id === searchParams.get('tab'))
-    ? searchParams.get('tab')
-    : 'details';
-  const ActiveComponent = TABS.find((tab) => tab.id === activeTabId)?.Component || AccountDetailsSection;
+  const activeItem = HUB_ITEMS.find((item) => item.id === searchParams.get('tab')) || null;
+
+  // Lightweight counts for the hub cards — only fetched on the overview
+  // (each section already loads its own full data once it's opened).
+  useEffect(() => {
+    if (activeItem || !user) return undefined;
+    let isMounted = true;
+
+    Promise.allSettled([
+      fetchMyOrders(),
+      fetchAddresses(),
+      fetchWishlistProductIds(),
+      fetchMyMessages(),
+    ]).then(([orders, addresses, wishlist, messages]) => {
+      if (!isMounted) return;
+      setCounts({
+        orders: orders.status === 'fulfilled' ? orders.value.length : null,
+        addresses: addresses.status === 'fulfilled' ? addresses.value.length : null,
+        wishlist: wishlist.status === 'fulfilled' ? wishlist.value.length : null,
+        messages: messages.status === 'fulfilled' ? messages.value.length : null,
+      });
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeItem, user]);
 
   if (loading) {
     return (
@@ -50,7 +128,7 @@ const Account = () => {
   }
 
   // Signed out (or awaiting email confirmation): keep the original compact
-  // centered card rather than showing an empty tabbed profile.
+  // centered card rather than showing an empty hub.
   if (!user) {
     return (
       <div className="pt-30 sm:pt-32 md:pt-34 pb-14 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8 min-h-screen">
@@ -89,6 +167,8 @@ const Account = () => {
   }
 
   const displayName = profile?.full_name || user.email;
+  const ActiveIcon = activeItem?.icon;
+  const ActiveComponent = activeItem?.Component;
 
   return (
     <div className="pt-30 sm:pt-32 md:pt-34 pb-14 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8 min-h-screen">
@@ -110,26 +190,60 @@ const Account = () => {
             </button>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-2.5">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTabId === tab.id;
+          {activeItem && (
+            <button
+              type="button"
+              onClick={() => setSearchParams({})}
+              className="mt-5 inline-flex items-center gap-1.5 text-[0.76rem] font-semibold uppercase tracking-[0.08em] text-primary hover:underline underline-offset-2"
+            >
+              <ArrowLeft size={14} />
+              Back to Account
+            </button>
+          )}
+        </div>
+
+        {!activeItem ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {HUB_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const count = item.countKey ? counts[item.countKey] : null;
               return (
                 <button
-                  key={tab.id}
+                  key={item.id}
                   type="button"
-                  onClick={() => setSearchParams({ tab: tab.id })}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[0.72rem] font-semibold tracking-[0.06em] uppercase transition-colors ${isActive ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-light)] bg-white/70 text-text-secondary'}`}
+                  onClick={() => setSearchParams({ tab: item.id })}
+                  className="group text-left rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 shadow-[0_10px_24px_rgba(31,44,35,0.06)] hover:bg-[var(--color-card-bg-hover)] hover:border-[var(--color-card-border-hover)] hover:-translate-y-0.5 transition-all duration-300"
                 >
-                  <Icon size={14} />
-                  {tab.label}
+                  <div className="flex items-start justify-between gap-3 mb-3.5">
+                    <div className={`h-11 w-11 rounded-xl border inline-flex items-center justify-center shrink-0 ${TONE_STYLES[item.tone]}`}>
+                      <Icon size={20} />
+                    </div>
+                    {typeof count === 'number' && (
+                      <span className="rounded-full border border-[var(--color-border-light)] bg-white/70 px-2.5 py-1 text-[0.68rem] font-semibold text-text-secondary">
+                        {count}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Typography variant="h4" className="text-foreground text-[0.98rem]">{item.label}</Typography>
+                    <ChevronRight size={15} className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+                  </div>
+                  <p className="text-[0.82rem] leading-relaxed text-muted-foreground">{item.desc}</p>
                 </button>
               );
             })}
           </div>
-        </div>
-
-        <ActiveComponent />
+        ) : (
+          <div>
+            <div className="mb-4 flex items-center gap-2.5">
+              <div className={`h-9 w-9 rounded-lg border inline-flex items-center justify-center shrink-0 ${TONE_STYLES[activeItem.tone]}`}>
+                <ActiveIcon size={16} />
+              </div>
+              <Typography variant="h3" className="text-foreground text-[1.3rem]">{activeItem.label}</Typography>
+            </div>
+            <ActiveComponent />
+          </div>
+        )}
       </div>
     </div>
   );

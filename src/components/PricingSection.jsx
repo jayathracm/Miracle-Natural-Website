@@ -1,7 +1,10 @@
 import React from 'react';
+// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
+import { motion } from 'framer-motion';
 import { Check, Leaf, ShieldCheck, Sparkles } from 'lucide-react';
 import { Typography } from './ui/Typography';
 import { Button } from './ui/Button';
+import { staggerContainer, fadeUpItem, viewportOnce } from '../lib/motionVariants';
 
 const bundleCards = [
   {
@@ -40,11 +43,18 @@ const PricingSection = () => {
           </Typography>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6"
+          variants={staggerContainer(0.1)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+        >
           {bundleCards.map((bundle) => (
-            <div
+            <motion.div
               key={bundle.title}
-              className={`rounded-xl border p-6 md:p-7 transition-all duration-300 ${bundle.featured
+              variants={fadeUpItem}
+              className={`rounded-xl border p-6 md:p-7 ${bundle.featured
                 ? 'border-primary shadow-[0_20px_45px_rgba(31,44,35,0.14)] bg-[rgba(255,250,239,0.95)]'
                 : 'border-[var(--color-card-border)] bg-[rgba(255,252,245,0.88)]'
                 }`}
@@ -68,27 +78,33 @@ const PricingSection = () => {
               >
                 Choose Bundle
               </Button>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6 md:gap-7 mt-12 sm:mt-14 md:mt-16">
-          <div className="p-5 rounded-lg bg-[rgba(255,252,245,0.82)] border border-primary/10 text-center">
+        <motion.div
+          className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6 md:gap-7 mt-12 sm:mt-14 md:mt-16"
+          variants={staggerContainer(0.1)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+        >
+          <motion.div variants={fadeUpItem} className="p-5 rounded-lg bg-[rgba(255,252,245,0.82)] border border-primary/10 text-center">
             <Leaf className="mx-auto mb-3 text-primary" size={20} />
             <Typography variant="h4" className="mb-2">Plant-led formulas</Typography>
             <Typography variant="small">Botanical ingredients selected for daily comfort.</Typography>
-          </div>
-          <div className="p-5 rounded-lg bg-[rgba(255,252,245,0.82)] border border-primary/10 text-center">
+          </motion.div>
+          <motion.div variants={fadeUpItem} className="p-5 rounded-lg bg-[rgba(255,252,245,0.82)] border border-primary/10 text-center">
             <ShieldCheck className="mx-auto mb-3 text-primary" size={20} />
             <Typography variant="h4" className="mb-2">No hidden extras</Typography>
             <Typography variant="small">Simple prices with clear bundle contents.</Typography>
-          </div>
-          <div className="p-5 rounded-lg bg-[rgba(255,252,245,0.82)] border border-primary/10 text-center">
+          </motion.div>
+          <motion.div variants={fadeUpItem} className="p-5 rounded-lg bg-[rgba(255,252,245,0.82)] border border-primary/10 text-center">
             <Sparkles className="mx-auto mb-3 text-primary" size={20} />
             <Typography variant="h4" className="mb-2">Routine guidance</Typography>
             <Typography variant="small">Every order includes practical usage instructions.</Typography>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );

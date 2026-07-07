@@ -1,7 +1,10 @@
 import React from 'react';
+// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
+import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
 import { Typography } from './ui/Typography';
 import { testimonials } from '../data';
+import { staggerContainer, fadeUpItem, viewportOnce } from '../lib/motionVariants';
 
 const TestimonialSection = () => {
   return (
@@ -17,10 +20,17 @@ const TestimonialSection = () => {
           </Typography>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6"
+          variants={staggerContainer(0.09)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+        >
           {testimonials.map((item) => (
-            <article
+            <motion.article
               key={`${item.name}-${item.studio}`}
+              variants={fadeUpItem}
               className="rounded-xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 sm:p-6"
             >
               <div className="flex items-center gap-1 mb-4">
@@ -33,9 +43,9 @@ const TestimonialSection = () => {
                 <p className="text-[0.76rem] font-bold tracking-[0.14em] uppercase text-foreground">{item.name}</p>
                 <p className="text-[0.82rem] text-muted-foreground mt-1">{item.studio} · {item.location}</p>
               </div>
-            </article>
+            </motion.article>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

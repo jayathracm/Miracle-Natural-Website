@@ -1,6 +1,9 @@
 import React from 'react';
+// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
+import { motion } from 'framer-motion';
 import { Leaf, ShieldCheck, Sparkles, FlaskConical, Droplets, Moon, Heart } from 'lucide-react';
 import { Typography } from './ui/Typography';
+import { staggerContainer, fadeUpItem, viewportOnce } from '../lib/motionVariants';
 
 const businessServices = [
   {
@@ -57,31 +60,49 @@ const FeatureGridSection = () => {
           </Typography>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-          <section className="rounded-xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 sm:p-6 md:p-7">
+        <motion.div
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8"
+          variants={staggerContainer(0.15)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+        >
+          <motion.section variants={fadeUpItem} className="rounded-xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 sm:p-6 md:p-7">
             <div className="mb-4 sm:mb-5">
               <Typography variant="label" className="mb-2 block text-primary">B2B</Typography>
               <Typography variant="h3" className="text-foreground">Leora Wellness Services</Typography>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <motion.div
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
+              variants={staggerContainer(0.08)}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewportOnce}
+            >
               {businessServices.map((item) => (
-                <article key={item.title} className="rounded-lg border border-[var(--color-border-light)] bg-white/55 p-4">
+                <motion.article key={item.title} variants={fadeUpItem} className="rounded-lg border border-[var(--color-border-light)] bg-white/55 p-4">
                   <item.icon size={18} className="text-primary mb-2" />
                   <Typography variant="h4" className="mb-1 text-foreground">{item.title}</Typography>
                   <Typography variant="small" className="text-muted-foreground leading-relaxed">{item.desc}</Typography>
-                </article>
+                </motion.article>
               ))}
-            </div>
-          </section>
+            </motion.div>
+          </motion.section>
 
-          <section className="rounded-xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 sm:p-6 md:p-7">
+          <motion.section variants={fadeUpItem} className="rounded-xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 sm:p-6 md:p-7">
             <div className="mb-4 sm:mb-5">
               <Typography variant="label" className="mb-2 block text-accent">B2C</Typography>
               <Typography variant="h3" className="text-foreground">Top Consumer Picks</Typography>
             </div>
-            <div className="space-y-3 sm:space-y-4">
+            <motion.div
+              className="space-y-3 sm:space-y-4"
+              variants={staggerContainer(0.08)}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewportOnce}
+            >
               {consumerPicks.map((item) => (
-                <article key={item.title} className="rounded-lg border border-[var(--color-border-light)] bg-white/55 p-4 sm:p-5">
+                <motion.article key={item.title} variants={fadeUpItem} className="rounded-lg border border-[var(--color-border-light)] bg-white/55 p-4 sm:p-5">
                   <div className="flex items-start gap-3">
                     <div className="mt-1"><item.icon size={18} className="text-accent" /></div>
                     <div>
@@ -89,11 +110,11 @@ const FeatureGridSection = () => {
                       <Typography variant="small" className="text-muted-foreground leading-relaxed">{item.desc}</Typography>
                     </div>
                   </div>
-                </article>
+                </motion.article>
               ))}
-            </div>
-          </section>
-        </div>
+            </motion.div>
+          </motion.section>
+        </motion.div>
       </div>
     </section>
   );

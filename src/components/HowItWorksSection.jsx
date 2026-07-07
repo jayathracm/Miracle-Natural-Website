@@ -1,6 +1,9 @@
 import React from 'react';
+// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
+import { motion } from 'framer-motion';
 import { Typography } from './ui/Typography';
 import { steps } from '../data';
+import { staggerContainer, fadeUpItem, viewportOnce } from '../lib/motionVariants';
 
 const HowItWorksSection = () => {
   return (
@@ -16,10 +19,17 @@ const HowItWorksSection = () => {
           </Typography>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 md:gap-6"
+          variants={staggerContainer(0.09)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+        >
           {steps.map((step) => (
-            <article
+            <motion.article
               key={step.number}
+              variants={fadeUpItem}
               className="group rounded-xl border border-[var(--color-card-border)] bg-[rgba(255,252,245,0.9)] overflow-hidden"
             >
               <div className="aspect-[16/10] overflow-hidden bg-[linear-gradient(160deg,rgba(255,251,243,0.98),rgba(243,234,215,0.9))]">
@@ -41,9 +51,9 @@ const HowItWorksSection = () => {
                 </Typography>
                 <p className="text-[0.8rem] uppercase tracking-[0.09em] font-semibold text-accent">{step.highlight}</p>
               </div>
-            </article>
+            </motion.article>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
