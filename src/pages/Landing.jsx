@@ -2,7 +2,6 @@ import HeroSection from '../components/HeroSection';
 import FeatureGridSection from '../components/FeatureGridSection';
 import ProductSection from '../components/ProductSection';
 import MadeForSection from '../components/MadeForSection';
-import HowItWorksSection from '../components/HowItWorksSection';
 import TestimonialSection from '../components/TestimonialSection';
 import PricingSection from '../components/PricingSection';
 import QnASection from '../components/QnASection';
@@ -34,7 +33,6 @@ const Landing = () => {
         <MadeForSection />
       </SectionBand>
 
-      <HowItWorksSection />
       <TestimonialSection />
 
       <SectionBand>

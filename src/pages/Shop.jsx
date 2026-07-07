@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion } from 'framer-motion';
-import { CheckCircle2, Sparkles, X } from 'lucide-react';
+import { CheckCircle2, ImageOff, ShoppingBag, Sparkles, X } from 'lucide-react';
 import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
 import { ProductGridSkeleton, Skeleton } from '../components/ui/Skeleton';
@@ -48,6 +49,8 @@ const readStoredCart = () => {
 
 const ShopPage = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [productCatalog, setProductCatalog] = useState([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState(null);
@@ -68,6 +71,30 @@ const ShopPage = () => {
   const [wishlistIds, setWishlistIds] = useState(() => new Set());
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('manual');
+  const [bundlePopup, setBundlePopup] = useState(null);
+  const [cartOpenSignal, setCartOpenSignal] = useState(0);
+
+  // Arriving here from a bundle's "Buy This Bundle" button (PricingSection)
+  // carries the bundle's real products via navigation state. Add them to
+  // the cart straight away and surface a confirmation — then clear the
+  // state so a refresh or back-navigation doesn't silently re-add them.
+  useEffect(() => {
+    const bundlePurchase = location.state?.bundlePurchase;
+    if (!bundlePurchase) return;
+
+    setCart((prev) => {
+      const next = { ...prev };
+      bundlePurchase.items.forEach(({ product, quantity }) => {
+        next[product.id] = (next[product.id] || 0) + quantity;
+      });
+      return next;
+    });
+
+    setBundlePopup(bundlePurchase);
+    navigate(location.pathname, { replace: true, state: null });
+    // Only ever meant to run for the navigation that carried this state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   useEffect(() => {
     try {
@@ -282,6 +309,10 @@ const ShopPage = () => {
     });
   };
 
+  const clearCart = () => {
+    setCart({});
+  };
+
   const removeToast = (id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
@@ -490,6 +521,7 @@ const ShopPage = () => {
     deliveryZoneLabel,
     grandTotal,
     onChangeQuantity: changeQuantity,
+    onClearCart: clearCart,
     user,
     customerName,
     setCustomerName,
@@ -618,7 +650,7 @@ const ShopPage = () => {
               )}
             </section>
 
-            <ShopCart {...cartProps} />
+            <ShopCart {...cartProps} openSignal={cartOpenSignal} />
           </>
         )}
       </div>
@@ -703,6 +735,75 @@ const ShopPage = () => {
           onToggleWishlist={toggleWishlist}
           onAddToCart={addToCart}
         />
+      )}
+
+      {bundlePopup && (
+        <div
+          className="fixed inset-0 z-[95] bg-[rgba(13,20,16,0.58)] backdrop-blur-sm px-4 py-8 sm:px-6 sm:py-12"
+          onClick={() => setBundlePopup(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Bundle added to cart"
+        >
+          <div
+            className="relative mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-[var(--color-card-border)] bg-[linear-gradient(160deg,rgba(255,253,248,0.98),rgba(248,243,232,0.96))] p-6 sm:p-7 shadow-[0_30px_80px_rgba(8,14,10,0.35)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-primary/12 border border-primary/25 inline-flex items-center justify-center">
+              <ShoppingBag size={28} className="text-primary" />
+            </div>
+
+            <Typography variant="h4" className="text-center text-foreground mb-1.5">
+              {bundlePopup.bundleName} added to your cart
+            </Typography>
+            <p className="text-center text-[0.86rem] text-muted-foreground mb-5">
+              {bundlePopup.items.length} products are ready — check out whenever you're set.
+            </p>
+
+            <div className="space-y-2 mb-6">
+              {bundlePopup.items.map(({ product, quantity }) => {
+                const image = PRODUCT_IMAGES[product.id] || product.image_url || null;
+                return (
+                  <div key={product.id} className="flex items-center gap-3 rounded-xl border border-[var(--color-border-light)] bg-white/70 px-3 py-2.5">
+                    <div className="h-10 w-10 rounded-lg overflow-hidden bg-[rgba(247,241,227,0.5)] shrink-0">
+                      {image ? (
+                        <img src={image} alt={product.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-text-tertiary">
+                          <ImageOff size={12} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[0.82rem] font-semibold text-foreground truncate">{product.name}</p>
+                    </div>
+                    {quantity > 1 && <span className="text-[0.76rem] text-muted-foreground shrink-0">x{quantity}</span>}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-center gap-2.5">
+              <Button
+                icon={ShoppingBag}
+                className="px-6 py-2.5 text-[0.74rem]"
+                onClick={() => {
+                  setBundlePopup(null);
+                  setCartOpenSignal(Date.now());
+                }}
+              >
+                Checkout Now
+              </Button>
+              <Button
+                variant="ghost"
+                className="px-6 py-2.5 text-[0.74rem]"
+                onClick={() => setBundlePopup(null)}
+              >
+                Continue Shopping
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

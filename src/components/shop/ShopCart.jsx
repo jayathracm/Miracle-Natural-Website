@@ -27,6 +27,7 @@ const CartInner = ({
   deliveryZoneLabel,
   grandTotal,
   onChangeQuantity,
+  onClearCart,
   user,
   customerName,
   setCustomerName,
@@ -65,6 +66,15 @@ const CartInner = ({
         <span className="text-[0.74rem] font-semibold text-muted-foreground">
           {totalItems} {totalItems === 1 ? 'item' : 'items'}
         </span>
+      )}
+      {mode === 'cart' && cartItems.length > 0 && (
+        <button
+          type="button"
+          onClick={onClearCart}
+          className="text-[0.72rem] font-semibold text-muted-foreground underline underline-offset-2 hover:text-red-600 transition-colors"
+        >
+          Clear
+        </button>
       )}
       {showCloseButton && (
         <button
@@ -234,14 +244,26 @@ const CartInner = ({
 // `mode` state, so the cart/checkout view stays consistent if the viewport
 // changes mid-session.
 export const ShopCart = (props) => {
-  const { cartItems, totalItems, grandTotal } = props;
+  const { cartItems, totalItems, grandTotal, openSignal } = props;
   const [mode, setMode] = useState('cart');
   const [isOpen, setIsOpen] = useState(false);
 
+  // Lets a parent (e.g. Shop.jsx after a bundle purchase lands items in the
+  // cart) force the drawer open by passing a changing value — a timestamp
+  // works well since it's guaranteed to differ each time.
+  useEffect(() => {
+    if (openSignal) setIsOpen(true);
+    // Only care about the signal changing, not the other props.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSignal]);
+
+  // Reset back to the cart view (not left stranded on the checkout form)
+  // whenever the cart empties out — but don't auto-close the panel. Closing
+  // it here made "Clear"/emptying the cart look like nothing happened,
+  // since the whole drawer would vanish instead of showing "cart is empty."
   useEffect(() => {
     if (cartItems.length === 0) {
       setMode('cart');
-      setIsOpen(false);
     }
   }, [cartItems.length]);
 
