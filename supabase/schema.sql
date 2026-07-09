@@ -571,3 +571,179 @@ create policy "Admins can view analytics events"
 
 create index if not exists analytics_events_created_at_idx on public.analytics_events (created_at desc);
 create index if not exists analytics_events_event_type_idx on public.analytics_events (event_type);
+
+-- ----------------------------------------------------------------------------
+-- 14. B2B PRICING MATRIX ENGINE (functional-requirements §2.2)
+-- private.is_corporate_partner() mirrors private.is_admin() exactly — same
+-- reasoning, kept out of `public` so it isn't directly callable via
+-- PostgREST but works inside RLS policies and SECURITY DEFINER functions.
+-- ----------------------------------------------------------------------------
+create or replace function private.is_corporate_partner()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'corporate_partner'
+  );
+$$;
+
+revoke all on function private.is_corporate_partner() from public;
+grant execute on function private.is_corporate_partner() to authenticated, anon;
+
+-- Per-product minimum order quantity override. Null means "use the global
+-- fallback MOQ" (25 — see calculate_b2b_price() below).
+alter table public.products
+  add column if not exists moq integer;
+
+alter table public.products
+  add constraint products_moq_check check (moq is null or moq > 0);
+
+-- Admin-configurable quantity breakpoints for wholesale pricing. Global for
+-- now (applies to every product) — a per-product override table is a
+-- natural later extension if a specific product ever needs its own tier
+-- schedule instead of the shared one.
+create table if not exists public.discount_tiers (
+  id uuid primary key default gen_random_uuid(),
+  min_quantity integer not null check (min_quantity > 0),
+  discount_percent numeric(5, 2) not null check (discount_percent > 0 and discount_percent <= 100),
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (min_quantity)
+);
+
+alter table public.discount_tiers enable row level security;
+
+-- Wholesale pricing is only visible to the roles allowed to see it at all
+-- (functional-requirements §0: customers can't view wholesale pricing).
+drop policy if exists "B2B roles can view discount tiers" on public.discount_tiers;
+create policy "B2B roles can view discount tiers"
+  on public.discount_tiers for select
+  using (private.is_admin() or private.is_corporate_partner());
+
+drop policy if exists "Admins can insert discount tiers" on public.discount_tiers;
+create policy "Admins can insert discount tiers"
+  on public.discount_tiers for insert
+  with check (private.is_admin());
+
+drop policy if exists "Admins can update discount tiers" on public.discount_tiers;
+create policy "Admins can update discount tiers"
+  on public.discount_tiers for update
+  using (private.is_admin())
+  with check (private.is_admin());
+
+-- Unlike products/bundles, nothing references discount_tiers by foreign key,
+-- so a real delete is safe here (no orphaning risk).
+drop policy if exists "Admins can delete discount tiers" on public.discount_tiers;
+create policy "Admins can delete discount tiers"
+  on public.discount_tiers for delete
+  using (private.is_admin());
+
+-- Single source of truth for B2B pricing math, so the frontend, a future
+-- Edge Function, and admin reporting all get the same answer instead of
+-- duplicating this logic in JS.
+--
+-- SECURITY DEFINER on purpose: discount_tiers' own RLS only lets
+-- admin/corporate_partner read it directly, but this function needs to read
+-- it regardless of caller in order to compute a real MOQ-not-met/retail-only
+-- response for a plain customer too. Eligibility is instead enforced
+-- explicitly inside the function body, the same "gate manually, then bypass
+-- RLS" pattern is_admin() itself already relies on. Lives in `public` (not
+-- `private`) because, unlike is_admin(), this one *is* meant to be called
+-- directly by the frontend/Edge Functions via
+-- /rest/v1/rpc/calculate_b2b_price — confirmed via the Supabase security
+-- advisor that anon/authenticated can call it; that's intentional, not a gap.
+create or replace function public.calculate_b2b_price(p_product_id text, p_quantity integer)
+returns table (
+  base_price numeric,
+  moq integer,
+  requested_quantity integer,
+  is_eligible boolean,
+  meets_moq boolean,
+  applied_discount_percent numeric,
+  unit_price numeric,
+  line_total numeric,
+  next_tier_min_quantity integer,
+  next_tier_discount_percent numeric
+)
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+declare
+  v_base_price numeric;
+  v_moq integer;
+  v_effective_moq integer;
+  v_is_eligible boolean;
+  v_discount numeric;
+  v_next_min integer;
+  v_next_discount numeric;
+begin
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'Quantity must be a positive integer';
+  end if;
+
+  select price, products.moq into v_base_price, v_moq
+  from public.products
+  where id = p_product_id and is_active = true;
+
+  if not found then
+    raise exception 'Product % not found or inactive', p_product_id;
+  end if;
+
+  v_effective_moq := coalesce(v_moq, 25);
+  v_is_eligible := private.is_admin() or private.is_corporate_partner();
+
+  if not v_is_eligible then
+    return query select
+      v_base_price, v_effective_moq, p_quantity,
+      false, (p_quantity >= v_effective_moq),
+      0::numeric, v_base_price, round(v_base_price * p_quantity, 2),
+      null::integer, null::numeric;
+    return;
+  end if;
+
+  if p_quantity < v_effective_moq then
+    return query select
+      v_base_price, v_effective_moq, p_quantity,
+      true, false,
+      0::numeric, v_base_price, round(v_base_price * p_quantity, 2),
+      null::integer, null::numeric;
+    return;
+  end if;
+
+  select discount_percent into v_discount
+  from public.discount_tiers
+  where is_active = true and min_quantity <= p_quantity
+  order by min_quantity desc
+  limit 1;
+
+  v_discount := coalesce(v_discount, 0);
+
+  select min_quantity, discount_percent into v_next_min, v_next_discount
+  from public.discount_tiers
+  where is_active = true and min_quantity > p_quantity
+  order by min_quantity asc
+  limit 1;
+
+  return query select
+    v_base_price, v_effective_moq, p_quantity,
+    true, true,
+    v_discount, round(v_base_price * (1 - v_discount / 100), 2), round(v_base_price * (1 - v_discount / 100) * p_quantity, 2),
+    v_next_min, v_next_discount;
+end;
+$$;
+
+revoke all on function public.calculate_b2b_price(text, integer) from public;
+grant execute on function public.calculate_b2b_price(text, integer) to authenticated, anon;
+
+-- Starter tiers so there's something to see immediately; fully editable
+-- from day one via the discount_tiers table (no admin UI yet).
+insert into public.discount_tiers (min_quantity, discount_percent)
+values (50, 10), (100, 15), (250, 20)
+on conflict (min_quantity) do update set discount_percent = excluded.discount_percent;
