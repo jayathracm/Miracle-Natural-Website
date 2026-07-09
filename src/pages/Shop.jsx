@@ -2,59 +2,54 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion } from 'framer-motion';
-import { CheckCircle2, ImageOff, ShoppingBag, Sparkles, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, ImageOff, LayoutGrid, List, Search, ShoppingBag, Sparkles, X } from 'lucide-react';
+import { Input } from '../components/ui/Input';
 import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
 import { ProductGridSkeleton, Skeleton } from '../components/ui/Skeleton';
 import { ProductCard } from '../components/shop/ProductCard';
 import { ProductDetailModal } from '../components/shop/ProductDetailModal';
 import { ShopCart } from '../components/shop/ShopCart';
-import { fetchProducts } from '../lib/products';
 import PRODUCT_IMAGES from '../data/productImages';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../hooks/useWishlist';
 import DELIVERY_ZONES from '../data/deliveryZones';
-import { addToWishlist, fetchWishlistProductIds, removeFromWishlist } from '../lib/wishlist';
 import { fetchAddresses } from '../lib/addresses';
 import { staggerContainer } from '../lib/motionVariants';
+import { SHOP_CATEGORY_ORDER, getShopCategory } from '../lib/shopCategories';
 
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
-const CART_STORAGE_KEY = 'miracleNatural.cart';
+const PRODUCTS_PER_PAGE = 12;
+
+const PRICE_FILTERS = [
+  { value: 'all', label: 'All Prices' },
+  { value: 'under_500', label: 'Under LKR 500' },
+  { value: '500_1500', label: 'LKR 500 - 1,500' },
+  { value: '1501_3000', label: 'LKR 1,501 - 3,000' },
+  { value: 'above_3000', label: 'Above LKR 3,000' },
+];
 
 const formatCurrency = (amount) => `LKR ${amount.toLocaleString('en-LK')}`;
-
-const SHOP_CATEGORY_ORDER = ['Face Care', 'Body Care', 'Hair Care', 'Lip Care'];
-
-const SHOP_CATEGORY_MAP = {
-  'Face Care': 'Face Care',
-  Treatment: 'Face Care',
-  'Weekly Care': 'Face Care',
-  'Body Care': 'Body Care',
-  'Hair Care': 'Hair Care',
-  'Lip Care': 'Lip Care',
-};
-
-const getShopCategory = (product) => SHOP_CATEGORY_MAP[product.category] || product.category;
-
-// Cart persists across reloads via localStorage — nothing modern-ecommerce
-// feels worse than an accidental refresh wiping out a cart.
-const readStoredCart = () => {
-  try {
-    const raw = window.localStorage.getItem(CART_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-};
 
 const ShopPage = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [productCatalog, setProductCatalog] = useState([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [productsError, setProductsError] = useState(null);
-  const [cart, setCart] = useState(readStoredCart);
+  const {
+    productCatalog,
+    isLoadingProducts,
+    productsError,
+    cart,
+    cartItems,
+    totalItems,
+    totalAmount,
+    addToCart,
+    addManyToCart,
+    changeQuantity,
+    clearCart,
+  } = useCart();
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -68,62 +63,54 @@ const ShopPage = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [priceFilter, setPriceFilter] = useState('all');
   const [sortOption, setSortOption] = useState('featured');
-  const [wishlistIds, setWishlistIds] = useState(() => new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  const [currentPage, setCurrentPage] = useState(1);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('manual');
   const [bundlePopup, setBundlePopup] = useState(null);
   const [cartOpenSignal, setCartOpenSignal] = useState(0);
 
+  const removeToast = (id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
+  const pushToast = (type, message) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setToasts((prev) => [...prev, { id, type, message }]);
+    window.setTimeout(() => {
+      removeToast(id);
+    }, 4200);
+  };
+
+  const { wishlistIds, toggleWishlist } = useWishlist({
+    onError: (message) => pushToast('error', message),
+  });
+
   // Arriving here from a bundle's "Buy This Bundle" button (PricingSection)
   // carries the bundle's real products via navigation state. Add them to
   // the cart straight away and surface a confirmation — then clear the
   // state so a refresh or back-navigation doesn't silently re-add them.
+  // The same navigation-state channel is used by ProductDetail.jsx's "View
+  // Cart" action (`{ openCart: true }`) to pop the floating cart drawer open
+  // on arrival, without needing to lift cart-drawer UI state into context.
   useEffect(() => {
-    const bundlePurchase = location.state?.bundlePurchase;
-    if (!bundlePurchase) return;
+    const state = location.state;
+    if (!state) return;
 
-    setCart((prev) => {
-      const next = { ...prev };
-      bundlePurchase.items.forEach(({ product, quantity }) => {
-        next[product.id] = (next[product.id] || 0) + quantity;
-      });
-      return next;
-    });
+    if (state.bundlePurchase) {
+      addManyToCart(
+        state.bundlePurchase.items.map(({ product, quantity }) => ({ productId: product.id, quantity }))
+      );
+      setBundlePopup(state.bundlePurchase);
+    } else if (state.openCart) {
+      setCartOpenSignal(Date.now());
+    }
 
-    setBundlePopup(bundlePurchase);
     navigate(location.pathname, { replace: true, state: null });
     // Only ever meant to run for the navigation that carried this state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
-    } catch {
-      // Non-fatal — cart just won't survive a refresh this session.
-    }
-  }, [cart]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (!user) {
-      setWishlistIds(new Set());
-      return undefined;
-    }
-
-    fetchWishlistProductIds()
-      .then((ids) => {
-        if (isMounted) setWishlistIds(new Set(ids));
-      })
-      .catch(() => {
-        // Non-fatal — heart icons just won't reflect saved state this load.
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user]);
 
   useEffect(() => {
     let isMounted = true;
@@ -165,55 +152,6 @@ const ShopPage = () => {
     }
   };
 
-  useEffect(() => {
-    let isMounted = true;
-
-    fetchProducts()
-      .then((rows) => {
-        if (!isMounted) return;
-        const withImages = rows.map((product) => ({
-          ...product,
-          image: PRODUCT_IMAGES[product.id] || product.image_url || null,
-        }));
-        setProductCatalog(withImages);
-      })
-      .catch((error) => {
-        if (!isMounted) return;
-        setProductsError(error.message || 'Could not load products. Please refresh the page.');
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setIsLoadingProducts(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const cartItems = useMemo(() => {
-    return productCatalog
-      .filter((product) => (cart[product.id] || 0) > 0)
-      .map((product) => {
-        const quantity = cart[product.id];
-        return {
-          ...product,
-          quantity,
-          lineTotal: product.price * quantity,
-        };
-      });
-  }, [cart, productCatalog]);
-
-  const totalItems = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
-    [cartItems]
-  );
-
-  const totalAmount = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.lineTotal, 0),
-    [cartItems]
-  );
-
   const shippingCost = useMemo(() => {
     if (!deliveryZone) return 0;
     return DELIVERY_ZONES[deliveryZone]?.rate || 0;
@@ -247,6 +185,10 @@ const ShopPage = () => {
       const normalizedCategory = getShopCategory(product);
 
       if (categoryFilter !== 'all' && normalizedCategory !== categoryFilter) {
+        return false;
+      }
+
+      if (searchTerm.trim() && !product.name.toLowerCase().includes(searchTerm.trim().toLowerCase())) {
         return false;
       }
 
@@ -286,82 +228,42 @@ const ShopPage = () => {
     }
 
     return categoryAndPriceFiltered;
-  }, [categoryFilter, priceFilter, sortOption, productCatalog]);
+  }, [categoryFilter, priceFilter, searchTerm, sortOption, productCatalog]);
 
-  const addToCart = (productId) => {
-    setCart((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
-  };
+  // Any change to what's being filtered/sorted/searched invalidates whatever
+  // page the user was on — safest to just snap back to page 1 rather than
+  // risk landing on a page past the new (smaller) result set.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [categoryFilter, priceFilter, searchTerm, sortOption]);
 
-  const changeQuantity = (productId, delta) => {
-    setCart((prev) => {
-      const current = prev[productId] || 0;
-      const next = current + delta;
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
 
-      if (next <= 0) {
-        const { [productId]: _removed, ...rest } = prev;
-        return rest;
-      }
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    return filteredProducts.slice(start, start + PRODUCTS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
 
-      return { ...prev, [productId]: next };
-    });
-  };
-
-  const clearCart = () => {
-    setCart({});
-  };
-
-  const removeToast = (id) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
-
-  const pushToast = (type, message) => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    setToasts((prev) => [...prev, { id, type, message }]);
-    window.setTimeout(() => {
-      removeToast(id);
-    }, 4200);
-  };
-
-  const toggleWishlist = async (productId) => {
-    if (!user) {
-      pushToast('error', 'Sign in to save items to your wishlist.');
-      return;
+  const pageNumbers = useMemo(() => {
+    // Simple "1 2 3 ... last" style list — with ellipses collapsing the
+    // middle once there are enough pages that showing all of them would be
+    // more clutter than the pagination bar is worth.
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
 
-    const isWishlisted = wishlistIds.has(productId);
+    const pages = new Set([1, 2, totalPages - 1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+    const sorted = [...pages].filter((page) => page >= 1 && page <= totalPages).sort((a, b) => a - b);
 
-    setWishlistIds((prev) => {
-      const next = new Set(prev);
-      if (isWishlisted) {
-        next.delete(productId);
-      } else {
-        next.add(productId);
+    const withEllipses = [];
+    sorted.forEach((page, index) => {
+      if (index > 0 && page - sorted[index - 1] > 1) {
+        withEllipses.push('ellipsis');
       }
-      return next;
+      withEllipses.push(page);
     });
-
-    try {
-      if (isWishlisted) {
-        await removeFromWishlist(productId);
-      } else {
-        await addToWishlist(productId);
-      }
-    } catch {
-      setWishlistIds((prev) => {
-        const reverted = new Set(prev);
-        if (isWishlisted) {
-          reverted.add(productId);
-        } else {
-          reverted.delete(productId);
-        }
-        return reverted;
-      });
-      pushToast('error', 'Could not update your wishlist. Please try again.');
-    }
-  };
+    return withEllipses;
+  }, [totalPages, currentPage]);
 
   const handleEmailOrder = async () => {
     if (cartItems.length === 0) {
@@ -503,7 +405,7 @@ const ShopPage = () => {
 
     setShowOrderSuccessPopup(true);
     pushToast('success', 'Order placed successfully.');
-    setCart({});
+    clearCart();
     setCustomerName('');
     setCustomerPhone('');
     setCustomerEmail('');
@@ -542,19 +444,21 @@ const ShopPage = () => {
     onSubmitOrder: handleEmailOrder,
   };
 
+  const hasActiveFilters = categoryFilter !== 'all' || priceFilter !== 'all' || sortOption !== 'featured' || searchTerm.trim() !== '';
+
+  const resetFilters = () => {
+    setCategoryFilter('all');
+    setPriceFilter('all');
+    setSortOption('featured');
+    setSearchTerm('');
+  };
+
   return (
     <div className="pt-28 sm:pt-30 md:pt-32 pb-14 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-[1320px] mx-auto">
-        <div className="mb-6 sm:mb-8 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <Typography variant="label" className="mb-2 block">Shop</Typography>
-            <Typography variant="h2" className="text-foreground">All Products</Typography>
-          </div>
-          {!isLoadingProducts && !productsError && (
-            <p className="text-[0.82rem] text-muted-foreground">
-              Showing {filteredProducts.length} of {productCatalog.length} products
-            </p>
-          )}
+        <div className="mb-6 sm:mb-8">
+          <Typography variant="label" className="mb-2 block">Shop</Typography>
+          <Typography variant="h2" className="text-foreground">All Products</Typography>
         </div>
 
         {productsError ? (
@@ -570,85 +474,193 @@ const ShopPage = () => {
           </section>
         ) : (
           <>
-            <section>
-              <div className="mb-5 flex flex-wrap items-center gap-2.5">
-                <select
-                  value={categoryFilter}
-                  onChange={(event) => setCategoryFilter(event.target.value)}
-                  className="rounded-lg border border-[var(--color-border-medium)] bg-white px-3 py-2 text-[0.84rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="all">All Categories</option>
-                  {SHOP_CATEGORY_ORDER.map((category) => (
-                    <option key={category} value={category}>{category} ({categoryCounts[category] || 0})</option>
-                  ))}
-                </select>
+            <div className="flex flex-col lg:flex-row items-start gap-6 lg:gap-8">
+              <aside className="w-full lg:w-64 shrink-0 space-y-5">
+                <div className="rounded-xl border border-[var(--color-border-light)] bg-white p-4">
+                  <p className="mb-3 text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary">Search Product</p>
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+                    <Input
+                      type="text"
+                      placeholder="Search products..."
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
 
-                <select
-                  value={priceFilter}
-                  onChange={(event) => setPriceFilter(event.target.value)}
-                  className="rounded-lg border border-[var(--color-border-medium)] bg-white px-3 py-2 text-[0.84rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="all">All Prices</option>
-                  <option value="under_500">Under LKR 500</option>
-                  <option value="500_1500">LKR 500 - 1,500</option>
-                  <option value="1501_3000">LKR 1,501 - 3,000</option>
-                  <option value="above_3000">Above LKR 3,000</option>
-                </select>
+                <div className="rounded-xl border border-[var(--color-border-light)] bg-white p-4">
+                  <p className="mb-3 text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary">Product Categories</p>
+                  <div className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => setCategoryFilter('all')}
+                      className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-[0.86rem] transition-colors ${categoryFilter === 'all' ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground hover:bg-[var(--color-hover-overlay)]'}`}
+                    >
+                      <span>All Categories</span>
+                      <span className="text-[0.76rem] text-muted-foreground">({productCatalog.length})</span>
+                    </button>
+                    {SHOP_CATEGORY_ORDER.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => setCategoryFilter(category)}
+                        className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-[0.86rem] transition-colors ${categoryFilter === category ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground hover:bg-[var(--color-hover-overlay)]'}`}
+                      >
+                        <span>{category}</span>
+                        <span className="text-[0.76rem] text-muted-foreground">({categoryCounts[category] || 0})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                <select
-                  value={sortOption}
-                  onChange={(event) => setSortOption(event.target.value)}
-                  className="rounded-lg border border-[var(--color-border-medium)] bg-white px-3 py-2 text-[0.84rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="featured">Sort: Featured</option>
-                  <option value="price_low_to_high">Price: Low to High</option>
-                  <option value="price_high_to_low">Price: High to Low</option>
-                  <option value="name_a_to_z">Name: A to Z</option>
-                  <option value="name_z_to_a">Name: Z to A</option>
-                </select>
+                <div className="rounded-xl border border-[var(--color-border-light)] bg-white p-4">
+                  <p className="mb-3 text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary">Filter By Price</p>
+                  <div className="space-y-1">
+                    {PRICE_FILTERS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setPriceFilter(option.value)}
+                        className={`w-full rounded-lg px-2.5 py-1.5 text-left text-[0.86rem] transition-colors ${priceFilter === option.value ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground hover:bg-[var(--color-hover-overlay)]'}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                {(categoryFilter !== 'all' || priceFilter !== 'all' || sortOption !== 'featured') && (
+                {hasActiveFilters && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setCategoryFilter('all');
-                      setPriceFilter('all');
-                      setSortOption('featured');
-                    }}
-                    className="text-[0.78rem] font-semibold text-primary underline underline-offset-2"
+                    onClick={resetFilters}
+                    className="text-[0.8rem] font-semibold text-primary underline underline-offset-2"
                   >
-                    Reset
+                    Reset all filters
                   </button>
                 )}
-              </div>
+              </aside>
 
-              {filteredProducts.length === 0 ? (
-                <div className="rounded-2xl border border-[var(--color-border-light)] bg-white px-5 py-10 text-center text-[0.95rem] text-muted-foreground">
-                  No products match your current filters.
+              <section className="flex-1 min-w-0 w-full">
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--color-border-light)] bg-white px-3.5 py-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('grid')}
+                      aria-label="Grid view"
+                      aria-pressed={viewMode === 'grid'}
+                      className={`h-8 w-8 rounded-lg border inline-flex items-center justify-center transition-colors ${viewMode === 'grid' ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-medium)] text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <LayoutGrid size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('list')}
+                      aria-label="List view"
+                      aria-pressed={viewMode === 'list'}
+                      className={`h-8 w-8 rounded-lg border inline-flex items-center justify-center transition-colors ${viewMode === 'list' ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-medium)] text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <List size={14} />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <select
+                      value={sortOption}
+                      onChange={(event) => setSortOption(event.target.value)}
+                      className="rounded-lg border border-[var(--color-border-medium)] bg-white px-3 py-1.5 text-[0.82rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="featured">Sort by Featured</option>
+                      <option value="price_low_to_high">Price: Low to High</option>
+                      <option value="price_high_to_low">Price: High to Low</option>
+                      <option value="name_a_to_z">Name: A to Z</option>
+                      <option value="name_z_to_a">Name: Z to A</option>
+                    </select>
+
+                    {filteredProducts.length > 0 && (
+                      <p className="text-[0.78rem] text-muted-foreground whitespace-nowrap">
+                        Showing {(currentPage - 1) * PRODUCTS_PER_PAGE + 1}–{Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length} results
+                      </p>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <motion.div
-                  key={`${categoryFilter}-${priceFilter}-${sortOption}`}
-                  className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-4"
-                  variants={staggerContainer(0.05)}
-                  initial="hidden"
-                  animate="visible"
-                >
-                  {filteredProducts.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      category={getShopCategory(product)}
-                      quantity={cart[product.id] || 0}
-                      isWishlisted={wishlistIds.has(product.id)}
-                      onAddToCart={addToCart}
-                      onToggleWishlist={toggleWishlist}
-                      onOpenDetail={setSelectedProduct}
-                    />
-                  ))}
-                </motion.div>
-              )}
-            </section>
+
+                {filteredProducts.length === 0 ? (
+                  <div className="rounded-2xl border border-[var(--color-border-light)] bg-white px-5 py-10 text-center text-[0.95rem] text-muted-foreground">
+                    No products match your current filters.
+                  </div>
+                ) : (
+                  <>
+                    <motion.div
+                      key={`${categoryFilter}-${priceFilter}-${sortOption}-${searchTerm}-${currentPage}-${viewMode}`}
+                      className={
+                        viewMode === 'grid'
+                          ? 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4'
+                          : 'flex flex-col gap-3'
+                      }
+                      variants={staggerContainer(0.05)}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      {paginatedProducts.map((product) => (
+                        <ProductCard
+                          key={product.id}
+                          product={product}
+                          category={getShopCategory(product)}
+                          quantity={cart[product.id] || 0}
+                          isWishlisted={wishlistIds.has(product.id)}
+                          onAddToCart={addToCart}
+                          onToggleWishlist={toggleWishlist}
+                          onOpenDetail={setSelectedProduct}
+                          view={viewMode}
+                        />
+                      ))}
+                    </motion.div>
+
+                    {totalPages > 1 && (
+                      <div className="mt-6 flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                          disabled={currentPage === 1}
+                          aria-label="Previous page"
+                          className="h-9 w-9 rounded-lg border border-[var(--color-border-medium)] inline-flex items-center justify-center text-foreground disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--color-hover-overlay)] transition-colors"
+                        >
+                          <ChevronLeft size={15} />
+                        </button>
+
+                        {pageNumbers.map((page, index) =>
+                          page === 'ellipsis' ? (
+                            <span key={`ellipsis-${index}`} className="px-1.5 text-[0.82rem] text-muted-foreground">…</span>
+                          ) : (
+                            <button
+                              key={page}
+                              type="button"
+                              onClick={() => setCurrentPage(page)}
+                              aria-current={currentPage === page ? 'page' : undefined}
+                              className={`h-9 min-w-9 px-2.5 rounded-lg border text-[0.82rem] font-semibold transition-colors ${currentPage === page ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-medium)] text-foreground hover:bg-[var(--color-hover-overlay)]'}`}
+                            >
+                              {page}
+                            </button>
+                          )
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                          disabled={currentPage === totalPages}
+                          aria-label="Next page"
+                          className="h-9 w-9 rounded-lg border border-[var(--color-border-medium)] inline-flex items-center justify-center text-foreground disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--color-hover-overlay)] transition-colors"
+                        >
+                          <ChevronRight size={15} />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </section>
+            </div>
 
             <ShopCart {...cartProps} openSignal={cartOpenSignal} />
           </>

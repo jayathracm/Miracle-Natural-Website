@@ -2,6 +2,7 @@ export { default as Landing } from './Landing';
 export { default as About } from './About';
 export { default as Pricing } from './Pricing';
 export { default as Shop } from './Shop';
+export { default as ProductDetail } from './ProductDetail';
 export { default as RitualBuilder } from './RitualBuilder';
 export { default as Login } from './Login';
 export { default as Signup } from './Signup';

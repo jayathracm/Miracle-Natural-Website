@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Heart, ImageOff, Plus, X } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
@@ -6,6 +7,8 @@ import { Button } from '../ui/Button';
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
 export const ProductDetailModal = ({ product, category, isWishlisted, onClose, onToggleWishlist, onAddToCart }) => {
+  const navigate = useNavigate();
+
   useEffect(() => {
     const handleEsc = (event) => {
       if (event.key === 'Escape') onClose();
@@ -15,6 +18,8 @@ export const ProductDetailModal = ({ product, category, isWishlisted, onClose, o
   }, [onClose]);
 
   if (!product) return null;
+
+  const hasSale = Boolean(product.compare_at_price) && Number(product.compare_at_price) > Number(product.price);
 
   return (
     <div
@@ -66,7 +71,17 @@ export const ProductDetailModal = ({ product, category, isWishlisted, onClose, o
           </div>
 
           <div className="space-y-4">
-            <p className="font-display text-[1.6rem] leading-none text-primary">{formatCurrency(product.price)}</p>
+            <div className="flex items-baseline gap-3">
+              <p className="font-display text-[1.6rem] leading-none text-primary">{formatCurrency(product.price)}</p>
+              {hasSale && (
+                <>
+                  <p className="text-[1rem] text-text-tertiary line-through">{formatCurrency(product.compare_at_price)}</p>
+                  <span className="rounded-md border border-[var(--color-border-medium)] bg-[var(--color-card-bg)] px-2 py-1 text-[0.62rem] font-bold tracking-[0.12em] uppercase text-foreground">
+                    Sale
+                  </span>
+                </>
+              )}
+            </div>
 
             {product.description && (
               <div>
@@ -89,16 +104,28 @@ export const ProductDetailModal = ({ product, category, isWishlisted, onClose, o
               </div>
             )}
 
-            <Button
-              className="w-full sm:w-auto px-6 py-2.5 text-[0.76rem]"
-              icon={Plus}
-              onClick={() => {
-                onAddToCart(product.id);
-                onClose();
-              }}
-            >
-              Add To Cart
-            </Button>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <Button
+                className="w-full sm:w-auto px-6 py-2.5 text-[0.76rem]"
+                icon={Plus}
+                onClick={() => {
+                  onAddToCart(product.id);
+                  onClose();
+                }}
+              >
+                Add To Cart
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  navigate(`/shop/${product.id}`);
+                }}
+                className="text-[0.8rem] font-semibold text-primary underline underline-offset-2"
+              >
+                View Full Details
+              </button>
+            </div>
           </div>
         </div>
       </div>

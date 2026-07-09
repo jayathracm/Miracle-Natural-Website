@@ -8,7 +8,7 @@ import { supabase } from './supabaseClient';
 export async function fetchProducts() {
   const { data, error } = await supabase
     .from('products')
-    .select('id, name, category, size, price, image_url, description, ingredients, benefits')
+    .select('id, name, category, size, price, compare_at_price, image_url, description, ingredients, benefits')
     .eq('is_active', true)
     .order('name', { ascending: true });
 
@@ -19,6 +19,7 @@ export async function fetchProducts() {
   return (data || []).map((product) => ({
     ...product,
     price: Number(product.price),
+    compare_at_price: product.compare_at_price === null ? null : Number(product.compare_at_price),
   }));
 }
 
@@ -40,6 +41,7 @@ export async function fetchAllProductsForAdmin() {
   return (data || []).map((product) => ({
     ...product,
     price: Number(product.price),
+    compare_at_price: product.compare_at_price === null ? null : Number(product.compare_at_price),
   }));
 }
 
@@ -58,6 +60,7 @@ export async function createProduct(payload) {
       category: payload.category,
       size: payload.size || null,
       price: payload.price,
+      compare_at_price: payload.compareAtPrice ?? null,
       image_url: payload.imageUrl || null,
       description: payload.description || null,
       ingredients: payload.ingredients || null,
@@ -71,7 +74,11 @@ export async function createProduct(payload) {
     throw error;
   }
 
-  return { ...data, price: Number(data.price) };
+  return {
+    ...data,
+    price: Number(data.price),
+    compare_at_price: data.compare_at_price === null ? null : Number(data.compare_at_price),
+  };
 }
 
 /** `id` is intentionally not editable here — see createProduct's note. */
@@ -83,6 +90,7 @@ export async function updateProduct(id, payload) {
       category: payload.category,
       size: payload.size || null,
       price: payload.price,
+      compare_at_price: payload.compareAtPrice ?? null,
       image_url: payload.imageUrl || null,
       description: payload.description || null,
       ingredients: payload.ingredients || null,
@@ -98,5 +106,9 @@ export async function updateProduct(id, payload) {
     throw error;
   }
 
-  return { ...data, price: Number(data.price) };
+  return {
+    ...data,
+    price: Number(data.price),
+    compare_at_price: data.compare_at_price === null ? null : Number(data.compare_at_price),
+  };
 }

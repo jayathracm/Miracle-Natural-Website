@@ -14,13 +14,14 @@ import {
 } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import ScrollProgressBar from './components/ScrollProgressBar';
-import { Landing, About, Pricing, Shop, RitualBuilder, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
+import { Landing, About, Pricing, Shop, ProductDetail, RitualBuilder, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminProducts from './pages/admin/AdminProducts';
 import RequireAdmin from './components/RequireAdmin';
 import { useSEO } from './hooks/useSEO';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
@@ -66,19 +67,21 @@ const App = () => {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <Router>
-          <SEOEffect />
-          <ScrollToTop />
-          <ScrollProgressBar />
-          <MainLayout>
-            <div className="flex flex-col min-h-screen">
-              <Navbar />
-              <main className="flex-grow">
-                <Routes>
+        <CartProvider>
+          <Router>
+            <SEOEffect />
+            <ScrollToTop />
+            <ScrollProgressBar />
+            <MainLayout>
+              <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <main className="flex-grow">
+                  <Routes>
                   <Route path="/" element={<Landing />} />
                   <Route path="/about" element={<About />} />
 
                   <Route path="/shop" element={<Shop />} />
+                  <Route path="/shop/:productId" element={<ProductDetail />} />
                   <Route path="/ritual-builder" element={<RitualBuilder />} />
                   <Route path="/pricing" element={<Pricing />} />
 
@@ -133,7 +136,8 @@ const App = () => {
               <Footer />
             </div>
           </MainLayout>
-        </Router>
+          </Router>
+        </CartProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

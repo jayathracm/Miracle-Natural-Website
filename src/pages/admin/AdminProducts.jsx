@@ -21,6 +21,7 @@ const emptyForm = {
   category: '',
   size: '',
   price: '',
+  compareAtPrice: '',
   imageUrl: '',
   description: '',
   ingredients: '',
@@ -86,6 +87,7 @@ const AdminProducts = () => {
       category: product.category,
       size: product.size || '',
       price: String(product.price),
+      compareAtPrice: product.compare_at_price === null || product.compare_at_price === undefined ? '' : String(product.compare_at_price),
       imageUrl: product.image_url || '',
       description: product.description || '',
       ingredients: product.ingredients || '',
@@ -121,11 +123,21 @@ const AdminProducts = () => {
       return;
     }
 
+    let compareAtPriceNumber = null;
+    if (form.compareAtPrice.trim()) {
+      compareAtPriceNumber = Number(form.compareAtPrice);
+      if (Number.isNaN(compareAtPriceNumber) || compareAtPriceNumber <= priceNumber) {
+        setFormError('Compare-at price must be a number greater than the regular price (or left blank).');
+        return;
+      }
+    }
+
     const payload = {
       name: form.name.trim(),
       category: form.category.trim(),
       size: form.size.trim(),
       price: priceNumber,
+      compareAtPrice: compareAtPriceNumber,
       imageUrl: form.imageUrl.trim(),
       description: form.description.trim(),
       ingredients: form.ingredients.trim(),
@@ -166,6 +178,7 @@ const AdminProducts = () => {
         category: product.category,
         size: product.size,
         price: Number(product.price),
+        compareAtPrice: product.compare_at_price === null || product.compare_at_price === undefined ? null : Number(product.compare_at_price),
         imageUrl: product.image_url,
         description: product.description,
         ingredients: product.ingredients,
@@ -298,6 +311,17 @@ const AdminProducts = () => {
                 value={form.price}
                 onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
               />
+              <Input
+                id="product-compare-at-price"
+                label="Compare-at Price (optional)"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. original price before a sale"
+                value={form.compareAtPrice}
+                onChange={(event) => setForm((prev) => ({ ...prev, compareAtPrice: event.target.value }))}
+                hint="Set this higher than Price to show a SALE badge and a struck-through original price on the storefront. Leave blank for no sale."
+              />
             </div>
 
             <Input
@@ -388,7 +412,12 @@ const AdminProducts = () => {
                     </div>
                     <Typography variant="h4" className="text-foreground text-[0.92rem] mb-1 leading-snug">{product.name}</Typography>
                     <p className="text-[0.76rem] text-muted-foreground mb-2">{product.size}</p>
-                    <p className="font-display text-[1.1rem] text-primary mb-3">{formatCurrency(product.price)}</p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <p className="font-display text-[1.1rem] text-primary">{formatCurrency(product.price)}</p>
+                      {product.compare_at_price && (
+                        <p className="text-[0.8rem] text-text-tertiary line-through">{formatCurrency(product.compare_at_price)}</p>
+                      )}
+                    </div>
 
                     <div className="mt-auto flex items-center gap-2">
                       <button

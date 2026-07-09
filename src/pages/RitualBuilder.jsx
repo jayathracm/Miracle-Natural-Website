@@ -201,8 +201,15 @@ const RitualBuilder = () => {
                       <Typography variant="h4" className="text-foreground mb-1 leading-snug">{item.product.name}</Typography>
                       {item.product.size && <Typography variant="small" className="block mb-3">{item.product.size}</Typography>}
                       <p className="text-[0.88rem] leading-relaxed text-muted-foreground mb-4">{item.reason}</p>
-                      <div className="mt-auto flex items-center justify-between">
+                      <div className="mt-auto flex items-center justify-between gap-2">
                         <p className="font-display text-[1.3rem] text-primary">{formatCurrency(item.product.price)}</p>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/shop/${item.productId}`)}
+                          className="shrink-0 text-[0.76rem] font-semibold text-primary underline underline-offset-2"
+                        >
+                          View Details
+                        </button>
                       </div>
                     </div>
                   </motion.article>

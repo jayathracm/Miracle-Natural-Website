@@ -102,13 +102,19 @@ create table if not exists public.products (
   category text not null,
   size text,
   price numeric(10, 2) not null,
+  -- Optional "was" price. When set (and > price), the storefront shows a
+  -- real SALE badge + a struck-through original price — never fabricated,
+  -- since it's just another product column an admin sets.
+  compare_at_price numeric(10, 2),
   image_url text,
   description text,
   ingredients text,
   benefits text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint products_compare_at_price_check
+    check (compare_at_price is null or compare_at_price > price)
 );
 
 alter table public.products enable row level security;

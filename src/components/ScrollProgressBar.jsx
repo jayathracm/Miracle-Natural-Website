@@ -1,4 +1,5 @@
 import React from 'react';
+// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion, useScroll, useSpring } from 'framer-motion';
 
 // A slim fixed bar that fills left-to-right as the page is scrolled —

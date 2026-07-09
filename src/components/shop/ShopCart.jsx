@@ -253,8 +253,6 @@ export const ShopCart = (props) => {
   // works well since it's guaranteed to differ each time.
   useEffect(() => {
     if (openSignal) setIsOpen(true);
-    // Only care about the signal changing, not the other props.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openSignal]);
 
   // Reset back to the cart view (not left stranded on the checkout form)
