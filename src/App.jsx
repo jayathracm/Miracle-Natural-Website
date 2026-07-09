@@ -14,11 +14,14 @@ import {
 } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import ScrollProgressBar from './components/ScrollProgressBar';
-import { Landing, About, Pricing, Shop, ProductDetail, RitualBuilder, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
+import { Landing, About, Pricing, Shop, ProductDetail, RitualBuilder, CorporatePartnerApply, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminProducts from './pages/admin/AdminProducts';
+import AdminCorporatePartners from './pages/admin/AdminCorporatePartners';
+import AdminAccounts from './pages/admin/AdminAccounts';
 import RequireAdmin from './components/RequireAdmin';
+import RequireSuperAdmin from './components/RequireSuperAdmin';
 import { useSEO } from './hooks/useSEO';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -84,6 +87,7 @@ const App = () => {
                   <Route path="/shop/:productId" element={<ProductDetail />} />
                   <Route path="/ritual-builder" element={<RitualBuilder />} />
                   <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/corporate-partner" element={<CorporatePartnerApply />} />
 
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
@@ -113,6 +117,24 @@ const App = () => {
                       <RequireAdmin>
                         <AdminProducts />
                       </RequireAdmin>
+                    )}
+                  />
+
+                  <Route
+                    path="/admin/corporate-partners"
+                    element={(
+                      <RequireAdmin>
+                        <AdminCorporatePartners />
+                      </RequireAdmin>
+                    )}
+                  />
+
+                  <Route
+                    path="/admin/accounts"
+                    element={(
+                      <RequireSuperAdmin>
+                        <AdminAccounts />
+                      </RequireSuperAdmin>
                     )}
                   />
 

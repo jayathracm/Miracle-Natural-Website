@@ -87,6 +87,16 @@ const Footer = () => {
                   Shop Bundles
                 </a>
               </li>
+              <li>
+                <a
+                  href="/corporate-partner"
+                  className="transition-colors duration-200"
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text-muted)'}
+                >
+                  Business & Wholesale
+                </a>
+              </li>
             </ul>
           </div>
 

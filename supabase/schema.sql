@@ -747,3 +747,264 @@ grant execute on function public.calculate_b2b_price(text, integer) to authentic
 insert into public.discount_tiers (min_quantity, discount_percent)
 values (50, 10), (100, 15), (250, 20)
 on conflict (min_quantity) do update set discount_percent = excluded.discount_percent;
+
+-- ----------------------------------------------------------------------------
+-- 15. CORPORATE_PARTNER_APPLICATIONS (functional-requirements §2.1/§3.4)
+-- Public "apply for a business account" form. Form fields only, no document
+-- upload — admin can verify manually offline if something looks off.
+-- Applicant already has (or gets, via normal signup) a customer-role
+-- account; approving an application is what flips profiles.role to
+-- corporate_partner, unlocking wholesale pricing/bulk ordering.
+-- ----------------------------------------------------------------------------
+create table if not exists public.corporate_partner_applications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
+  business_name text not null,
+  registration_number text not null,
+  contact_person text not null,
+  contact_phone text not null,
+  contact_email text not null,
+  estimated_order_volume text not null,
+  delivery_region text not null,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  admin_notes text,
+  reviewed_by uuid references auth.users (id) on delete set null,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Prevents duplicate concurrent pending applications from the same user,
+-- while still allowing a fresh re-application after a rejection (only one
+-- row per user can ever be 'pending' at a time). Verified manually: a
+-- second pending insert for the same user correctly raises a unique
+-- violation.
+create unique index if not exists corporate_partner_applications_one_pending_per_user
+  on public.corporate_partner_applications (user_id)
+  where status = 'pending';
+
+alter table public.corporate_partner_applications enable row level security;
+
+drop policy if exists "Users can submit their own application" on public.corporate_partner_applications;
+create policy "Users can submit their own application"
+  on public.corporate_partner_applications for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can view their own applications" on public.corporate_partner_applications;
+create policy "Users can view their own applications"
+  on public.corporate_partner_applications for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Admins can view all applications" on public.corporate_partner_applications;
+create policy "Admins can view all applications"
+  on public.corporate_partner_applications for select
+  using (private.is_admin());
+
+-- Deliberately no UPDATE/DELETE policies at all, for anyone, admin included.
+-- Every status change must go through review_corporate_partner_application()
+-- below, which is the only place that (a) stamps reviewed_by/reviewed_at
+-- and (b) flips profiles.role atomically with the status change — a raw
+-- `.update()` from the client could do one without the other.
+
+-- The only supported way to approve/reject an application. SECURITY
+-- DEFINER so it can both update this table (which has no client update
+-- policy) and flip profiles.role for a *different* user than the caller —
+-- both need to bypass RLS, but only after an explicit is_admin() check,
+-- same pattern as calculate_b2b_price(). Verified manually: non-admin
+-- caller is rejected, a full approve cycle correctly stamps
+-- reviewed_by/reviewed_at and flips the applicant's profiles.role, then the
+-- test row/role change were reverted.
+create or replace function public.review_corporate_partner_application(
+  p_application_id uuid,
+  p_decision text,
+  p_admin_notes text default null
+)
+returns public.corporate_partner_applications
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_result public.corporate_partner_applications;
+begin
+  if not private.is_admin() then
+    raise exception 'Only admins can review corporate partner applications';
+  end if;
+
+  if p_decision not in ('approved', 'rejected') then
+    raise exception 'Decision must be either ''approved'' or ''rejected''';
+  end if;
+
+  update public.corporate_partner_applications
+  set status = p_decision,
+      admin_notes = p_admin_notes,
+      reviewed_by = auth.uid(),
+      reviewed_at = now(),
+      updated_at = now()
+  where id = p_application_id
+  returning * into v_result;
+
+  if not found then
+    raise exception 'Application % not found', p_application_id;
+  end if;
+
+  if p_decision = 'approved' then
+    update public.profiles
+    set role = 'corporate_partner', updated_at = now()
+    where id = v_result.user_id;
+  end if;
+
+  return v_result;
+end;
+$$;
+
+revoke all on function public.review_corporate_partner_application(uuid, text, text) from public;
+grant execute on function public.review_corporate_partner_application(uuid, text, text) to authenticated, anon;
+
+-- ----------------------------------------------------------------------------
+-- 16. SUPERADMIN ROLE + ACCOUNT MANAGEMENT (functional-requirements §3.6)
+-- Adds a rank above 'admin'. private.is_admin() is redefined to treat
+-- superadmin as admin-equivalent (role in ('admin','superadmin')), so every
+-- existing admin-gated policy/page above this point automatically extends
+-- to superadmins with no other changes. private.is_superadmin() is a
+-- separate, stricter check (role = 'superadmin' only) used solely to gate
+-- the two RPCs below.
+-- ----------------------------------------------------------------------------
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles
+  add constraint profiles_role_check
+  check (role in ('customer', 'corporate_partner', 'admin', 'superadmin'));
+
+create or replace function private.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role in ('admin', 'superadmin')
+  );
+$$;
+
+create or replace function private.is_superadmin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'superadmin'
+  );
+$$;
+
+revoke all on function private.is_superadmin() from public;
+grant execute on function private.is_superadmin() to authenticated, anon;
+
+-- Read-only account directory for the /admin/accounts page. profiles has no
+-- email column (email lives in auth.users), so this joins the two tables
+-- server-side rather than exposing auth.users to the client directly.
+-- SECURITY DEFINER, gated internally by private.is_superadmin() — there is
+-- no client-facing "select all profiles" RLS policy, same "no direct table
+-- access, only through a checked RPC" pattern as section 15 above.
+create or replace function public.list_accounts_for_admin(
+  p_search text default null,
+  p_role_filter text default null
+)
+returns table (
+  id uuid,
+  email text,
+  full_name text,
+  phone text,
+  role text,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+begin
+  if not private.is_superadmin() then
+    raise exception 'Only superadmins can list accounts';
+  end if;
+
+  return query
+    select p.id, u.email::text, p.full_name, p.phone, p.role, p.created_at
+    from public.profiles p
+    join auth.users u on u.id = p.id
+    where
+      (p_role_filter is null or p_role_filter = 'all' or p.role = p_role_filter)
+      and (
+        p_search is null or trim(p_search) = ''
+        or p.full_name ilike '%' || trim(p_search) || '%'
+        or u.email ilike '%' || trim(p_search) || '%'
+      )
+    order by p.created_at desc;
+end;
+$$;
+
+revoke all on function public.list_accounts_for_admin(text, text) from public;
+grant execute on function public.list_accounts_for_admin(text, text) to authenticated, anon;
+
+-- The only supported way to change someone's role. There is no client
+-- update policy on profiles.role for anyone but the row owner, and even
+-- that "Users can update their own profile" policy has no WITH CHECK
+-- restricting which columns change — this RPC is the actual, controlled
+-- write path going forward. Gated by private.is_superadmin(). Refuses to
+-- demote the last remaining superadmin so this page can never lock everyone
+-- out of itself. Verified manually: non-superadmin callers rejected, a full
+-- promote/demote roundtrip on a real account worked and was reverted, and
+-- attempting to demote the sole superadmin correctly raised an exception.
+create or replace function public.update_account_role(
+  p_user_id uuid,
+  p_new_role text
+)
+returns public.profiles
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_current_role text;
+  v_other_superadmins integer;
+  v_result public.profiles;
+begin
+  if not private.is_superadmin() then
+    raise exception 'Only superadmins can change account roles';
+  end if;
+
+  if p_new_role not in ('customer', 'corporate_partner', 'admin', 'superadmin') then
+    raise exception 'Invalid role: %', p_new_role;
+  end if;
+
+  select role into v_current_role from public.profiles where id = p_user_id;
+
+  if not found then
+    raise exception 'Account % not found', p_user_id;
+  end if;
+
+  if v_current_role = 'superadmin' and p_new_role <> 'superadmin' then
+    select count(*) into v_other_superadmins
+    from public.profiles
+    where role = 'superadmin' and id <> p_user_id;
+
+    if v_other_superadmins = 0 then
+      raise exception 'Cannot remove the last superadmin';
+    end if;
+  end if;
+
+  update public.profiles
+  set role = p_new_role, updated_at = now()
+  where id = p_user_id
+  returning * into v_result;
+
+  return v_result;
+end;
+$$;
+
+revoke all on function public.update_account_role(uuid, text) from public;
+grant execute on function public.update_account_role(uuid, text) to authenticated, anon;

@@ -62,7 +62,13 @@ export const AuthProvider = ({ children }) => {
     profile,
     profileLoading,
     role: profile?.role ?? 'customer',
-    isAdmin: profile?.role === 'admin',
+    // Superadmin is a rank above admin, not a separate track — anything
+    // gated on isAdmin (RequireAdmin route guard, admin nav links) should
+    // also be visible to superadmins. isSuperAdmin is the stricter check,
+    // used only to gate the account-management page/nav link itself.
+    isAdmin: profile?.role === 'admin' || profile?.role === 'superadmin',
+    isSuperAdmin: profile?.role === 'superadmin',
+    isCorporatePartner: profile?.role === 'corporate_partner',
     signOut: () => supabase.auth.signOut(),
     // Lets a component re-pull the profile row after editing it (name/phone
     // changes), without waiting for a full auth-state change event.

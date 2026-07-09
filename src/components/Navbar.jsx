@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { LayoutDashboard, Mail, Menu, Package, User, X } from 'lucide-react';
+import { Briefcase, LayoutDashboard, Mail, Menu, Package, ShieldCheck, User, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import logoIcon from '../assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
 import logoWordmark from '../assets/branding-from-pdf/miracle-natural-wordmark-transparent.png';
@@ -19,7 +19,7 @@ const Navbar = () => {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isSuperAdmin, isCorporatePartner } = useAuth();
   const accountMenuRef = useRef(null);
 
   // Optimized scroll handler - only updates when crossing threshold
@@ -172,6 +172,17 @@ const Navbar = () => {
                     {user ? 'My Account' : 'Sign In'}
                   </Link>
 
+                  {!isAdmin && !isCorporatePartner && (
+                    <Link
+                      to="/corporate-partner"
+                      onClick={() => setIsAccountMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-[0.76rem] font-semibold tracking-[0.04em] uppercase text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors"
+                    >
+                      <Briefcase size={14} />
+                      Business Account
+                    </Link>
+                  )}
+
                   {isAdmin && (
                     <>
                       <div className="my-1.5 border-t border-[var(--color-border-light)]" />
@@ -199,6 +210,24 @@ const Navbar = () => {
                         <Mail size={14} />
                         Admin: Messages
                       </Link>
+                      <Link
+                        to="/admin/corporate-partners"
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-[0.76rem] font-semibold tracking-[0.04em] uppercase text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors"
+                      >
+                        <Briefcase size={14} />
+                        Admin: Partners
+                      </Link>
+                      {isSuperAdmin && (
+                        <Link
+                          to="/admin/accounts"
+                          onClick={() => setIsAccountMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-[0.76rem] font-semibold tracking-[0.04em] uppercase text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors"
+                        >
+                          <ShieldCheck size={14} />
+                          Admin: Accounts
+                        </Link>
+                      )}
                     </>
                   )}
                 </motion.div>
@@ -264,6 +293,16 @@ const Navbar = () => {
                   <User size={18} />
                   {user ? 'My Account' : 'Sign In'}
                 </Link>
+                {!isAdmin && !isCorporatePartner && (
+                  <Link
+                    to="/corporate-partner"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left inline-flex items-center gap-2"
+                  >
+                    <Briefcase size={18} />
+                    Business Account
+                  </Link>
+                )}
                 {isAdmin && (
                   <>
                     <Link
@@ -290,6 +329,24 @@ const Navbar = () => {
                       <Mail size={18} />
                       Admin: Messages
                     </Link>
+                    <Link
+                      to="/admin/corporate-partners"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left inline-flex items-center gap-2"
+                    >
+                      <Briefcase size={18} />
+                      Admin: Partners
+                    </Link>
+                    {isSuperAdmin && (
+                      <Link
+                        to="/admin/accounts"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left inline-flex items-center gap-2"
+                      >
+                        <ShieldCheck size={18} />
+                        Admin: Accounts
+                      </Link>
+                    )}
                   </>
                 )}
                 <Link
