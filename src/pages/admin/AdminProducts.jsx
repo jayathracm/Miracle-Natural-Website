@@ -22,6 +22,7 @@ const emptyForm = {
   size: '',
   price: '',
   compareAtPrice: '',
+  moq: '',
   imageUrl: '',
   description: '',
   ingredients: '',
@@ -88,6 +89,7 @@ const AdminProducts = () => {
       size: product.size || '',
       price: String(product.price),
       compareAtPrice: product.compare_at_price === null || product.compare_at_price === undefined ? '' : String(product.compare_at_price),
+      moq: product.moq === null || product.moq === undefined ? '' : String(product.moq),
       imageUrl: product.image_url || '',
       description: product.description || '',
       ingredients: product.ingredients || '',
@@ -132,12 +134,22 @@ const AdminProducts = () => {
       }
     }
 
+    let moqNumber = null;
+    if (form.moq.trim()) {
+      moqNumber = Number(form.moq);
+      if (!Number.isInteger(moqNumber) || moqNumber <= 0) {
+        setFormError('Minimum order quantity must be a whole number greater than 0 (or left blank).');
+        return;
+      }
+    }
+
     const payload = {
       name: form.name.trim(),
       category: form.category.trim(),
       size: form.size.trim(),
       price: priceNumber,
       compareAtPrice: compareAtPriceNumber,
+      moq: moqNumber,
       imageUrl: form.imageUrl.trim(),
       description: form.description.trim(),
       ingredients: form.ingredients.trim(),
@@ -179,6 +191,7 @@ const AdminProducts = () => {
         size: product.size,
         price: Number(product.price),
         compareAtPrice: product.compare_at_price === null || product.compare_at_price === undefined ? null : Number(product.compare_at_price),
+        moq: product.moq === null || product.moq === undefined ? null : Number(product.moq),
         imageUrl: product.image_url,
         description: product.description,
         ingredients: product.ingredients,
@@ -322,6 +335,17 @@ const AdminProducts = () => {
                 onChange={(event) => setForm((prev) => ({ ...prev, compareAtPrice: event.target.value }))}
                 hint="Set this higher than Price to show a SALE badge and a struck-through original price on the storefront. Leave blank for no sale."
               />
+              <Input
+                id="product-moq"
+                label="Wholesale MOQ (optional)"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 25"
+                value={form.moq}
+                onChange={(event) => setForm((prev) => ({ ...prev, moq: event.target.value }))}
+                hint="Minimum quantity a Corporate Partner must order to unlock wholesale pricing on this product. Leave blank to use the site-wide default (25 units)."
+              />
             </div>
 
             <Input
@@ -412,12 +436,15 @@ const AdminProducts = () => {
                     </div>
                     <Typography variant="h4" className="text-foreground text-[0.92rem] mb-1 leading-snug">{product.name}</Typography>
                     <p className="text-[0.76rem] text-muted-foreground mb-2">{product.size}</p>
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-1">
                       <p className="font-display text-[1.1rem] text-primary">{formatCurrency(product.price)}</p>
                       {product.compare_at_price && (
                         <p className="text-[0.8rem] text-text-tertiary line-through">{formatCurrency(product.compare_at_price)}</p>
                       )}
                     </div>
+                    <p className="text-[0.72rem] text-muted-foreground mb-3">
+                      Wholesale MOQ: {product.moq ? `${product.moq} units` : 'default (25 units)'}
+                    </p>
 
                     <div className="mt-auto flex items-center gap-2">
                       <button

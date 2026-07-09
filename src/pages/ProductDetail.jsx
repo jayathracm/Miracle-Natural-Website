@@ -6,7 +6,9 @@ import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../hooks/useWishlist';
+import { useAuth } from '../context/AuthContext';
 import { getShopCategory } from '../lib/shopCategories';
+import { WholesalePricingPanel } from '../components/shop/WholesalePricingPanel';
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
@@ -19,6 +21,7 @@ const ProductDetail = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { productById, isLoadingProducts, productsError, addToCart } = useCart();
+  const { isCorporatePartner, isAdmin } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [notice, setNotice] = useState(null);
 
@@ -153,6 +156,10 @@ const ProductDetail = () => {
                   Add To Cart
                 </Button>
               </div>
+
+              {(isCorporatePartner || isAdmin) && (
+                <WholesalePricingPanel productId={product.id} quantity={quantity} />
+              )}
 
               {notice && (
                 <div
