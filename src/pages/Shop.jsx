@@ -18,6 +18,7 @@ import { useWishlist } from '../hooks/useWishlist';
 import DELIVERY_ZONES from '../data/deliveryZones';
 import { fetchAddresses } from '../lib/addresses';
 import { calculateB2BPrice } from '../lib/b2bPricing';
+import { decrementInventoryForOrder } from '../lib/inventory';
 import { submitQuotation } from '../lib/quotations';
 import { staggerContainer } from '../lib/motionVariants';
 import { SHOP_CATEGORY_ORDER, getShopCategory } from '../lib/shopCategories';
@@ -439,6 +440,12 @@ const ShopPage = () => {
 
     if (itemsError) {
       pushToast('error', 'Order saved, but item details failed to record. Our team will follow up with you directly.');
+    } else {
+      // Best-effort stock decrement — same "DB-first, this part can't sink
+      // the order" spirit as the notification email below. Idempotent
+      // server-side, so there's no real downside to firing it here even if
+      // something upstream retries.
+      decrementInventoryForOrder(orderRow.id).catch(() => {});
     }
 
     try {

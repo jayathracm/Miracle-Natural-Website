@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Briefcase, FileText, LayoutDashboard, Mail, Menu, Package, Percent, ShieldCheck, User, X } from 'lucide-react';
+import { Boxes, Briefcase, FileText, LayoutDashboard, Mail, Menu, Package, Percent, ShieldCheck, User, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import logoIcon from '../assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
 import logoWordmark from '../assets/branding-from-pdf/miracle-natural-wordmark-transparent.png';
@@ -234,6 +234,14 @@ const Navbar = () => {
                         <FileText size={14} />
                         Admin: Quotations
                       </Link>
+                      <Link
+                        to="/admin/inventory"
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-[0.76rem] font-semibold tracking-[0.04em] uppercase text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors"
+                      >
+                        <Boxes size={14} />
+                        Admin: Inventory
+                      </Link>
                       {isSuperAdmin && (
                         <Link
                           to="/admin/accounts"
@@ -368,6 +376,14 @@ const Navbar = () => {
                     >
                       <FileText size={18} />
                       Admin: Quotations
+                    </Link>
+                    <Link
+                      to="/admin/inventory"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left inline-flex items-center gap-2"
+                    >
+                      <Boxes size={18} />
+                      Admin: Inventory
                     </Link>
                     {isSuperAdmin && (
                       <Link
