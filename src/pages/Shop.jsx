@@ -17,6 +17,8 @@ import { useCart } from '../context/CartContext';
 import { useWishlist } from '../hooks/useWishlist';
 import DELIVERY_ZONES from '../data/deliveryZones';
 import { fetchAddresses } from '../lib/addresses';
+import { calculateB2BPrice } from '../lib/b2bPricing';
+import { submitQuotation } from '../lib/quotations';
 import { staggerContainer } from '../lib/motionVariants';
 import { SHOP_CATEGORY_ORDER, getShopCategory } from '../lib/shopCategories';
 
@@ -34,7 +36,8 @@ const PRICE_FILTERS = [
 const formatCurrency = (amount) => `LKR ${amount.toLocaleString('en-LK')}`;
 
 const ShopPage = () => {
-  const { user } = useAuth();
+  const { user, isCorporatePartner, isAdmin } = useAuth();
+  const isWholesaleEligible = isCorporatePartner || isAdmin;
   const location = useLocation();
   const navigate = useNavigate();
   const {
@@ -59,6 +62,8 @@ const ShopPage = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isSendingOrder, setIsSendingOrder] = useState(false);
   const [showOrderSuccessPopup, setShowOrderSuccessPopup] = useState(false);
+  const [isRequestingQuote, setIsRequestingQuote] = useState(false);
+  const [showQuoteSuccessPopup, setShowQuoteSuccessPopup] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [priceFilter, setPriceFilter] = useState('all');
@@ -70,6 +75,7 @@ const ShopPage = () => {
   const [selectedAddressId, setSelectedAddressId] = useState('manual');
   const [bundlePopup, setBundlePopup] = useState(null);
   const [cartOpenSignal, setCartOpenSignal] = useState(0);
+  const [wholesalePricing, setWholesalePricing] = useState({});
 
   const removeToast = (id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -163,6 +169,72 @@ const ShopPage = () => {
   }, [deliveryZone]);
 
   const grandTotal = useMemo(() => totalAmount + shippingCost, [totalAmount, shippingCost]);
+
+  // Bulk ordering (functional-requirements §2.3): a Corporate Partner's cart
+  // totals should reflect the same discount-tier math as WholesalePricingPanel
+  // on the product page, not flat retail pricing. Recomputed per line item
+  // (not just the overall quantity) since MOQ/tier eligibility is evaluated
+  // per product, exactly like calculate_b2b_price does server-side. Debounced
+  // so rapid +/- clicks on cart quantities don't fire a request per click.
+  // Deliberately scoped to this page (not lifted into CartContext) — nothing
+  // else in the app reads cartItems, so there's no risk of silently changing
+  // prices shown elsewhere (ProductCard, RitualBuilder, bundle popups all
+  // show retail pricing, which is correct — this is purely a checkout-time
+  // adjustment for eligible accounts).
+  useEffect(() => {
+    if (!isWholesaleEligible || cartItems.length === 0) {
+      setWholesalePricing({});
+      return undefined;
+    }
+
+    let isCancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      Promise.all(
+        cartItems.map((item) =>
+          calculateB2BPrice(item.id, item.quantity)
+            .then((pricing) => [item.id, pricing])
+            .catch(() => [item.id, null])
+        )
+      ).then((results) => {
+        if (isCancelled) return;
+        const next = {};
+        results.forEach(([productId, pricing]) => {
+          if (pricing) next[productId] = pricing;
+        });
+        setWholesalePricing(next);
+      });
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+    // cartItems is a derived array (stable reference unless cart/catalog
+    // actually change), so it's safe as a dependency here.
+  }, [isWholesaleEligible, cartItems]);
+
+  const effectiveCartItems = useMemo(() => {
+    return cartItems.map((item) => {
+      const pricing = wholesalePricing[item.id];
+      const applies = isWholesaleEligible && pricing && pricing.meetsMoq && pricing.appliedDiscountPercent > 0;
+      return {
+        ...item,
+        effectiveUnitPrice: applies ? pricing.unitPrice : item.price,
+        effectiveLineTotal: applies ? pricing.lineTotal : item.lineTotal,
+        wholesaleDiscountPercent: applies ? pricing.appliedDiscountPercent : 0,
+      };
+    });
+  }, [cartItems, wholesalePricing, isWholesaleEligible]);
+
+  const effectiveSubtotal = useMemo(
+    () => effectiveCartItems.reduce((sum, item) => sum + item.effectiveLineTotal, 0),
+    [effectiveCartItems]
+  );
+
+  const effectiveGrandTotal = useMemo(
+    () => effectiveSubtotal + shippingCost,
+    [effectiveSubtotal, shippingCost]
+  );
 
   const categoryCounts = useMemo(() => {
     const counts = SHOP_CATEGORY_ORDER.reduce((acc, category) => {
@@ -294,21 +366,22 @@ const ShopPage = () => {
     if (isSendingOrder) return;
 
     const subject = `New Miracle Natural Order - ${customerName || 'Customer'}`;
-    const orderLines = cartItems.map(
-      (item) => `- ${item.name} (${item.size}) x ${item.quantity} = ${formatCurrency(item.lineTotal)}`
+    const orderLines = effectiveCartItems.map(
+      (item) =>
+        `- ${item.name} (${item.size}) x ${item.quantity} = ${formatCurrency(item.effectiveLineTotal)}${item.wholesaleDiscountPercent > 0 ? ` (wholesale -${item.wholesaleDiscountPercent}%)` : ''}`
     );
 
     const body = [
       'Hello,',
       '',
-      'I would like to place an order with the following products:',
+      `I would like to place ${isWholesaleEligible ? 'a wholesale/bulk' : 'an'} order with the following products:`,
       '',
       ...orderLines,
       '',
       `Total Items: ${totalItems}`,
-      `Subtotal: ${formatCurrency(totalAmount)}`,
+      `Subtotal: ${formatCurrency(effectiveSubtotal)}`,
       `Shipping (${deliveryZoneLabel}): ${formatCurrency(shippingCost)}`,
-      `Grand Total: ${formatCurrency(grandTotal)}`,
+      `Grand Total: ${formatCurrency(effectiveGrandTotal)}`,
       '',
       'Customer Details:',
       `Name: ${customerName || 'Not provided'}`,
@@ -338,10 +411,11 @@ const ShopPage = () => {
         payment_method: 'cash_on_delivery',
         delivery_zone: deliveryZone,
         delivery_address: deliveryAddress.trim(),
-        subtotal: totalAmount,
+        subtotal: effectiveSubtotal,
         shipping_cost: shippingCost,
-        grand_total: grandTotal,
+        grand_total: effectiveGrandTotal,
         notes: customerNotes.trim() || null,
+        channel: isWholesaleEligible ? 'b2b' : 'retail',
       })
       .select('id')
       .single();
@@ -353,13 +427,13 @@ const ShopPage = () => {
     }
 
     const { error: itemsError } = await supabase.from('order_items').insert(
-      cartItems.map((item) => ({
+      effectiveCartItems.map((item) => ({
         order_id: orderRow.id,
         product_id: item.id,
         product_name: item.name,
         quantity: item.quantity,
-        unit_price: item.price,
-        line_total: item.lineTotal,
+        unit_price: item.effectiveUnitPrice,
+        line_total: item.effectiveLineTotal,
       }))
     );
 
@@ -386,9 +460,9 @@ const ShopPage = () => {
           delivery_address: deliveryAddress,
           notes: customerNotes || 'None',
           total_items: totalItems,
-          subtotal: formatCurrency(totalAmount),
+          subtotal: formatCurrency(effectiveSubtotal),
           shipping: formatCurrency(shippingCost),
-          grand_total: formatCurrency(grandTotal),
+          grand_total: formatCurrency(effectiveGrandTotal),
           order_items: orderLines.join('\n'),
           order_message: body,
         }),
@@ -415,13 +489,50 @@ const ShopPage = () => {
     setIsSendingOrder(false);
   };
 
+  // Quotation Requests (§2.4): an alternative to placing an order outright —
+  // Corporate Partner/admin only (enforced by RLS on the insert). Deliberately
+  // reuses whatever's in the cart as the "custom product list" rather than
+  // building a separate item picker from scratch, and deliberately doesn't
+  // send price data — quotations.quoted_unit_price starts null and is filled
+  // in by an admin later, so the retail/wholesale numbers in the cart aren't
+  // relevant here, only product + quantity.
+  const handleRequestQuote = async () => {
+    if (cartItems.length === 0) {
+      pushToast('error', 'Your cart is empty. Add at least one product before requesting a quote.');
+      return;
+    }
+
+    if (isRequestingQuote) return;
+
+    setIsRequestingQuote(true);
+    try {
+      await submitQuotation({
+        items: cartItems.map((item) => ({
+          productId: item.id,
+          productName: item.name,
+          quantity: item.quantity,
+        })),
+        customerNotes: customerNotes.trim() || null,
+      });
+      setShowQuoteSuccessPopup(true);
+      pushToast('success', 'Quote request submitted.');
+      clearCart();
+      setCustomerNotes('');
+    } catch {
+      pushToast('error', 'Could not submit your quote request. Please try again.');
+    } finally {
+      setIsRequestingQuote(false);
+    }
+  };
+
   const cartProps = {
-    cartItems,
+    cartItems: effectiveCartItems,
     totalItems,
-    subtotal: totalAmount,
+    subtotal: effectiveSubtotal,
     shippingCost,
     deliveryZoneLabel,
-    grandTotal,
+    grandTotal: effectiveGrandTotal,
+    isWholesaleEligible,
     onChangeQuantity: changeQuantity,
     onClearCart: clearCart,
     user,
@@ -442,6 +553,8 @@ const ShopPage = () => {
     onSelectSavedAddress: handleSelectSavedAddress,
     isSendingOrder,
     onSubmitOrder: handleEmailOrder,
+    isRequestingQuote,
+    onRequestQuote: handleRequestQuote,
   };
 
   const hasActiveFilters = categoryFilter !== 'all' || priceFilter !== 'all' || sortOption !== 'featured' || searchTerm.trim() !== '';
@@ -729,6 +842,51 @@ const ShopPage = () => {
                 <Button
                   className="px-6 py-2.5 text-[0.74rem]"
                   onClick={() => setShowOrderSuccessPopup(false)}
+                >
+                  Continue Shopping
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showQuoteSuccessPopup && (
+        <div
+          className="fixed inset-0 z-[95] bg-[rgba(13,20,16,0.58)] backdrop-blur-sm px-4 py-8 sm:px-6 sm:py-12"
+          onClick={() => setShowQuoteSuccessPopup(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Quote request confirmation"
+        >
+          <div
+            className="relative mx-auto w-full max-w-lg overflow-hidden rounded-3xl border border-[var(--color-card-border)] bg-[linear-gradient(160deg,rgba(255,253,248,0.98),rgba(248,243,232,0.96))] p-6 sm:p-7 shadow-[0_30px_80px_rgba(8,14,10,0.35)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="pointer-events-none absolute -top-14 -right-12 h-40 w-40 rounded-full bg-primary/18 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-secondary/22 blur-2xl" />
+            <div className="pointer-events-none absolute top-3 right-3 text-primary/55">
+              <Sparkles size={18} />
+            </div>
+
+            <div className="relative z-10">
+              <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-primary/12 border border-primary/25 inline-flex items-center justify-center">
+                <CheckCircle2 size={34} className="text-primary" />
+              </div>
+
+              <Typography variant="h4" className="text-center text-foreground mb-2 font-extrabold">
+                Quote Request Sent!
+              </Typography>
+
+              <p className="text-center text-[0.95rem] leading-relaxed text-muted-foreground mb-6">
+                Our team will review your product list and get back to you with pricing. You can check
+                the status any time from your account.
+              </p>
+
+              <div className="flex justify-center">
+                <Button
+                  className="px-6 py-2.5 text-[0.74rem]"
+                  onClick={() => setShowQuoteSuccessPopup(false)}
                 >
                   Continue Shopping
                 </Button>

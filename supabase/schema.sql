@@ -125,9 +125,7 @@ create policy "Anyone can view active products"
   using (is_active = true);
 
 -- Admins manage the full catalog, including deactivated products the policy
--- above hides from everyone else. No delete policy on purpose — the admin
--- UI only supports create/edit/deactivate, to avoid orphaning
--- order_items/wishlist_items rows that reference a product id.
+-- above hides from everyone else.
 drop policy if exists "Admins can view all products" on public.products;
 create policy "Admins can view all products"
   on public.products for select
@@ -141,6 +139,17 @@ create policy "Admins can insert products"
 drop policy if exists "Admins can update products" on public.products;
 create policy "Admins can update products"
   on public.products for update
+  using (private.is_admin());
+
+-- Permanent delete. Safe against orphaning: order_items/quotation_items/
+-- analytics_events.product_id are ON DELETE SET NULL (and already store
+-- their own denormalized product_name/unit_price at transaction time),
+-- wishlist_items.product_id is ON DELETE CASCADE. bundle_items.product_id
+-- has no ON DELETE action (defaults to RESTRICT), so deleting a product
+-- still used in a bundle correctly fails until it's removed from the bundle.
+drop policy if exists "Admins can delete products" on public.products;
+create policy "Admins can delete products"
+  on public.products for delete
   using (private.is_admin());
 
 -- ----------------------------------------------------------------------------
@@ -161,6 +170,12 @@ create table if not exists public.orders (
   shipping_cost numeric(10, 2) not null default 0,
   grand_total numeric(10, 2) not null,
   status text not null default 'pending' check (status in ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
+  -- Distinguishes B2B/bulk orders from retail (functional-requirements §2.3).
+  -- Set by the checkout flow itself based on the signed-in user's role at
+  -- the moment of purchase — not something the client can misreport in a
+  -- way that matters, since it's purely a reporting/filtering label, not an
+  -- authorization boundary.
+  channel text not null default 'retail' check (channel in ('retail', 'b2b')),
   notes text,
   created_at timestamptz not null default now()
 );
@@ -1008,3 +1023,17 @@ $$;
 
 revoke all on function public.update_account_role(uuid, text) from public;
 grant execute on function public.update_account_role(uuid, text) to authenticated, anon;
+
+-- ----------------------------------------------------------------------------
+-- 17. ADMIN PROFILE VISIBILITY (supports Quotation Requests UI, §2.4)
+-- profiles was the one customer-facing table that never got an "Admins can
+-- view all X" policy (every other table — orders, applications, quotations,
+-- messages — already has one). AdminQuotations.jsx needs to show who
+-- requested a quote (name/phone), which means looking up a profiles row
+-- that isn't the admin's own — nothing else needed that until now. Read-only,
+-- admin-gated, same pattern used everywhere else in this file.
+-- ----------------------------------------------------------------------------
+drop policy if exists "Admins can view all profiles" on public.profiles;
+create policy "Admins can view all profiles"
+  on public.profiles for select
+  using (private.is_admin());

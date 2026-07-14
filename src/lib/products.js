@@ -84,6 +84,21 @@ export async function createProduct(payload) {
   };
 }
 
+/**
+ * Permanently deletes a product. Historical order_items/quotation_items rows
+ * keep their own denormalized product_name/unit_price, so past records stay
+ * readable. If the product is still linked from a bundle, the DB's foreign
+ * key on bundle_items rejects the delete (code 23503) — the caller should
+ * show a message telling the admin to remove it from the bundle first.
+ */
+export async function deleteProduct(id) {
+  const { error } = await supabase.from('products').delete().eq('id', id);
+
+  if (error) {
+    throw error;
+  }
+}
+
 /** `id` is intentionally not editable here — see createProduct's note. */
 export async function updateProduct(id, payload) {
   const { data, error } = await supabase

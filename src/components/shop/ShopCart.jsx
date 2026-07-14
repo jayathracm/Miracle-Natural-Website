@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>, <motion.button>)
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ImageOff, Mail, Minus, Plus, ShoppingBag, Truck, X } from 'lucide-react';
+import { ChevronLeft, ImageOff, Mail, Minus, Percent, Plus, ShoppingBag, Truck, X } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -26,6 +26,7 @@ const CartInner = ({
   shippingCost,
   deliveryZoneLabel,
   grandTotal,
+  isWholesaleEligible,
   onChangeQuantity,
   onClearCart,
   user,
@@ -46,6 +47,8 @@ const CartInner = ({
   onSelectSavedAddress,
   isSendingOrder,
   onSubmitOrder,
+  isRequestingQuote,
+  onRequestQuote,
 }) => (
   <div className="flex flex-col">
     <div className="flex items-center gap-2 px-4 sm:px-5 py-3.5 border-b border-[var(--color-border-light)]">
@@ -97,6 +100,12 @@ const CartInner = ({
           </div>
         ) : (
           <>
+            {isWholesaleEligible && cartItems.some((item) => item.wholesaleDiscountPercent > 0) && (
+              <div className="mb-3 flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/[0.06] px-3 py-2 text-[0.74rem] font-semibold text-primary">
+                <Percent size={13} />
+                Wholesale pricing applied to eligible items
+              </div>
+            )}
             <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1 -mr-1">
               {cartItems.map((item) => (
                 <div key={item.id} className="flex items-center gap-3">
@@ -111,7 +120,17 @@ const CartInner = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[0.82rem] font-semibold text-foreground truncate">{item.name}</p>
-                    <p className="text-[0.72rem] text-muted-foreground">{formatCurrency(item.price)} each</p>
+                    {item.wholesaleDiscountPercent > 0 ? (
+                      <p className="text-[0.72rem] text-muted-foreground flex items-center gap-1.5">
+                        <span className="line-through text-text-tertiary">{formatCurrency(item.price)}</span>
+                        <span className="font-semibold text-primary">{formatCurrency(item.effectiveUnitPrice)} each</span>
+                        <span className="rounded-md border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[0.6rem] font-bold text-primary">
+                          -{item.wholesaleDiscountPercent}%
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-[0.72rem] text-muted-foreground">{formatCurrency(item.price)} each</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -232,6 +251,17 @@ const CartInner = ({
         <Button type="submit" className="w-full py-2.5 text-[0.76rem]" icon={Mail} disabled={isSendingOrder}>
           {isSendingOrder ? 'Placing Order...' : 'Place Order'}
         </Button>
+
+        {isWholesaleEligible && (
+          <button
+            type="button"
+            disabled={isRequestingQuote}
+            onClick={onRequestQuote}
+            className="w-full py-2.5 rounded-lg border border-primary/40 text-[0.76rem] font-semibold tracking-[0.06em] uppercase text-primary hover:bg-primary/5 transition-colors disabled:opacity-60"
+          >
+            {isRequestingQuote ? 'Submitting...' : 'Request a Quote Instead'}
+          </button>
+        )}
       </form>
     )}
   </div>
