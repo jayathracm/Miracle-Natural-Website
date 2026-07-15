@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
+  FileText,
   LogOut,
   Mail,
   MapPin,
@@ -19,10 +20,12 @@ import OrdersSection from '../components/account/OrdersSection';
 import AddressesSection from '../components/account/AddressesSection';
 import WishlistSection from '../components/account/WishlistSection';
 import ContactSection from '../components/account/ContactSection';
+import QuotationsSection from '../components/account/QuotationsSection';
 import { fetchMyOrders } from '../lib/orders';
 import { fetchAddresses } from '../lib/addresses';
 import { fetchWishlistProductIds } from '../lib/wishlist';
 import { fetchMyMessages } from '../lib/messages';
+import { fetchMyQuotations } from '../lib/quotations';
 
 const primaryLinkClasses = "inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-primary bg-primary text-white text-[0.76rem] font-semibold tracking-[0.1em] uppercase hover:bg-forest-800 transition-colors";
 const ghostButtonClasses = "inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-[var(--color-border-medium)] text-foreground text-[0.76rem] font-semibold tracking-[0.1em] uppercase hover:bg-[var(--color-hover-overlay)] transition-colors";
@@ -77,6 +80,16 @@ const HUB_ITEMS = [
     countKey: 'messages',
     Component: ContactSection,
   },
+  {
+    id: 'quotations',
+    label: 'Quote Requests',
+    desc: 'Track wholesale quote requests and see pricing once quoted.',
+    icon: FileText,
+    tone: 'accent',
+    countKey: 'quotations',
+    Component: QuotationsSection,
+    wholesaleOnly: true,
+  },
 ];
 
 const TONE_STYLES = {
@@ -86,12 +99,18 @@ const TONE_STYLES = {
 
 const Account = () => {
   const location = useLocation();
-  const { user, loading, profile, signOut } = useAuth();
+  const { user, loading, profile, isCorporatePartner, isAdmin, signOut } = useAuth();
   const { needsEmailConfirmation } = location.state || {};
   const [searchParams, setSearchParams] = useSearchParams();
   const [counts, setCounts] = useState({});
 
-  const activeItem = HUB_ITEMS.find((item) => item.id === searchParams.get('tab')) || null;
+  // Quote Requests only makes sense for accounts that can actually request
+  // wholesale pricing — hidden for plain customers rather than shown as a
+  // permanently-empty tile.
+  const isWholesaleEligible = isCorporatePartner || isAdmin;
+  const visibleHubItems = HUB_ITEMS.filter((item) => !item.wholesaleOnly || isWholesaleEligible);
+
+  const activeItem = visibleHubItems.find((item) => item.id === searchParams.get('tab')) || null;
 
   // Lightweight counts for the hub cards — only fetched on the overview
   // (each section already loads its own full data once it's opened).
@@ -104,20 +123,22 @@ const Account = () => {
       fetchAddresses(),
       fetchWishlistProductIds(),
       fetchMyMessages(),
-    ]).then(([orders, addresses, wishlist, messages]) => {
+      isWholesaleEligible ? fetchMyQuotations() : Promise.resolve([]),
+    ]).then(([orders, addresses, wishlist, messages, quotations]) => {
       if (!isMounted) return;
       setCounts({
         orders: orders.status === 'fulfilled' ? orders.value.length : null,
         addresses: addresses.status === 'fulfilled' ? addresses.value.length : null,
         wishlist: wishlist.status === 'fulfilled' ? wishlist.value.length : null,
         messages: messages.status === 'fulfilled' ? messages.value.length : null,
+        quotations: quotations.status === 'fulfilled' ? quotations.value.length : null,
       });
     });
 
     return () => {
       isMounted = false;
     };
-  }, [activeItem, user]);
+  }, [activeItem, user, isWholesaleEligible]);
 
   if (loading) {
     return (
@@ -204,7 +225,7 @@ const Account = () => {
 
         {!activeItem ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {HUB_ITEMS.map((item) => {
+            {visibleHubItems.map((item) => {
               const Icon = item.icon;
               const count = item.countKey ? counts[item.countKey] : null;
               return (

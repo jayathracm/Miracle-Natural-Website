@@ -19,6 +19,9 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminCorporatePartners from './pages/admin/AdminCorporatePartners';
+import AdminDiscountTiers from './pages/admin/AdminDiscountTiers';
+import AdminQuotations from './pages/admin/AdminQuotations';
+import AdminInventory from './pages/admin/AdminInventory';
 import AdminAccounts from './pages/admin/AdminAccounts';
 import RequireAdmin from './components/RequireAdmin';
 import RequireSuperAdmin from './components/RequireSuperAdmin';
@@ -125,6 +128,33 @@ const App = () => {
                     element={(
                       <RequireAdmin>
                         <AdminCorporatePartners />
+                      </RequireAdmin>
+                    )}
+                  />
+
+                  <Route
+                    path="/admin/discount-tiers"
+                    element={(
+                      <RequireAdmin>
+                        <AdminDiscountTiers />
+                      </RequireAdmin>
+                    )}
+                  />
+
+                  <Route
+                    path="/admin/quotations"
+                    element={(
+                      <RequireAdmin>
+                        <AdminQuotations />
+                      </RequireAdmin>
+                    )}
+                  />
+
+                  <Route
+                    path="/admin/inventory"
+                    element={(
+                      <RequireAdmin>
+                        <AdminInventory />
                       </RequireAdmin>
                     )}
                   />

@@ -42,6 +42,7 @@ export async function fetchAllProductsForAdmin() {
     ...product,
     price: Number(product.price),
     compare_at_price: product.compare_at_price === null ? null : Number(product.compare_at_price),
+    moq: product.moq === null || product.moq === undefined ? null : Number(product.moq),
   }));
 }
 
@@ -61,6 +62,7 @@ export async function createProduct(payload) {
       size: payload.size || null,
       price: payload.price,
       compare_at_price: payload.compareAtPrice ?? null,
+      moq: payload.moq ?? null,
       image_url: payload.imageUrl || null,
       description: payload.description || null,
       ingredients: payload.ingredients || null,
@@ -78,7 +80,23 @@ export async function createProduct(payload) {
     ...data,
     price: Number(data.price),
     compare_at_price: data.compare_at_price === null ? null : Number(data.compare_at_price),
+    moq: data.moq === null || data.moq === undefined ? null : Number(data.moq),
   };
+}
+
+/**
+ * Permanently deletes a product. Historical order_items/quotation_items rows
+ * keep their own denormalized product_name/unit_price, so past records stay
+ * readable. If the product is still linked from a bundle, the DB's foreign
+ * key on bundle_items rejects the delete (code 23503) — the caller should
+ * show a message telling the admin to remove it from the bundle first.
+ */
+export async function deleteProduct(id) {
+  const { error } = await supabase.from('products').delete().eq('id', id);
+
+  if (error) {
+    throw error;
+  }
 }
 
 /** `id` is intentionally not editable here — see createProduct's note. */
@@ -91,6 +109,7 @@ export async function updateProduct(id, payload) {
       size: payload.size || null,
       price: payload.price,
       compare_at_price: payload.compareAtPrice ?? null,
+      moq: payload.moq ?? null,
       image_url: payload.imageUrl || null,
       description: payload.description || null,
       ingredients: payload.ingredients || null,
@@ -110,5 +129,6 @@ export async function updateProduct(id, payload) {
     ...data,
     price: Number(data.price),
     compare_at_price: data.compare_at_price === null ? null : Number(data.compare_at_price),
+    moq: data.moq === null || data.moq === undefined ? null : Number(data.moq),
   };
 }

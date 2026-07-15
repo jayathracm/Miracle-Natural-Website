@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ImageOff, Pencil, Plus, RefreshCw, Search, X } from 'lucide-react';
+import { ImageOff, Pencil, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import { Typography } from '../../components/ui/Typography';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { ProductGridSkeleton } from '../../components/ui/Skeleton';
 import PRODUCT_IMAGES from '../../data/productImages';
-import { createProduct, fetchAllProductsForAdmin, updateProduct } from '../../lib/products';
+import { createProduct, deleteProduct, fetchAllProductsForAdmin, updateProduct } from '../../lib/products';
 
 // Suggestions only (via <datalist>) — not an enum. Category is a free-text
 // column; Shop.jsx groups anything unrecognized under its own name rather
@@ -22,6 +22,8 @@ const emptyForm = {
   size: '',
   price: '',
   compareAtPrice: '',
+  discountPercent: '',
+  moq: '',
   imageUrl: '',
   description: '',
   ingredients: '',
@@ -44,6 +46,10 @@ const AdminProducts = () => {
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   const loadProducts = () => {
     setIsLoading(true);
@@ -88,6 +94,13 @@ const AdminProducts = () => {
       size: product.size || '',
       price: String(product.price),
       compareAtPrice: product.compare_at_price === null || product.compare_at_price === undefined ? '' : String(product.compare_at_price),
+      // Derived purely for display — lets an admin editing an existing sale
+      // see it expressed as a percentage instead of two raw prices.
+      discountPercent:
+        product.compare_at_price && product.price
+          ? String(Math.round((1 - Number(product.price) / Number(product.compare_at_price)) * 100))
+          : '',
+      moq: product.moq === null || product.moq === undefined ? '' : String(product.moq),
       imageUrl: product.image_url || '',
       description: product.description || '',
       ingredients: product.ingredients || '',
@@ -104,6 +117,31 @@ const AdminProducts = () => {
     setForm(emptyForm);
     setFormError(null);
   };
+
+  // Escape closes the modal, same as the storefront's ProductDetailModal.
+  useEffect(() => {
+    if (!formOpen) return undefined;
+    const handleEsc = (event) => {
+      if (event.key === 'Escape') closeForm();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [formOpen]);
+
+  // Discount % is a manual-sale helper, not a stored field — it just
+  // back-calculates the Compare-at Price so an admin can type "20% off"
+  // instead of doing the math themselves. Compare-at Price stays editable
+  // directly too; this only overwrites it while a valid % is present.
+  useEffect(() => {
+    if (!formOpen || !form.discountPercent.trim()) return;
+    const discount = Number(form.discountPercent);
+    const price = Number(form.price);
+    if (!Number.isFinite(discount) || discount <= 0 || discount >= 100) return;
+    if (!Number.isFinite(price) || price <= 0) return;
+
+    const computedCompareAt = String(Math.round(price / (1 - discount / 100)));
+    setForm((prev) => (prev.compareAtPrice === computedCompareAt ? prev : { ...prev, compareAtPrice: computedCompareAt }));
+  }, [formOpen, form.discountPercent, form.price]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -132,12 +170,22 @@ const AdminProducts = () => {
       }
     }
 
+    let moqNumber = null;
+    if (form.moq.trim()) {
+      moqNumber = Number(form.moq);
+      if (!Number.isInteger(moqNumber) || moqNumber <= 0) {
+        setFormError('Minimum order quantity must be a whole number greater than 0 (or left blank).');
+        return;
+      }
+    }
+
     const payload = {
       name: form.name.trim(),
       category: form.category.trim(),
       size: form.size.trim(),
       price: priceNumber,
       compareAtPrice: compareAtPriceNumber,
+      moq: moqNumber,
       imageUrl: form.imageUrl.trim(),
       description: form.description.trim(),
       ingredients: form.ingredients.trim(),
@@ -179,6 +227,7 @@ const AdminProducts = () => {
         size: product.size,
         price: Number(product.price),
         compareAtPrice: product.compare_at_price === null || product.compare_at_price === undefined ? null : Number(product.compare_at_price),
+        moq: product.moq === null || product.moq === undefined ? null : Number(product.moq),
         imageUrl: product.image_url,
         description: product.description,
         ingredients: product.ingredients,
@@ -191,6 +240,26 @@ const AdminProducts = () => {
     } catch {
       // Silently ignore — a stale row would show back to its real state on
       // next refresh, and this is a quick toggle, not a form submission.
+    }
+  };
+
+  const handleDelete = async (product) => {
+    setDeleteError(null);
+    setDeletingId(product.id);
+    try {
+      await deleteProduct(product.id);
+      setProducts((prev) => prev.filter((p) => p.id !== product.id));
+      setPendingDeleteId(null);
+    } catch (deleteErrorCaught) {
+      // 23503: still referenced by a bundle — the DB's foreign key on
+      // bundle_items has no ON DELETE action, so it blocks this on purpose.
+      if (deleteErrorCaught?.code === '23503') {
+        setDeleteError(`"${product.name}" is still part of a bundle — remove it from that bundle first, then delete it.`);
+      } else {
+        setDeleteError(deleteErrorCaught?.message || 'Could not delete this product.');
+      }
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -242,9 +311,18 @@ const AdminProducts = () => {
         </div>
 
         {formOpen && (
+          <div
+            className="fixed inset-0 z-[95] bg-[rgba(17,24,20,0.5)] backdrop-blur-sm px-4 py-6 sm:px-6 sm:py-10 overflow-y-auto"
+            onClick={closeForm}
+            role="dialog"
+            aria-modal="true"
+            aria-label={editingId ? 'Edit product' : 'New product'}
+            data-lenis-prevent
+          >
           <form
             onSubmit={handleSubmit}
-            className="mb-6 rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 sm:p-6 shadow-[0_10px_24px_rgba(31,44,35,0.06)] space-y-3.5"
+            onClick={(event) => event.stopPropagation()}
+            className="mx-auto w-full max-w-2xl rounded-2xl border border-[var(--color-card-border)] bg-white p-5 sm:p-6 shadow-[0_24px_60px_rgba(8,14,10,0.28)] space-y-3.5"
           >
             <div className="flex items-center justify-between">
               <Typography variant="h4" className="text-foreground">
@@ -322,6 +400,29 @@ const AdminProducts = () => {
                 onChange={(event) => setForm((prev) => ({ ...prev, compareAtPrice: event.target.value }))}
                 hint="Set this higher than Price to show a SALE badge and a struck-through original price on the storefront. Leave blank for no sale."
               />
+              <Input
+                id="product-discount-percent"
+                label="Discount % (optional helper)"
+                type="number"
+                min="1"
+                max="99"
+                step="1"
+                placeholder="e.g. 20"
+                value={form.discountPercent}
+                onChange={(event) => setForm((prev) => ({ ...prev, discountPercent: event.target.value }))}
+                hint="Type a percentage off and Compare-at Price above fills in automatically. Just a shortcut — edit Compare-at Price directly if you prefer."
+              />
+              <Input
+                id="product-moq"
+                label="Wholesale MOQ (optional)"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 25"
+                value={form.moq}
+                onChange={(event) => setForm((prev) => ({ ...prev, moq: event.target.value }))}
+                hint="Minimum quantity a Corporate Partner must order to unlock wholesale pricing on this product. Leave blank to use the site-wide default (25 units)."
+              />
             </div>
 
             <Input
@@ -360,21 +461,30 @@ const AdminProducts = () => {
               onChange={(event) => setForm((prev) => ({ ...prev, benefits: event.target.value }))}
             />
 
-            <label className="inline-flex items-center gap-2 text-[0.84rem] text-foreground">
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-              />
-              Active (visible in the storefront)
-            </label>
-
             {formError && <p className="text-[0.82rem] text-red-600">{formError}</p>}
 
-            <Button type="submit" className="px-5 py-2.5 text-[0.74rem]" disabled={isSaving}>
-              {isSaving ? 'Saving...' : editingId ? 'Save Changes' : 'Add Product'}
-            </Button>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+              <label className="inline-flex items-center gap-2 text-[0.84rem] text-foreground">
+                <input
+                  type="checkbox"
+                  checked={form.isActive}
+                  onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+                />
+                Active (visible in the storefront)
+              </label>
+
+              <Button type="submit" className="px-5 py-2.5 text-[0.74rem] shrink-0" disabled={isSaving}>
+                {isSaving ? 'Saving...' : editingId ? 'Save Changes' : 'Add Product'}
+              </Button>
+            </div>
           </form>
+          </div>
+        )}
+
+        {deleteError && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[0.82rem] text-red-700">
+            {deleteError}
+          </div>
         )}
 
         {error ? (
@@ -391,6 +501,8 @@ const AdminProducts = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredProducts.map((product) => {
               const image = PRODUCT_IMAGES[product.id] || product.image_url || null;
+              const isPendingDelete = pendingDeleteId === product.id;
+              const isDeleting = deletingId === product.id;
               return (
                 <div
                   key={product.id}
@@ -412,30 +524,63 @@ const AdminProducts = () => {
                     </div>
                     <Typography variant="h4" className="text-foreground text-[0.92rem] mb-1 leading-snug">{product.name}</Typography>
                     <p className="text-[0.76rem] text-muted-foreground mb-2">{product.size}</p>
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-1">
                       <p className="font-display text-[1.1rem] text-primary">{formatCurrency(product.price)}</p>
                       {product.compare_at_price && (
                         <p className="text-[0.8rem] text-text-tertiary line-through">{formatCurrency(product.compare_at_price)}</p>
                       )}
                     </div>
+                    <p className="text-[0.72rem] text-muted-foreground mb-3">
+                      Wholesale MOQ: {product.moq ? `${product.moq} units` : 'default (25 units)'}
+                    </p>
 
-                    <div className="mt-auto flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openEditForm(product)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border-medium)] px-3 py-2 text-[0.72rem] font-semibold text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors"
-                      >
-                        <Pencil size={13} />
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(product)}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-[0.72rem] font-semibold transition-colors ${product.is_active ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}
-                      >
-                        {product.is_active ? 'Deactivate' : 'Activate'}
-                      </button>
-                    </div>
+                    {isPendingDelete ? (
+                      <div className="mt-auto flex items-center gap-2">
+                        <span className="flex-1 text-[0.72rem] text-red-600 font-semibold">Delete permanently?</span>
+                        <button
+                          type="button"
+                          disabled={isDeleting}
+                          onClick={() => handleDelete(product)}
+                          className="rounded-lg border border-red-200 px-3 py-2 text-[0.72rem] font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-60"
+                        >
+                          {isDeleting ? 'Deleting...' : 'Confirm'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isDeleting}
+                          onClick={() => setPendingDeleteId(null)}
+                          className="text-[0.72rem] font-semibold text-text-secondary hover:text-foreground transition-colors disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-auto flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditForm(product)}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border-medium)] px-3 py-2 text-[0.72rem] font-semibold text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors"
+                        >
+                          <Pencil size={13} />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(product)}
+                          className={`flex-1 rounded-lg border px-3 py-2 text-[0.72rem] font-semibold transition-colors ${product.is_active ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}
+                        >
+                          {product.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPendingDeleteId(product.id)}
+                          aria-label={`Delete ${product.name}`}
+                          className="inline-flex items-center justify-center rounded-lg border border-[var(--color-border-medium)] px-2.5 py-2 text-text-secondary hover:text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

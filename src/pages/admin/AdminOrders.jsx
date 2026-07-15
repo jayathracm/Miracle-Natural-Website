@@ -28,6 +28,7 @@ const AdminOrders = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [channelFilter, setChannelFilter] = useState('all');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
 
@@ -54,9 +55,12 @@ const AdminOrders = () => {
   }, []);
 
   const filteredOrders = useMemo(() => {
-    if (statusFilter === 'all') return orders;
-    return orders.filter((order) => order.status === statusFilter);
-  }, [orders, statusFilter]);
+    return orders.filter((order) => {
+      if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+      if (channelFilter !== 'all' && order.channel !== channelFilter) return false;
+      return true;
+    });
+  }, [orders, statusFilter, channelFilter]);
 
   const statusCounts = useMemo(() => {
     return orders.reduce(
@@ -65,6 +69,16 @@ const AdminOrders = () => {
         return acc;
       },
       { pending: 0, confirmed: 0, shipped: 0, delivered: 0, cancelled: 0 }
+    );
+  }, [orders]);
+
+  const channelCounts = useMemo(() => {
+    return orders.reduce(
+      (acc, order) => {
+        acc[order.channel] = (acc[order.channel] || 0) + 1;
+        return acc;
+      },
+      { retail: 0, b2b: 0 }
     );
   }, [orders]);
 
@@ -116,6 +130,20 @@ const AdminOrders = () => {
               </button>
             ))}
           </div>
+
+          <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
+            <span className="text-[0.68rem] font-semibold tracking-[0.08em] uppercase text-text-tertiary">Channel:</span>
+            {['all', 'retail', 'b2b'].map((channel) => (
+              <button
+                key={channel}
+                type="button"
+                onClick={() => setChannelFilter(channel)}
+                className={`rounded-full border px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase transition-colors ${channelFilter === channel ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-light)] bg-white/70 text-text-secondary'}`}
+              >
+                {channel === 'all' ? `All (${orders.length})` : channel === 'b2b' ? `B2B (${channelCounts.b2b || 0})` : `Retail (${channelCounts.retail || 0})`}
+              </button>
+            ))}
+          </div>
         </div>
 
         {error ? (
@@ -152,7 +180,12 @@ const AdminOrders = () => {
                       <p className="text-[0.72rem] text-text-tertiary mt-0.5">{formatDate(order.created_at)}</p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
+                      {order.channel === 'b2b' && (
+                        <span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-primary">
+                          B2B
+                        </span>
+                      )}
                       <span className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] ${STATUS_STYLES[order.status] || 'border-gray-300 bg-gray-50 text-gray-700'}`}>
                         {order.status}
                       </span>

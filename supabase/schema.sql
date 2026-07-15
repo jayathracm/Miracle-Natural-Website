@@ -125,9 +125,7 @@ create policy "Anyone can view active products"
   using (is_active = true);
 
 -- Admins manage the full catalog, including deactivated products the policy
--- above hides from everyone else. No delete policy on purpose — the admin
--- UI only supports create/edit/deactivate, to avoid orphaning
--- order_items/wishlist_items rows that reference a product id.
+-- above hides from everyone else.
 drop policy if exists "Admins can view all products" on public.products;
 create policy "Admins can view all products"
   on public.products for select
@@ -141,6 +139,17 @@ create policy "Admins can insert products"
 drop policy if exists "Admins can update products" on public.products;
 create policy "Admins can update products"
   on public.products for update
+  using (private.is_admin());
+
+-- Permanent delete. Safe against orphaning: order_items/quotation_items/
+-- analytics_events.product_id are ON DELETE SET NULL (and already store
+-- their own denormalized product_name/unit_price at transaction time),
+-- wishlist_items.product_id is ON DELETE CASCADE. bundle_items.product_id
+-- has no ON DELETE action (defaults to RESTRICT), so deleting a product
+-- still used in a bundle correctly fails until it's removed from the bundle.
+drop policy if exists "Admins can delete products" on public.products;
+create policy "Admins can delete products"
+  on public.products for delete
   using (private.is_admin());
 
 -- ----------------------------------------------------------------------------
@@ -161,6 +170,12 @@ create table if not exists public.orders (
   shipping_cost numeric(10, 2) not null default 0,
   grand_total numeric(10, 2) not null,
   status text not null default 'pending' check (status in ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
+  -- Distinguishes B2B/bulk orders from retail (functional-requirements §2.3).
+  -- Set by the checkout flow itself based on the signed-in user's role at
+  -- the moment of purchase — not something the client can misreport in a
+  -- way that matters, since it's purely a reporting/filtering label, not an
+  -- authorization boundary.
+  channel text not null default 'retail' check (channel in ('retail', 'b2b')),
   notes text,
   created_at timestamptz not null default now()
 );
@@ -318,14 +333,130 @@ create policy "Admins can update messages"
   using (private.is_admin());
 
 -- ----------------------------------------------------------------------------
--- 9. INVENTORY (basic, single-pool)
--- Per the Decisions Log: a single stock-count field per product, with a
--- per-product low-stock threshold (not a single global number). Separate
--- retail/wholesale/raw-material pools stay a [Stretch] item.
+-- 9. INVENTORY — multi-pool (retail / wholesale) + raw materials
+-- Supersedes the original single-pool design. products.stock_count/
+-- low_stock_threshold below are left in place (never wired to anything) for
+-- history rather than dropped; product_inventory is the authoritative source
+-- from here on.
 -- ----------------------------------------------------------------------------
 alter table public.products
   add column if not exists stock_count integer not null default 0 check (stock_count >= 0),
   add column if not exists low_stock_threshold integer not null default 10 check (low_stock_threshold >= 0);
+
+create table if not exists public.product_inventory (
+  product_id text not null references public.products (id) on delete cascade,
+  pool text not null check (pool in ('retail', 'wholesale')),
+  stock_count integer not null default 0 check (stock_count >= 0),
+  low_stock_threshold integer not null default 10 check (low_stock_threshold >= 0),
+  updated_at timestamptz not null default now(),
+  primary key (product_id, pool)
+);
+
+alter table public.product_inventory enable row level security;
+
+-- Admin-only end to end — stock levels aren't shown to customers anywhere
+-- yet, so there's no public read policy (unlike products).
+drop policy if exists "Admins can view all inventory" on public.product_inventory;
+create policy "Admins can view all inventory"
+  on public.product_inventory for select
+  using (private.is_admin());
+
+drop policy if exists "Admins can insert inventory rows" on public.product_inventory;
+create policy "Admins can insert inventory rows"
+  on public.product_inventory for insert
+  with check (private.is_admin());
+
+drop policy if exists "Admins can update inventory" on public.product_inventory;
+create policy "Admins can update inventory"
+  on public.product_inventory for update
+  using (private.is_admin());
+
+-- Auto-provision both pool rows for every new product, so the inventory
+-- screen and the decrement function below never have to special-case a
+-- missing row.
+create or replace function private.ensure_product_inventory_rows()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.product_inventory (product_id, pool, stock_count, low_stock_threshold)
+  values (new.id, 'retail', 0, 10), (new.id, 'wholesale', 0, 10)
+  on conflict (product_id, pool) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_ensure_product_inventory on public.products;
+create trigger trg_ensure_product_inventory
+  after insert on public.products
+  for each row execute function private.ensure_product_inventory_rows();
+
+-- Raw materials: a separate, simpler inventory track for manufacturing
+-- ingredients (not finished products). Admin-managed only, manual stock
+-- adjustment — nothing auto-decrements it yet (would need a
+-- bill-of-materials linking table, out of scope for this pass).
+create table if not exists public.raw_materials (
+  id text primary key,
+  name text not null,
+  unit text not null default 'units',
+  stock_count numeric(10, 2) not null default 0 check (stock_count >= 0),
+  low_stock_threshold numeric(10, 2) not null default 0 check (low_stock_threshold >= 0),
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.raw_materials enable row level security;
+
+drop policy if exists "Admins manage raw materials" on public.raw_materials;
+create policy "Admins manage raw materials"
+  on public.raw_materials for all
+  using (private.is_admin())
+  with check (private.is_admin());
+
+-- Real-time stock decrement on checkout. Idempotent by design: flips
+-- inventory_adjusted false->true and only proceeds if that update actually
+-- affected a row, so calling this twice for the same order (e.g. a retried
+-- client call) can't double-decrement. Callable by anon/authenticated since
+-- guest checkout has no user_id to gate on — safety instead comes from only
+-- ever touching the exact order_id passed in, using data checkout itself
+-- just inserted.
+alter table public.orders
+  add column if not exists inventory_adjusted boolean not null default false;
+
+create or replace function public.decrement_inventory_for_order(p_order_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_channel text;
+begin
+  update public.orders
+    set inventory_adjusted = true
+    where id = p_order_id and inventory_adjusted = false
+    returning channel into v_channel;
+
+  if not found or v_channel is null then
+    -- Either already adjusted, or the order id doesn't exist — no-op.
+    return;
+  end if;
+
+  update public.product_inventory pi
+    set stock_count = greatest(0, pi.stock_count - oi.quantity),
+        updated_at = now()
+    from public.order_items oi
+    where oi.order_id = p_order_id
+      and oi.product_id = pi.product_id
+      and pi.pool = (case when v_channel = 'b2b' then 'wholesale' else 'retail' end);
+end;
+$$;
+
+revoke all on function public.decrement_inventory_for_order(uuid) from public;
+grant execute on function public.decrement_inventory_for_order(uuid) to authenticated, anon;
 
 -- ----------------------------------------------------------------------------
 -- 10. BUNDLES + BUNDLE_ITEMS
@@ -1008,3 +1139,17 @@ $$;
 
 revoke all on function public.update_account_role(uuid, text) from public;
 grant execute on function public.update_account_role(uuid, text) to authenticated, anon;
+
+-- ----------------------------------------------------------------------------
+-- 17. ADMIN PROFILE VISIBILITY (supports Quotation Requests UI, §2.4)
+-- profiles was the one customer-facing table that never got an "Admins can
+-- view all X" policy (every other table — orders, applications, quotations,
+-- messages — already has one). AdminQuotations.jsx needs to show who
+-- requested a quote (name/phone), which means looking up a profiles row
+-- that isn't the admin's own — nothing else needed that until now. Read-only,
+-- admin-gated, same pattern used everywhere else in this file.
+-- ----------------------------------------------------------------------------
+drop policy if exists "Admins can view all profiles" on public.profiles;
+create policy "Admins can view all profiles"
+  on public.profiles for select
+  using (private.is_admin());
