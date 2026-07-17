@@ -48,7 +48,6 @@ const ShopPage = () => {
     cart,
     cartItems,
     totalItems,
-    totalAmount,
     addToCart,
     addManyToCart,
     changeQuantity,
@@ -168,8 +167,6 @@ const ShopPage = () => {
     if (!deliveryZone) return '';
     return DELIVERY_ZONES[deliveryZone]?.label || '';
   }, [deliveryZone]);
-
-  const grandTotal = useMemo(() => totalAmount + shippingCost, [totalAmount, shippingCost]);
 
   // Bulk ordering (functional-requirements §2.3): a Corporate Partner's cart
   // totals should reflect the same discount-tier math as WholesalePricingPanel

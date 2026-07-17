@@ -23,7 +23,12 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // varsIgnorePattern/argsIgnorePattern both exempt capitalized bindings
+      // (e.g. icon: Icon). Core no-unused-vars doesn't know that a JSXIdentifier
+      // like <Icon /> counts as "using" the variable - that's normally handled
+      // by eslint-plugin-react's jsx-uses-vars rule, which isn't installed here.
+      // Without this, any component-as-prop pattern gets a false-positive error.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
     },
   },
 ])
