@@ -11,10 +11,11 @@ import {
   Route,
   useLocation,
   useNavigate,
+  useParams,
 } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import ScrollProgressBar from './components/ScrollProgressBar';
-import { Landing, About, Pricing, Shop, ProductDetail, RitualBuilder, CorporatePartnerApply, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
+import { Landing, MiracleNatural, Laira, About, Pricing, Shop, ProductDetail, RitualBuilder, CorporatePartnerApply, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminProducts from './pages/admin/AdminProducts';
@@ -70,6 +71,20 @@ const Redirect = ({ to }) => {
   return null;
 };
 
+// The shop used to live at the site root (/shop, /shop/:productId) back when
+// there was only one storefront. Now that Miracle Natural, Laira, and Leora
+// Wellness each have their own shop under /:brandSlug/shop, old bookmarks/
+// links to the bare /shop paths redirect to Miracle Natural's — the only
+// brand with real products today — rather than 404ing outright.
+const RedirectLegacyShopProduct = () => {
+  const { productId } = useParams();
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate(`/miracle-natural/shop/${productId}`, { replace: true });
+  }, [navigate, productId]);
+  return null;
+};
+
 const App = () => {
   return (
     <ErrorBoundary>
@@ -85,10 +100,14 @@ const App = () => {
                 <main className="flex-grow">
                   <Routes>
                   <Route path="/" element={<Landing />} />
+                  <Route path="/miracle-natural" element={<MiracleNatural />} />
+                  <Route path="/laira" element={<Laira />} />
                   <Route path="/about" element={<About />} />
 
-                  <Route path="/shop" element={<Shop />} />
-                  <Route path="/shop/:productId" element={<ProductDetail />} />
+                  <Route path="/:brandSlug/shop" element={<Shop />} />
+                  <Route path="/:brandSlug/shop/:productId" element={<ProductDetail />} />
+                  <Route path="/shop" element={<Redirect to="/miracle-natural/shop" />} />
+                  <Route path="/shop/:productId" element={<RedirectLegacyShopProduct />} />
                   <Route path="/ritual-builder" element={<RitualBuilder />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/corporate-partner" element={<CorporatePartnerApply />} />

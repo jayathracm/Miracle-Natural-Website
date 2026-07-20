@@ -7,6 +7,7 @@ import { Textarea } from '../../components/ui/Textarea';
 import { ProductGridSkeleton } from '../../components/ui/Skeleton';
 import PRODUCT_IMAGES from '../../data/productImages';
 import { createProduct, deleteProduct, fetchAllProductsForAdmin, updateProduct } from '../../lib/products';
+import { BRANDS, BRAND_BY_VALUE } from '../../lib/brands';
 
 // Suggestions only (via <datalist>) — not an enum. Category is a free-text
 // column; Shop.jsx groups anything unrecognized under its own name rather
@@ -17,6 +18,7 @@ const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')
 
 const emptyForm = {
   id: '',
+  brand: 'miracle_natural',
   name: '',
   category: '',
   size: '',
@@ -39,6 +41,7 @@ const AdminProducts = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [brandFilter, setBrandFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   const [formOpen, setFormOpen] = useState(false);
@@ -68,12 +71,13 @@ const AdminProducts = () => {
     return products.filter((product) => {
       if (statusFilter === 'active' && !product.is_active) return false;
       if (statusFilter === 'inactive' && product.is_active) return false;
+      if (brandFilter !== 'all' && product.brand !== brandFilter) return false;
       if (searchTerm.trim() && !product.name.toLowerCase().includes(searchTerm.trim().toLowerCase())) {
         return false;
       }
       return true;
     });
-  }, [products, statusFilter, searchTerm]);
+  }, [products, statusFilter, brandFilter, searchTerm]);
 
   const activeCount = useMemo(() => products.filter((p) => p.is_active).length, [products]);
   const inactiveCount = products.length - activeCount;
@@ -89,6 +93,7 @@ const AdminProducts = () => {
     setEditingId(product.id);
     setForm({
       id: product.id,
+      brand: product.brand || 'miracle_natural',
       name: product.name,
       category: product.category,
       size: product.size || '',
@@ -180,6 +185,7 @@ const AdminProducts = () => {
     }
 
     const payload = {
+      brand: form.brand,
       name: form.name.trim(),
       category: form.category.trim(),
       size: form.size.trim(),
@@ -222,6 +228,7 @@ const AdminProducts = () => {
   const handleToggleActive = async (product) => {
     try {
       await updateProduct(product.id, {
+        brand: product.brand,
         name: product.name,
         category: product.category,
         size: product.size,
@@ -297,6 +304,25 @@ const AdminProducts = () => {
                 </button>
               ))}
             </div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setBrandFilter('all')}
+                className={`rounded-full border px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase transition-colors ${brandFilter === 'all' ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-light)] bg-white/70 text-text-secondary'}`}
+              >
+                All Storefronts
+              </button>
+              {BRANDS.map((entry) => (
+                <button
+                  key={entry.brand}
+                  type="button"
+                  onClick={() => setBrandFilter(entry.brand)}
+                  className={`rounded-full border px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase transition-colors ${brandFilter === entry.brand ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-light)] bg-white/70 text-text-secondary'}`}
+                >
+                  {entry.label} ({products.filter((p) => p.brand === entry.brand).length})
+                </button>
+              ))}
+            </div>
             <div className="relative ml-auto w-full sm:w-64">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
               <Input
@@ -348,6 +374,23 @@ const AdminProducts = () => {
             {editingId && (
               <Input label="Product ID" type="text" value={editingId} disabled />
             )}
+
+            <div>
+              <label htmlFor="product-brand" className="mb-1.5 block text-[0.78rem] font-semibold text-foreground">
+                Storefront
+              </label>
+              <select
+                id="product-brand"
+                value={form.brand}
+                onChange={(event) => setForm((prev) => ({ ...prev, brand: event.target.value }))}
+                className="w-full rounded-lg border border-[var(--color-border-medium)] bg-white px-3 py-2 text-[0.86rem] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              >
+                {BRANDS.map((entry) => (
+                  <option key={entry.brand} value={entry.brand}>{entry.label}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-[0.74rem] text-muted-foreground">Which shop this product appears in — each brand has its own storefront and cart.</p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <Input
@@ -522,6 +565,9 @@ const AdminProducts = () => {
                         {product.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
+                    <span className="mb-1.5 inline-flex w-fit rounded-full border border-[var(--color-border-light)] bg-white/70 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.06em] text-text-secondary">
+                      {BRAND_BY_VALUE[product.brand]?.label || product.brand}
+                    </span>
                     <Typography variant="h4" className="text-foreground text-[0.92rem] mb-1 leading-snug">{product.name}</Typography>
                     <p className="text-[0.76rem] text-muted-foreground mb-2">{product.size}</p>
                     <div className="flex items-center gap-2 mb-1">

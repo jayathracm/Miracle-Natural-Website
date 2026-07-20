@@ -1,4 +1,6 @@
 export { default as Landing } from './Landing';
+export { default as MiracleNatural } from './MiracleNatural';
+export { default as Laira } from './Laira';
 export { default as About } from './About';
 export { default as Pricing } from './Pricing';
 export { default as Shop } from './Shop';

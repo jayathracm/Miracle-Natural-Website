@@ -9,6 +9,7 @@ import { Skeleton } from './ui/Skeleton';
 import { BundleDetailModal } from './BundleDetailModal';
 import { fetchBundles } from '../lib/bundles';
 import { staggerContainer, fadeUpItem, viewportOnce } from '../lib/motionVariants';
+import { shopPathForBrand } from '../lib/brands';
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
@@ -43,7 +44,7 @@ const PricingSection = () => {
   // checkout shortcut — no re-fetching, the items are already in hand here.
   const handleBuyBundle = (bundle) => {
     setSelectedBundle(null);
-    navigate('/shop', {
+    navigate(shopPathForBrand('miracle_natural'), {
       state: {
         bundlePurchase: {
           bundleName: bundle.name,

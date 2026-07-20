@@ -13,6 +13,7 @@ import {
   User,
   Heart,
 } from 'lucide-react';
+import { shopPathForBrand } from '../lib/brands';
 import { Typography } from '../components/ui/Typography';
 import { useAuth } from '../context/AuthContext';
 import AccountDetailsSection from '../components/account/AccountDetailsSection';
@@ -173,7 +174,7 @@ const Account = () => {
             )}
 
             <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
-              <Link to="/shop" className={`${primaryLinkClasses} w-full sm:w-auto`}>
+              <Link to={shopPathForBrand('miracle_natural')} className={`${primaryLinkClasses} w-full sm:w-auto`}>
                 <ShoppingBag size={16} />
                 Continue Shopping
               </Link>

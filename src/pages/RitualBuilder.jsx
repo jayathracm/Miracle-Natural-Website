@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabaseClient';
 import { fetchProducts } from '../lib/products';
 import PRODUCT_IMAGES from '../data/productImages';
 import { staggerContainer, fadeUpItem, fadeUpEmphasis } from '../lib/motionVariants';
+import { shopPathForBrand } from '../lib/brands';
 
 const SKIN_TYPES = [
   { value: 'normal', label: 'Normal' },
@@ -64,7 +65,9 @@ const RitualBuilder = () => {
   // not the Vite-bundled image asset.
   useEffect(() => {
     let isMounted = true;
-    fetchProducts()
+    // Ritual Builder is a Miracle Natural feature (reached from its nav),
+    // so recommendations are scoped to that brand's catalog only.
+    fetchProducts('miracle_natural')
       .then((rows) => {
         if (!isMounted) return;
         const map = {};
@@ -205,7 +208,7 @@ const RitualBuilder = () => {
                         <p className="font-display text-[1.3rem] text-primary">{formatCurrency(item.product.price)}</p>
                         <button
                           type="button"
-                          onClick={() => navigate(`/shop/${item.productId}`)}
+                          onClick={() => navigate(`${shopPathForBrand('miracle_natural')}/${item.productId}`)}
                           className="shrink-0 text-[0.76rem] font-semibold text-primary underline underline-offset-2"
                         >
                           View Details
@@ -218,7 +221,7 @@ const RitualBuilder = () => {
             </motion.div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              <Button onClick={() => navigate('/shop')} icon={ArrowRight} className="w-full sm:w-auto px-8 py-3">
+              <Button onClick={() => navigate(shopPathForBrand('miracle_natural'))} icon={ArrowRight} className="w-full sm:w-auto px-8 py-3">
                 Shop These Products
               </Button>
               <Button variant="ghost" icon={RotateCcw} onClick={handleStartOver} className="w-full sm:w-auto px-8 py-3">

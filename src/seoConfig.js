@@ -2,10 +2,24 @@
 // Centralized SEO configuration
 export const SEO_CONFIG = {
   '/': {
+    title: 'Leora Wellness | Miracle Natural & Laira',
+    description:
+      'Leora Wellness (Pvt) Ltd is the personal-care company behind Miracle Natural and Laira, built on certified manufacturing expertise.',
+    canonical: '/',
+    keywords: [
+      'Leora Wellness',
+      'Miracle Natural',
+      'Laira',
+      'personal care manufacturer Sri Lanka',
+      'botanical skincare',
+      'natural body care',
+    ],
+  },
+  '/miracle-natural': {
     title: 'Miracle Natural | Botanical Personal Care',
     description:
       'Miracle Natural by Leora Wellness offers herbal-based personal care products for face, body, and hair, built on certified manufacturing expertise.',
-    canonical: '/',
+    canonical: '/miracle-natural',
     keywords: [
       'Miracle Natural',
       'personal care products',
@@ -18,6 +32,13 @@ export const SEO_CONFIG = {
       'natural face wash',
       'moisturizer bundle',
     ],
+  },
+  '/laira': {
+    title: 'Laira | Coming Soon from Leora Wellness',
+    description:
+      'Laira is a new wellness brand from Leora Wellness (Pvt) Ltd, currently in development. Check back soon.',
+    canonical: '/laira',
+    keywords: ['Laira', 'Leora Wellness', 'coming soon'],
   },
   '/about': {
     title: 'About Us | Miracle Natural',
@@ -32,11 +53,11 @@ export const SEO_CONFIG = {
       'Sri Lanka skincare manufacturer',
     ],
   },
-  '/shop': {
+  '/miracle-natural/shop': {
     title: 'Shop | Miracle Natural',
     description:
       'Shop the full Miracle Natural range of herbal face, body, hair, and lip care products with fast email checkout and island-wide delivery.',
-    canonical: '/shop',
+    canonical: '/miracle-natural/shop',
     keywords: [
       'Miracle Natural shop',
       'buy herbal skincare Sri Lanka',
@@ -44,6 +65,18 @@ export const SEO_CONFIG = {
       'natural hair care',
       'natural body care',
     ],
+  },
+  '/laira/shop': {
+    title: 'Shop | Laira',
+    description: 'The Laira shop is coming soon from Leora Wellness.',
+    canonical: '/laira/shop',
+    keywords: ['Laira shop', 'Leora Wellness'],
+  },
+  '/leora-wellness/shop': {
+    title: 'Shop | Leora Wellness',
+    description: 'The Leora Wellness shop is coming soon.',
+    canonical: '/leora-wellness/shop',
+    keywords: ['Leora Wellness shop'],
   },
   '/login': {
     title: 'Sign In | Miracle Natural',

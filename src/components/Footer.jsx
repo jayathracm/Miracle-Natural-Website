@@ -12,9 +12,9 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 mb-8 sm:mb-10">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <p className="text-3xl font-display mb-4 text-[var(--color-footer-text)]">Miracle Natural</p>
+            <p className="text-3xl font-display mb-4 text-[var(--color-footer-text)]">Leora Wellness</p>
             <p className="text-[0.98rem] sm:text-[1rem] md:text-[1.02rem] mb-4 sm:mb-5 leading-relaxed max-w-md" style={{ color: 'var(--color-footer-text-muted)' }}>
-              Miracle Natural by Leora Wellness (Pvt) Ltd. For retail, bulk inquiries, and OEM partnerships, contact our team directly.
+              Leora Wellness (Pvt) Ltd is the personal-care company behind Miracle Natural and Laira. For retail, bulk inquiries, and OEM partnerships, contact our team directly.
             </p>
             <div className="flex flex-wrap gap-3">
               <a href="#" aria-label="Facebook" className="transition-colors duration-200" style={{ color: 'var(--color-footer-text-muted)' }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text-muted)'}>
@@ -38,18 +38,28 @@ const Footer = () => {
             <ul className="space-y-2" style={{ color: 'var(--color-footer-text-muted)' }}>
               <li>
                 <a
-                  href="#hero"
+                  href="/miracle-natural"
                   className="transition-colors duration-200 hover:opacity-100"
                   style={{ color: 'inherit' }}
                   onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
                   onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text-muted)'}
                 >
-                  Home
+                  Miracle Natural
                 </a>
               </li>
               <li>
                 <a
-                  href="#features"
+                  href="/laira"
+                  className="transition-colors duration-200"
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text-muted)'}
+                >
+                  Laira (Coming Soon)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/miracle-natural#features"
                   className="transition-colors duration-200"
                   onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
                   onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text-muted)'}
@@ -59,7 +69,7 @@ const Footer = () => {
               </li>
               <li>
                 <a
-                  href="#how-it-works"
+                  href="/miracle-natural#how-it-works"
                   className="transition-colors duration-200"
                   onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
                   onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text-muted)'}
@@ -69,7 +79,7 @@ const Footer = () => {
               </li>
               <li>
                 <a
-                  href="#testimonials"
+                  href="/miracle-natural#testimonials"
                   className="transition-colors duration-200"
                   onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
                   onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text-muted)'}
@@ -173,7 +183,7 @@ const Footer = () => {
         </div>
 
         <div className="text-center text-[0.8rem] sm:text-[0.82rem] tracking-[0.06em] uppercase" style={{ color: 'var(--color-footer-text-muted)' }}>
-          <p>&copy; 2026 Miracle Natural. All rights reserved.</p>
+          <p>&copy; 2026 Leora Wellness (Pvt) Ltd. All rights reserved.</p>
         </div>
       </div>
     </footer>

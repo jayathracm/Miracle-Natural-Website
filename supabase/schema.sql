@@ -111,11 +111,19 @@ create table if not exists public.products (
   ingredients text,
   benefits text,
   is_active boolean not null default true,
+  -- Which storefront this product belongs to (functional-requirements
+  -- §1.0 — three separate shop pages, one shared products table). All
+  -- existing products are Miracle Natural; Laira and Leora Wellness have
+  -- no products yet, so their shop pages render an empty/coming-soon state.
+  brand text not null default 'miracle_natural'
+    check (brand in ('miracle_natural', 'laira', 'leora_wellness')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint products_compare_at_price_check
     check (compare_at_price is null or compare_at_price > price)
 );
+
+create index if not exists products_brand_idx on public.products (brand);
 
 alter table public.products enable row level security;
 
@@ -176,9 +184,15 @@ create table if not exists public.orders (
   -- way that matters, since it's purely a reporting/filtering label, not an
   -- authorization boundary.
   channel text not null default 'retail' check (channel in ('retail', 'b2b')),
+  -- Which storefront the order was placed through (see products.brand
+  -- above) — same reporting/filtering-label spirit as `channel`.
+  brand text not null default 'miracle_natural'
+    check (brand in ('miracle_natural', 'laira', 'leora_wellness')),
   notes text,
   created_at timestamptz not null default now()
 );
+
+create index if not exists orders_brand_idx on public.orders (brand);
 
 alter table public.orders enable row level security;
 

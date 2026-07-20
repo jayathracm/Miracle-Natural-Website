@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Heart, ImageOff, Plus, X } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
+import { shopPathForBrand } from '../../lib/brands';
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
@@ -119,7 +120,7 @@ export const ProductDetailModal = ({ product, category, isWishlisted, onClose, o
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate(`/shop/${product.id}`);
+                  navigate(`${shopPathForBrand(product.brand)}/${product.id}`);
                 }}
                 className="text-[0.8rem] font-semibold text-primary underline underline-offset-2"
               >
