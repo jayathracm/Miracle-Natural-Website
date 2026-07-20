@@ -8,16 +8,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { shopPathForBrand } from '../lib/brands';
 
-// The two sub-brand tabs, styled more prominently than the rest of the nav
-// (bordered pills rather than plain text) since they're the primary way
-// visitors choose which brand's landing page to enter. Laira is flagged as
-// a work in progress — it still routes to a real (placeholder) page, it's
-// just labeled so visitors know not to expect a full storefront yet.
-const BRAND_TABS = [
-  { to: '/miracle-natural', label: 'Miracle Natural' },
-  { to: '/laira', label: 'Laira', badge: 'Soon' },
-];
-
 const NAV_SECTIONS = [
   { to: '/ritual-builder', label: 'Ritual Builder' },
   { to: '/about', label: 'About Us' },
@@ -128,31 +118,6 @@ const Navbar = () => {
 
         {/* Desktop Menu - Only show on lg+ (1024px) */}
         <div className="hidden lg:flex items-center gap-5 xl:gap-6">
-          <div className="flex items-center gap-2">
-            {BRAND_TABS.map((tab) => {
-              const isActive = location.pathname === tab.to || location.pathname.startsWith(`${tab.to}/`);
-              return (
-                <Link
-                  key={tab.to}
-                  to={tab.to}
-                  className={cn(
-                    "relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border text-[0.76rem] xl:text-[0.8rem] font-semibold tracking-[0.08em] uppercase transition-colors",
-                    isActive
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-[var(--color-border-medium)] text-foreground hover:bg-[var(--color-hover-overlay)]"
-                  )}
-                >
-                  {tab.label}
-                  {tab.badge && (
-                    <span className="rounded-full bg-secondary/30 px-1.5 py-0.5 text-[0.6rem] font-bold tracking-[0.06em] text-text-secondary normal-case">
-                      {tab.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-
           {NAV_SECTIONS.map((link) => (
             <Link key={link.to} to={link.to} className="text-[0.78rem] xl:text-[0.8rem] font-semibold tracking-[0.1em] uppercase text-muted-foreground hover:text-primary transition-colors">
               {link.label}
@@ -314,32 +279,6 @@ const Navbar = () => {
               className="fixed inset-0 z-40 bg-[rgba(247,241,227,0.98)] backdrop-blur-sm pt-24 px-6 pb-8 overflow-y-auto lg:hidden"
             >
               <div className="mx-auto w-full max-w-sm flex flex-col items-stretch gap-3">
-                {BRAND_TABS.map((tab) => {
-                  const isActive = location.pathname === tab.to || location.pathname.startsWith(`${tab.to}/`);
-                  return (
-                    <Link
-                      key={tab.to}
-                      to={tab.to}
-                      onClick={() => setIsMenuOpen(false)}
-                      className={cn(
-                        "w-full rounded-lg border px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-left inline-flex items-center justify-between",
-                        isActive
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-[var(--color-border-light)] bg-white/70 text-foreground"
-                      )}
-                    >
-                      {tab.label}
-                      {tab.badge && (
-                        <span className="rounded-full bg-secondary/30 px-2 py-0.5 text-[0.62rem] font-bold tracking-[0.06em] text-text-secondary normal-case">
-                          {tab.badge}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-
-                <div className="my-1 border-t border-[var(--color-border-light)]" />
-
                 {NAV_SECTIONS.map((link) => (
                   <Link key={link.to} to={link.to} onClick={() => setIsMenuOpen(false)} className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left">
                     {link.label}

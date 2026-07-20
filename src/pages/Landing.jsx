@@ -5,11 +5,10 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Leaf, ShieldCheck, Sparkles } from 'lucide-react';
 import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
-import { staggerContainer, fadeUpItem, fadeUpEmphasis, viewportOnce } from '../lib/motionVariants';
+import { fadeUpEmphasis, viewportOnce } from '../lib/motionVariants';
 import { shopPathForBrand } from '../lib/brands';
+import BrandShowcase from '../components/BrandShowcase';
 import leoraIcon from '../assets/branding/leora-wellness-icon-transparent.png';
-import miracleNaturalIcon from '../assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
-import lairaWordmark from '../assets/branding/laira-wordmark-transparent.png';
 
 // This is the neutral "parent company" landing page at "/" — Leora Wellness
 // sits above three storefronts (its own, plus the two consumer-facing
@@ -78,78 +77,8 @@ const Landing = () => {
         </motion.div>
       </section>
 
-      {/* Our Brands */}
-      <section className="px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-14">
-        <div className="max-w-[1320px] mx-auto">
-          <div className="text-center mb-8 sm:mb-10">
-            <Typography variant="label" className="mb-3 block text-primary">Our Brands</Typography>
-            <Typography variant="h2" className="text-foreground text-balance">
-              Three storefronts, one standard of care.
-            </Typography>
-          </div>
-
-          <motion.div
-            variants={staggerContainer(0.12)}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewportOnce}
-            className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6"
-          >
-            {/* Leora Wellness card — the parent brand's own (currently empty) line */}
-            <motion.div
-              variants={fadeUpItem}
-              className="relative rounded-2xl border border-[var(--color-border-medium)] bg-white/70 p-6 sm:p-8 shadow-[0_16px_36px_rgba(31,44,35,0.06)] flex flex-col items-start overflow-hidden"
-            >
-              <span className="absolute top-5 right-5 rounded-full border border-[var(--color-border-medium)] bg-white/90 px-3 py-1 text-[0.66rem] font-bold tracking-[0.1em] uppercase text-text-secondary">
-                Coming Soon
-              </span>
-              <img src={leoraIcon} alt="" aria-hidden="true" className="h-14 w-14 object-contain mb-5" />
-              <Typography variant="h3" className="text-foreground mb-2">Leora Wellness</Typography>
-              <Typography variant="p" className="mb-6">
-                Our own direct product line, launching under the Leora Wellness name —
-                details and products are still being finalized.
-              </Typography>
-              <Button variant="ghost" icon={ArrowRight} className="mt-auto w-full sm:w-auto" onClick={() => navigate(shopPathForBrand('leora_wellness'))}>
-                Preview Leora Wellness Shop
-              </Button>
-            </motion.div>
-
-            {/* Miracle Natural card */}
-            <motion.div
-              variants={fadeUpItem}
-              className="rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-6 sm:p-8 shadow-[0_16px_36px_rgba(31,44,35,0.08)] flex flex-col items-start"
-            >
-              <img src={miracleNaturalIcon} alt="" aria-hidden="true" className="h-16 w-16 object-contain mb-5" />
-              <Typography variant="h3" className="text-foreground mb-2">Miracle Natural</Typography>
-              <Typography variant="p" className="mb-6">
-                Herbal-based personal care for everyday rituals — face, body, hair, and lip care,
-                made accessible without compromising on quality.
-              </Typography>
-              <Button icon={ArrowRight} className="mt-auto w-full sm:w-auto" onClick={() => navigate('/miracle-natural')}>
-                Explore Miracle Natural
-              </Button>
-            </motion.div>
-
-            {/* Laira card — work in progress */}
-            <motion.div
-              variants={fadeUpItem}
-              className="relative rounded-2xl border border-[var(--color-border-medium)] bg-white/70 p-6 sm:p-8 shadow-[0_16px_36px_rgba(31,44,35,0.06)] flex flex-col items-start overflow-hidden"
-            >
-              <span className="absolute top-5 right-5 rounded-full border border-[var(--color-border-medium)] bg-white/90 px-3 py-1 text-[0.66rem] font-bold tracking-[0.1em] uppercase text-text-secondary">
-                Coming Soon
-              </span>
-              <img src={lairaWordmark} alt="Laira — The Best Version of You" className="h-10 w-auto object-contain mb-7 mt-1 grayscale" />
-              <Typography variant="p" className="mb-6">
-                A new wellness line from Leora Wellness is taking shape. The Laira experience
-                will land here as soon as it&apos;s ready.
-              </Typography>
-              <Button variant="ghost" icon={ArrowRight} className="mt-auto w-full sm:w-auto" onClick={() => navigate('/laira')}>
-                Preview Laira
-              </Button>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
+      {/* Our Brands — COD Modern Warfare-style expanding tile showcase */}
+      <BrandShowcase />
 
       {/* Closing CTA — points at the one storefront that's actually live today */}
       <section className="relative py-12 sm:py-14 md:py-16 px-4 sm:px-6 flex flex-col items-center justify-center overflow-hidden">
