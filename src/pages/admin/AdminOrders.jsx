@@ -4,6 +4,7 @@ import { Typography } from '../../components/ui/Typography';
 import { Button } from '../../components/ui/Button';
 import { RowSkeletonList } from '../../components/ui/Skeleton';
 import { supabase } from '../../lib/supabaseClient';
+import { BRANDS, BRAND_BY_VALUE } from '../../lib/brands';
 
 const STATUS_OPTIONS = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
 
@@ -29,6 +30,7 @@ const AdminOrders = () => {
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [channelFilter, setChannelFilter] = useState('all');
+  const [brandFilter, setBrandFilter] = useState('all');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
 
@@ -58,9 +60,10 @@ const AdminOrders = () => {
     return orders.filter((order) => {
       if (statusFilter !== 'all' && order.status !== statusFilter) return false;
       if (channelFilter !== 'all' && order.channel !== channelFilter) return false;
+      if (brandFilter !== 'all' && order.brand !== brandFilter) return false;
       return true;
     });
-  }, [orders, statusFilter, channelFilter]);
+  }, [orders, statusFilter, channelFilter, brandFilter]);
 
   const statusCounts = useMemo(() => {
     return orders.reduce(
@@ -80,6 +83,13 @@ const AdminOrders = () => {
       },
       { retail: 0, b2b: 0 }
     );
+  }, [orders]);
+
+  const brandCounts = useMemo(() => {
+    return orders.reduce((acc, order) => {
+      acc[order.brand] = (acc[order.brand] || 0) + 1;
+      return acc;
+    }, {});
   }, [orders]);
 
   const handleStatusChange = async (orderId, nextStatus) => {
@@ -144,6 +154,27 @@ const AdminOrders = () => {
               </button>
             ))}
           </div>
+
+          <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
+            <span className="text-[0.68rem] font-semibold tracking-[0.08em] uppercase text-text-tertiary">Storefront:</span>
+            <button
+              type="button"
+              onClick={() => setBrandFilter('all')}
+              className={`rounded-full border px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase transition-colors ${brandFilter === 'all' ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-light)] bg-white/70 text-text-secondary'}`}
+            >
+              All ({orders.length})
+            </button>
+            {BRANDS.map(({ brand, label }) => (
+              <button
+                key={brand}
+                type="button"
+                onClick={() => setBrandFilter(brand)}
+                className={`rounded-full border px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase transition-colors ${brandFilter === brand ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-light)] bg-white/70 text-text-secondary'}`}
+              >
+                {label} ({brandCounts[brand] || 0})
+              </button>
+            ))}
+          </div>
         </div>
 
         {error ? (
@@ -181,6 +212,11 @@ const AdminOrders = () => {
                     </div>
 
                     <div className="flex items-center gap-2.5">
+                      {order.brand && (
+                        <span className="rounded-full border border-[var(--color-border-medium)] bg-white/70 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-text-secondary">
+                          {BRAND_BY_VALUE[order.brand]?.label || order.brand}
+                        </span>
+                      )}
                       {order.channel === 'b2b' && (
                         <span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-primary">
                           B2B

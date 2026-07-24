@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, Flower2, Leaf, Sparkles } from 'lucide-react';
 import { Button } from './ui/Button';
 import { cn } from '../lib/utils';
 import { shopPathForBrand } from '../lib/brands';
@@ -22,9 +24,10 @@ const TILES = [
     description: 'Our own direct product line, launching under the Leora Wellness name — details are still being finalized.',
     icon: leoraIcon,
     iconClassName: 'h-9 sm:h-10',
+    bgIcon: Flower2,
     to: shopPathForBrand('leora_wellness'),
     ctaLabel: 'Preview Shop',
-    gradient: 'linear-gradient(165deg, #0d3d38 0%, #071f1c 100%)',
+    gradient: 'linear-gradient(165deg, #1d6459 0%, #0f3b34 100%)',
   },
   {
     brand: 'miracle_natural',
@@ -33,9 +36,10 @@ const TILES = [
     description: 'Herbal-based personal care for everyday rituals — face, body, hair, and lip care, made accessible without compromising on quality.',
     icon: miracleNaturalIcon,
     iconClassName: 'h-11 sm:h-12',
+    bgIcon: Leaf,
     to: '/miracle-natural',
     ctaLabel: 'Explore Brand',
-    gradient: 'linear-gradient(165deg, #223026 0%, #10160f 100%)',
+    gradient: 'linear-gradient(165deg, #3f5a49 0%, #223026 100%)',
   },
   {
     brand: 'laira',
@@ -44,11 +48,131 @@ const TILES = [
     description: "A new wellness line from Leora Wellness is taking shape. The full experience lands here soon.",
     icon: lairaWordmark,
     iconClassName: 'h-6 sm:h-7 brightness-0 invert',
+    bgIcon: Sparkles,
     to: '/laira',
     ctaLabel: 'Preview Laira',
-    gradient: 'linear-gradient(165deg, #1c1c1c 0%, #050505 100%)',
+    gradient: 'linear-gradient(165deg, #40403e 0%, #1c1c1c 100%)',
   },
 ];
+
+const ICON_SPRING = { type: 'spring', stiffness: 110, damping: 14 };
+const CONTENT_SPRING = { type: 'spring', stiffness: 280, damping: 26 };
+
+const BrandTile = ({ tile, isActive, isDimmed, onHoverStart, onToggle, navigate }) => {
+  // Cursor-tracked spotlight + parallax: the background icon drifts a few
+  // pixels toward the pointer and a soft radial highlight follows it, so the
+  // expanded panel feels alive rather than just a static resize.
+  const [spot, setSpot] = useState({ x: 50, y: 50 });
+
+  const handleMouseMove = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setSpot({
+      x: ((event.clientX - rect.left) / rect.width) * 100,
+      y: ((event.clientY - rect.top) / rect.height) * 100,
+    });
+  };
+
+  const parallaxX = isActive ? (spot.x - 50) * 0.22 : 0;
+  const parallaxY = isActive ? (spot.y - 50) * 0.22 : 0;
+
+  return (
+    <motion.div
+      role="button"
+      tabIndex={0}
+      onMouseEnter={onHoverStart}
+      onMouseMove={handleMouseMove}
+      onClick={onToggle}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') onToggle();
+      }}
+      aria-pressed={isActive}
+      aria-label={`${tile.label}${isActive ? ' (expanded)' : ''}`}
+      className="group relative h-full min-w-0 flex-1 cursor-pointer overflow-hidden border-r border-white/10 outline-none transition-[filter] duration-500 ease-out last:border-r-0 focus-visible:ring-2 focus-visible:ring-white/60"
+      style={{ flexBasis: 0, filter: isDimmed ? 'brightness(0.55) blur(1.5px)' : 'brightness(1) blur(0px)' }}
+    >
+      <div
+        className="absolute inset-0 transition-[filter] duration-500 ease-out"
+        style={{ background: tile.gradient }}
+      />
+
+      {/* Cursor-follow spotlight — only present on the expanded tile, a soft
+          glow that tracks the pointer for a bit of depth/interactivity. */}
+      {isActive && (
+        <div
+          className="pointer-events-none absolute inset-0 transition-opacity duration-300"
+          style={{ background: `radial-gradient(420px circle at ${spot.x}% ${spot.y}%, rgba(255,255,255,0.16), transparent 60%)` }}
+        />
+      )}
+
+      {/* Oversized background texture, in the site's own cream tone (not the
+          brand's logo) so the dark tiles still tie back to the page's
+          palette. It "unfurls" — rotated and small at rest, straightening,
+          growing, and drifting toward the cursor on hover. */}
+      <div className="pointer-events-none absolute inset-x-0 top-[6%] bottom-[38%] flex items-center justify-center">
+        <motion.div
+          animate={{ x: parallaxX, y: parallaxY, rotate: isActive ? 0 : -10, scale: isActive ? 1.06 : 1 }}
+          transition={ICON_SPRING}
+        >
+          <tile.bgIcon
+            aria-hidden="true"
+            strokeWidth={1}
+            className={cn(
+              'text-cream-50 opacity-[0.12] transition-[height,width,opacity] duration-500',
+              isActive ? 'h-56 w-56 sm:h-64 sm:w-64' : 'h-32 w-32 sm:h-40 sm:w-40'
+            )}
+          />
+        </motion.div>
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+
+      <div className="relative z-10 flex h-full flex-col justify-end p-5 sm:p-7 md:p-9">
+        <img src={tile.icon} alt="" aria-hidden="true" className={cn('mb-3 w-auto object-contain', tile.iconClassName)} />
+
+        <p className="text-[0.85rem] sm:text-[0.95rem] md:text-[1.05rem] font-bold uppercase tracking-[0.14em] text-white whitespace-nowrap">
+          {tile.label}
+        </p>
+
+        <AnimatePresence>
+          {isActive && (
+            <motion.div
+              key="detail"
+              initial={{ opacity: 0, y: 22, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 14, scale: 0.96 }}
+              transition={CONTENT_SPRING}
+              className="mt-3"
+            >
+              {tile.badge && (
+                <motion.span
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ ...CONTENT_SPRING, delay: 0.05 }}
+                  className="mb-2.5 inline-flex rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-white/90"
+                >
+                  {tile.badge}
+                </motion.span>
+              )}
+              <p className="mb-4 max-w-sm text-[0.85rem] sm:text-[0.9rem] leading-relaxed text-white/80">
+                {tile.description}
+              </p>
+              <Button
+                icon={ArrowRight}
+                className="px-5 py-2.5 text-[0.72rem]"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(tile.to);
+                }}
+              >
+                {tile.ctaLabel}
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+};
 
 const BrandShowcase = () => {
   const navigate = useNavigate();
@@ -98,76 +222,15 @@ const BrandShowcase = () => {
           // (nothing hovered/pinned) all three stay fully sharp and equal.
           const isDimmed = activeBrand !== null && !isActive;
           return (
-            <div
+            <BrandTile
               key={tile.brand}
-              role="button"
-              tabIndex={0}
-              onMouseEnter={() => setHoveredBrand(tile.brand)}
-              onClick={() => handleTileClick(tile.brand)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') handleTileClick(tile.brand);
-              }}
-              aria-pressed={isActive}
-              aria-label={`${tile.label}${isActive ? ' (expanded)' : ''}`}
-              className="group relative h-full min-w-0 cursor-pointer overflow-hidden border-r border-white/10 outline-none last:border-r-0 focus-visible:ring-2 focus-visible:ring-white/60"
-              style={{
-                flexGrow: isActive ? 3.2 : 1,
-                flexBasis: 0,
-                filter: isDimmed ? 'brightness(0.55) blur(1.5px)' : 'brightness(1) blur(0px)',
-                transition: 'flex-grow 550ms cubic-bezier(0.16,1,0.3,1), filter 550ms ease',
-              }}
-            >
-              <div className="absolute inset-0" style={{ background: tile.gradient }} />
-
-              {/* Oversized faded watermark icon for texture/depth, like the
-                  moody background art behind each COD panel. */}
-              <img
-                src={tile.icon}
-                alt=""
-                aria-hidden="true"
-                className={cn(
-                  'pointer-events-none absolute left-1/2 top-1/2 w-auto -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.08] transition-transform duration-700',
-                  isActive ? 'h-64 sm:h-72' : 'h-40 sm:h-48',
-                  tile.brand === 'laira' && 'brightness-0 invert'
-                )}
-              />
-
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-
-              <div className="relative z-10 flex h-full flex-col justify-end p-5 sm:p-7 md:p-9">
-                <img src={tile.icon} alt="" aria-hidden="true" className={cn('mb-3 w-auto object-contain', tile.iconClassName)} />
-
-                <p className="text-[0.85rem] sm:text-[0.95rem] md:text-[1.05rem] font-bold uppercase tracking-[0.14em] text-white whitespace-nowrap">
-                  {tile.label}
-                </p>
-
-                <div
-                  className={cn(
-                    'overflow-hidden transition-all duration-500 ease-out',
-                    isActive ? 'mt-3 max-h-56 opacity-100' : 'mt-0 max-h-0 opacity-0'
-                  )}
-                >
-                  {tile.badge && (
-                    <span className="mb-2.5 inline-flex rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-white/90">
-                      {tile.badge}
-                    </span>
-                  )}
-                  <p className="mb-4 max-w-sm text-[0.85rem] sm:text-[0.9rem] leading-relaxed text-white/80">
-                    {tile.description}
-                  </p>
-                  <Button
-                    icon={ArrowRight}
-                    className="px-5 py-2.5 text-[0.72rem]"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      navigate(tile.to);
-                    }}
-                  >
-                    {tile.ctaLabel}
-                  </Button>
-                </div>
-              </div>
-            </div>
+              tile={tile}
+              isActive={isActive}
+              isDimmed={isDimmed}
+              onHoverStart={() => setHoveredBrand(tile.brand)}
+              onToggle={() => handleTileClick(tile.brand)}
+              navigate={navigate}
+            />
           );
         })}
       </div>

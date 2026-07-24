@@ -10,7 +10,7 @@ import { supabase } from './supabaseClient';
 export async function fetchProductInventory() {
   const { data, error } = await supabase
     .from('product_inventory')
-    .select('product_id, pool, stock_count, low_stock_threshold, updated_at, products(name, category, is_active)')
+    .select('product_id, pool, stock_count, low_stock_threshold, updated_at, products(name, category, is_active, brand)')
     .order('product_id', { ascending: true });
 
   if (error) {
@@ -25,6 +25,7 @@ export async function fetchProductInventory() {
     updatedAt: row.updated_at,
     productName: row.products?.name || row.product_id,
     productCategory: row.products?.category || null,
+    productBrand: row.products?.brand || 'miracle_natural',
     isActive: row.products?.is_active ?? true,
   }));
 }
