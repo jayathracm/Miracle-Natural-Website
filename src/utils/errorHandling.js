@@ -73,26 +73,6 @@ export const sendToErrorService = async (errorData) => {
 };
 
 /**
- * Handle async operations with error catching
- * @param {Function} asyncFn - The async function to execute
- * @param {Function} onError - Error handler function
- * @returns {Promise} - Promise that resolves with the result or rejects with error
- */
-export const withErrorHandling = async (asyncFn, onError = null) => {
-  try {
-    return await asyncFn();
-  } catch (error) {
-    const errorData = logError(error);
-
-    if (onError) {
-      onError(error, errorData);
-    }
-
-    throw error;
-  }
-};
-
-/**
  * Create a user-friendly error message
  * @param {Error} error - The error object
  * @returns {string} - User-friendly error message
@@ -118,58 +98,4 @@ export const getUserFriendlyMessage = (error) => {
   }
 
   return 'An unexpected error occurred. Please try again.';
-};
-
-/**
- * Check if the error is a network error
- * @param {Error} error - The error object
- * @returns {boolean} - True if it's a network error
- */
-export const isNetworkError = (error) => {
-  return (
-    (error.name === 'TypeError' && error.message.includes('fetch')) ||
-    error.code === ERROR_CODES.NETWORK_ERROR
-  );
-};
-
-/**
- * Check if the error is a 404 error
- * @param {Error} error - The error object
- * @returns {boolean} - True if it's a 404 error
- */
-export const isNotFoundError = (error) => {
-  return error.status === 404 || error.code === ERROR_CODES.NOT_FOUND;
-};
-
-/**
- * Retry function with exponential backoff
- * @param {Function} fn - Function to retry
- * @param {number} maxRetries - Maximum number of retries
- * @param {number} baseDelay - Base delay in milliseconds
- * @returns {Promise} - Promise that resolves with the result
- */
-export const retryWithBackoff = async (
-  fn,
-  maxRetries = 3,
-  baseDelay = 1000
-) => {
-  let lastError;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-
-      if (attempt === maxRetries) {
-        throw error;
-      }
-
-      // Wait with exponential backoff
-      const delay = baseDelay * Math.pow(2, attempt);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-
-  throw lastError;
 };

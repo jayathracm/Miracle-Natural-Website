@@ -22,7 +22,7 @@ export async function fetchWishlistProductIds() {
 export async function fetchWishlist() {
   const { data, error } = await supabase
     .from('wishlist_items')
-    .select('id, created_at, product_id, products(id, name, category, size, price, image_url, description)')
+    .select('id, created_at, product_id, products(id, name, category, size, price, image_url, description, brand)')
     .order('created_at', { ascending: false });
 
   if (error) {

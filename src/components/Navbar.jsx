@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Boxes, Briefcase, FileText, LayoutDashboard, Mail, Menu, Package, Percent, ShieldCheck, User, X } from 'lucide-react';
+import { BarChart3, Boxes, Briefcase, FileText, LayoutDashboard, Mail, Menu, Package, Percent, ShieldCheck, User, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import logoIcon from '../assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
-import logoWordmark from '../assets/branding-from-pdf/miracle-natural-wordmark-transparent.png';
+import leoraIcon from '../assets/branding/leora-wellness-icon-transparent.png';
 import { cn } from '../lib/utils';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.nav>, <motion.div>)
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { shopPathForBrand } from '../lib/brands';
 
 const NAV_SECTIONS = [
-  { href: '#hero', label: 'Home', id: 'hero' },
-  { to: '/ritual-builder', label: 'Ritual Builder', type: 'route' },
-  { to: '/about', label: 'About Us', type: 'route' },
+  { to: '/ritual-builder', label: 'Ritual Builder' },
+  { to: '/about', label: 'About Us' },
 ];
 
 const Navbar = () => {
@@ -21,6 +20,16 @@ const Navbar = () => {
   const location = useLocation();
   const { user, isAdmin, isSuperAdmin, isCorporatePartner } = useAuth();
   const accountMenuRef = useRef(null);
+
+  // The global "Shop Now" button routes to whichever brand's shop matches
+  // where the visitor already is (so it's never a surprise which storefront
+  // it opens); anywhere else (Leora Wellness home, About, Account, etc.) it
+  // defaults to Miracle Natural, the only brand with real products today.
+  const contextualShopPath = location.pathname.startsWith('/laira')
+    ? shopPathForBrand('laira')
+    : location.pathname.startsWith('/leora-wellness')
+    ? shopPathForBrand('leora_wellness')
+    : shopPathForBrand('miracle_natural');
 
   // Optimized scroll handler - only updates when crossing threshold
   const handleScroll = useCallback(() => {
@@ -84,13 +93,13 @@ const Navbar = () => {
         )}>
         {/* Logo */}
         <Link
-          to={location.pathname === '/' ? '#hero' : '/'}
-          aria-label="Miracle Natural Home"
+          to="/"
+          aria-label="Leora Wellness Home"
           className="relative z-50 flex items-center flex-shrink-0"
         >
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <img
-              src={logoIcon}
+              src={leoraIcon}
               alt=""
               aria-hidden="true"
               className={cn(
@@ -98,44 +107,22 @@ const Navbar = () => {
                 scrolled ? "h-8 sm:h-9" : "h-9 sm:h-10"
               )}
             />
-            <img
-              src={logoWordmark}
-              alt="Miracle Natural"
-              className={cn(
-                "w-auto max-w-[220px] sm:max-w-[280px] object-contain transition-all duration-300",
-                scrolled ? "h-8 sm:h-9" : "h-9 sm:h-10"
-              )}
-            />
+            <span className={cn(
+              "font-display text-foreground whitespace-nowrap transition-all duration-300",
+              scrolled ? "text-[1.05rem] sm:text-[1.15rem]" : "text-[1.15rem] sm:text-[1.3rem]"
+            )}>
+              Leora Wellness
+            </span>
           </div>
         </Link>
 
         {/* Desktop Menu - Only show on lg+ (1024px) */}
-        <div className="hidden lg:flex items-center gap-6 xl:gap-8">
-          {NAV_SECTIONS.map((link) => {
-            const isOnHomePage = location.pathname === '/';
-
-            if (link.type === 'route') {
-              return (
-                <Link key={link.to} to={link.to} className="text-[0.78rem] xl:text-[0.8rem] font-semibold tracking-[0.1em] uppercase text-muted-foreground hover:text-primary transition-colors">
-                  {link.label}
-                </Link>
-              );
-            } else {
-              if (isOnHomePage) {
-                return (
-                  <a key={link.href} href={link.href} className="text-[0.78rem] xl:text-[0.8rem] font-semibold tracking-[0.1em] uppercase text-muted-foreground hover:text-primary transition-colors">
-                    {link.label}
-                  </a>
-                );
-              } else {
-                return (
-                  <Link key={link.href} to={`/${link.href}`} className="text-[0.78rem] xl:text-[0.8rem] font-semibold tracking-[0.1em] uppercase text-muted-foreground hover:text-primary transition-colors">
-                    {link.label}
-                  </Link>
-                );
-              }
-            }
-          })}
+        <div className="hidden lg:flex items-center gap-5 xl:gap-6">
+          {NAV_SECTIONS.map((link) => (
+            <Link key={link.to} to={link.to} className="text-[0.78rem] xl:text-[0.8rem] font-semibold tracking-[0.1em] uppercase text-muted-foreground hover:text-primary transition-colors">
+              {link.label}
+            </Link>
+          ))}
 
           <div className="relative" ref={accountMenuRef}>
             <button
@@ -242,6 +229,14 @@ const Navbar = () => {
                         <Boxes size={14} />
                         Admin: Inventory
                       </Link>
+                      <Link
+                        to="/admin/analytics"
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-[0.76rem] font-semibold tracking-[0.04em] uppercase text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors"
+                      >
+                        <BarChart3 size={14} />
+                        Admin: Analytics
+                      </Link>
                       {isSuperAdmin && (
                         <Link
                           to="/admin/accounts"
@@ -259,7 +254,7 @@ const Navbar = () => {
             </AnimatePresence>
           </div>
 
-          <Link to="/shop" className="px-4 py-2 rounded-lg border border-primary bg-primary text-white text-[0.76rem] xl:text-[0.8rem] font-semibold tracking-[0.1em] uppercase hover:bg-forest-800 transition-colors">
+          <Link to={contextualShopPath} className="px-4 py-2 rounded-lg border border-primary bg-primary text-white text-[0.76rem] xl:text-[0.8rem] font-semibold tracking-[0.1em] uppercase hover:bg-forest-800 transition-colors">
             Shop Now
           </Link>
         </div>
@@ -284,31 +279,11 @@ const Navbar = () => {
               className="fixed inset-0 z-40 bg-[rgba(247,241,227,0.98)] backdrop-blur-sm pt-24 px-6 pb-8 overflow-y-auto lg:hidden"
             >
               <div className="mx-auto w-full max-w-sm flex flex-col items-stretch gap-3">
-                {NAV_SECTIONS.map((link) => {
-                  const isOnHomePage = location.pathname === '/';
-
-                  if (link.type === 'route') {
-                    return (
-                      <Link key={link.to} to={link.to} onClick={() => setIsMenuOpen(false)} className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left">
-                        {link.label}
-                      </Link>
-                    );
-                  } else {
-                    if (isOnHomePage) {
-                      return (
-                        <a key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)} className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left">
-                          {link.label}
-                        </a>
-                      );
-                    } else {
-                      return (
-                        <Link key={link.href} to={`/${link.href}`} onClick={() => setIsMenuOpen(false)} className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left">
-                          {link.label}
-                        </Link>
-                      );
-                    }
-                  }
-                })}
+                {NAV_SECTIONS.map((link) => (
+                  <Link key={link.to} to={link.to} onClick={() => setIsMenuOpen(false)} className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left">
+                    {link.label}
+                  </Link>
+                ))}
                 <Link
                   to="/account"
                   onClick={() => setIsMenuOpen(false)}
@@ -385,6 +360,14 @@ const Navbar = () => {
                       <Boxes size={18} />
                       Admin: Inventory
                     </Link>
+                    <Link
+                      to="/admin/analytics"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left inline-flex items-center gap-2"
+                    >
+                      <BarChart3 size={18} />
+                      Admin: Analytics
+                    </Link>
                     {isSuperAdmin && (
                       <Link
                         to="/admin/accounts"
@@ -398,7 +381,7 @@ const Navbar = () => {
                   </>
                 )}
                 <Link
-                  to="/shop"
+                  to={contextualShopPath}
                   onClick={() => setIsMenuOpen(false)}
                   className="w-full px-6 py-3 rounded-lg bg-primary text-white text-[0.9rem] font-sans font-semibold tracking-[0.1em] uppercase text-center"
                 >

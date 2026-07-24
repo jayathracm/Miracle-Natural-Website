@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion } from 'framer-motion';
-import { CheckCircle2, ChevronLeft, ChevronRight, ImageOff, LayoutGrid, List, Search, ShoppingBag, Sparkles, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ImageOff, LayoutGrid, List, Search, ShoppingBag, Sparkles, X } from 'lucide-react';
 import { Input } from '../components/ui/Input';
 import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
@@ -13,7 +13,7 @@ import { ShopCart } from '../components/shop/ShopCart';
 import PRODUCT_IMAGES from '../data/productImages';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
+import { useBrandCart } from '../context/CartContext';
 import { useWishlist } from '../hooks/useWishlist';
 import DELIVERY_ZONES from '../data/deliveryZones';
 import { fetchAddresses } from '../lib/addresses';
@@ -22,6 +22,8 @@ import { decrementInventoryForOrder } from '../lib/inventory';
 import { submitQuotation } from '../lib/quotations';
 import { staggerContainer } from '../lib/motionVariants';
 import { SHOP_CATEGORY_ORDER, getShopCategory } from '../lib/shopCategories';
+import { BRAND_BY_SLUG } from '../lib/brands';
+import NotFound from '../components/NotFound';
 
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 const PRODUCTS_PER_PAGE = 12;
@@ -37,6 +39,10 @@ const PRICE_FILTERS = [
 const formatCurrency = (amount) => `LKR ${amount.toLocaleString('en-LK')}`;
 
 const ShopPage = () => {
+  const { brandSlug } = useParams();
+  const brandEntry = BRAND_BY_SLUG[brandSlug];
+  const brand = brandEntry?.brand;
+
   const { user, isCorporatePartner, isAdmin } = useAuth();
   const isWholesaleEligible = isCorporatePartner || isAdmin;
   const location = useLocation();
@@ -48,12 +54,11 @@ const ShopPage = () => {
     cart,
     cartItems,
     totalItems,
-    totalAmount,
     addToCart,
     addManyToCart,
     changeQuantity,
     clearCart,
-  } = useCart();
+  } = useBrandCart(brand);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -168,8 +173,6 @@ const ShopPage = () => {
     if (!deliveryZone) return '';
     return DELIVERY_ZONES[deliveryZone]?.label || '';
   }, [deliveryZone]);
-
-  const grandTotal = useMemo(() => totalAmount + shippingCost, [totalAmount, shippingCost]);
 
   // Bulk ordering (functional-requirements §2.3): a Corporate Partner's cart
   // totals should reflect the same discount-tier math as WholesalePricingPanel
@@ -366,7 +369,7 @@ const ShopPage = () => {
 
     if (isSendingOrder) return;
 
-    const subject = `New Miracle Natural Order - ${customerName || 'Customer'}`;
+    const subject = `New ${brandEntry.label} Order - ${customerName || 'Customer'}`;
     const orderLines = effectiveCartItems.map(
       (item) =>
         `- ${item.name} (${item.size}) x ${item.quantity} = ${formatCurrency(item.effectiveLineTotal)}${item.wholesaleDiscountPercent > 0 ? ` (wholesale -${item.wholesaleDiscountPercent}%)` : ''}`
@@ -417,6 +420,7 @@ const ShopPage = () => {
         grand_total: effectiveGrandTotal,
         notes: customerNotes.trim() || null,
         channel: isWholesaleEligible ? 'b2b' : 'retail',
+        brand,
       })
       .select('id')
       .single();
@@ -573,12 +577,20 @@ const ShopPage = () => {
     setSearchTerm('');
   };
 
+  // Invalid brand segment in the URL (not one of miracle-natural/laira/
+  // leora-wellness) — all hooks above are safe to call with an undefined
+  // brand (they just resolve to empty carts/catalogs), so it's fine to bail
+  // out here rather than needing an early return before them.
+  if (!brandEntry) {
+    return <NotFound />;
+  }
+
   return (
     <div className="pt-28 sm:pt-30 md:pt-32 pb-14 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-[1320px] mx-auto">
         <div className="mb-6 sm:mb-8">
           <Typography variant="label" className="mb-2 block">Shop</Typography>
-          <Typography variant="h2" className="text-foreground">All Products</Typography>
+          <Typography variant="h2" className="text-foreground">{brandEntry.label}</Typography>
         </div>
 
         {productsError ? (
@@ -592,6 +604,17 @@ const ShopPage = () => {
             </div>
             <ProductGridSkeleton count={10} />
           </section>
+        ) : productCatalog.length === 0 ? (
+          <div className="rounded-2xl border border-[var(--color-border-light)] bg-white px-5 py-16 text-center">
+            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-primary/12 border border-primary/25 inline-flex items-center justify-center">
+              <Clock size={26} className="text-primary" />
+            </div>
+            <Typography variant="h4" className="text-foreground mb-2">{brandEntry.label} Shop Coming Soon</Typography>
+            <p className="text-[0.9rem] text-muted-foreground mb-5 max-w-md mx-auto">
+              There's nothing to browse here just yet — check back soon, or shop Miracle Natural in the meantime.
+            </p>
+            <Button onClick={() => navigate('/miracle-natural/shop')}>Shop Miracle Natural</Button>
+          </div>
         ) : (
           <>
             <div className="flex flex-col lg:flex-row items-start gap-6 lg:gap-8">

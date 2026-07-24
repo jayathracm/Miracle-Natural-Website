@@ -6,6 +6,7 @@ import { gsap } from 'gsap';
 import { Typography } from './ui/Typography';
 import { Button } from './ui/Button';
 import { ArrowRight } from 'lucide-react';
+import { shopPathForBrand } from '../lib/brands';
 
 const catalogImageModules = import.meta.glob('../assets/catalog/*.{png,jpg,jpeg,webp}', {
   eager: true,
@@ -176,7 +177,7 @@ const HeroSection = () => {
             <Button
               variant="ghost"
               className="w-full sm:w-auto px-4 py-2 text-sm sm:text-base"
-              onClick={() => navigate('/shop')}
+              onClick={() => navigate(shopPathForBrand('miracle_natural'))}
             >
               Start Your Ritual
             </Button>

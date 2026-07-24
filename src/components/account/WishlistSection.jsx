@@ -5,6 +5,7 @@ import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
 import { ProductGridSkeleton } from '../ui/Skeleton';
 import { fetchWishlist, removeFromWishlist } from '../../lib/wishlist';
+import { shopPathForBrand } from '../../lib/brands';
 import PRODUCT_IMAGES from '../../data/productImages';
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
@@ -57,7 +58,7 @@ const WishlistSection = () => {
       <div className="rounded-2xl border border-[var(--color-card-border)] bg-white/75 px-5 py-12 text-center text-muted-foreground flex flex-col items-center gap-3">
         <Heart size={26} className="text-text-tertiary" />
         <Typography variant="small">Nothing saved yet — tap the heart icon on any product in the shop to add it here.</Typography>
-        <Link to="/shop" className="mt-1">
+        <Link to={shopPathForBrand('miracle_natural')} className="mt-1">
           <Button className="px-4 py-2 text-[0.72rem]" icon={ShoppingBag}>Browse Shop</Button>
         </Link>
       </div>
@@ -92,7 +93,7 @@ const WishlistSection = () => {
               <p className="font-display text-[1.15rem] text-primary mb-3">{formatCurrency(product.price)}</p>
 
               <div className="mt-auto flex items-center gap-2">
-                <Link to="/shop" className="flex-1">
+                <Link to={shopPathForBrand(product.brand)} className="flex-1">
                   <Button className="w-full px-3 py-2 text-[0.7rem]" icon={ShoppingBag}>
                     Shop This
                   </Button>

@@ -13,6 +13,7 @@ import {
   updateRawMaterial,
   deleteRawMaterial,
 } from '../../lib/inventory';
+import { BRANDS, BRAND_BY_VALUE } from '../../lib/brands';
 
 const emptyMaterialForm = { id: '', name: '', unit: 'units', stockCount: '', lowStockThreshold: '', notes: '' };
 
@@ -82,6 +83,7 @@ const AdminInventory = () => {
   const [inventoryError, setInventoryError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [brandFilter, setBrandFilter] = useState('all');
   const [drafts, setDrafts] = useState({});
   const [savingKey, setSavingKey] = useState(null);
   const [saveError, setSaveError] = useState(null);
@@ -121,6 +123,7 @@ const AdminInventory = () => {
           productId: row.productId,
           productName: row.productName,
           productCategory: row.productCategory,
+          productBrand: row.productBrand,
           isActive: row.isActive,
           retail: null,
           wholesale: null,
@@ -136,6 +139,13 @@ const AdminInventory = () => {
     [groupedProducts]
   );
 
+  const brandCounts = useMemo(() => {
+    return groupedProducts.reduce((acc, product) => {
+      acc[product.productBrand] = (acc[product.productBrand] || 0) + 1;
+      return acc;
+    }, {});
+  }, [groupedProducts]);
+
   const filteredProducts = useMemo(() => {
     return groupedProducts.filter((product) => {
       if (searchTerm.trim() && !product.productName.toLowerCase().includes(searchTerm.trim().toLowerCase())) {
@@ -144,9 +154,12 @@ const AdminInventory = () => {
       if (lowStockOnly && !(isRowLow(product.retail) || isRowLow(product.wholesale))) {
         return false;
       }
+      if (brandFilter !== 'all' && product.productBrand !== brandFilter) {
+        return false;
+      }
       return true;
     });
-  }, [groupedProducts, searchTerm, lowStockOnly]);
+  }, [groupedProducts, searchTerm, lowStockOnly, brandFilter]);
 
   const handleDraftChange = (productId, pool, field, value) => {
     const key = `${productId}:${pool}`;
@@ -363,6 +376,27 @@ const AdminInventory = () => {
           </button>
         </div>
 
+        <div className="mb-4 flex flex-wrap items-center gap-2.5">
+          <span className="text-[0.68rem] font-semibold tracking-[0.08em] uppercase text-text-tertiary">Storefront:</span>
+          <button
+            type="button"
+            onClick={() => setBrandFilter('all')}
+            className={`rounded-full border px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase transition-colors ${brandFilter === 'all' ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-light)] bg-white/70 text-text-secondary'}`}
+          >
+            All ({groupedProducts.length})
+          </button>
+          {BRANDS.map(({ brand, label }) => (
+            <button
+              key={brand}
+              type="button"
+              onClick={() => setBrandFilter(brand)}
+              className={`rounded-full border px-3 py-1.5 text-[0.72rem] font-semibold tracking-[0.08em] uppercase transition-colors ${brandFilter === brand ? 'border-primary bg-primary/10 text-primary' : 'border-[var(--color-border-light)] bg-white/70 text-text-secondary'}`}
+            >
+              {label} ({brandCounts[brand] || 0})
+            </button>
+          ))}
+        </div>
+
         {saveError && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[0.82rem] text-red-700">
             {saveError}
@@ -391,11 +425,16 @@ const AdminInventory = () => {
                     <Typography variant="h4" className="text-foreground text-[0.92rem]">{product.productName}</Typography>
                     <p className="text-[0.7rem] text-muted-foreground">{product.productCategory}</p>
                   </div>
-                  {!product.isActive && (
-                    <span className="rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.06em] text-gray-600">
-                      Inactive
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-[var(--color-border-medium)] bg-white/70 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.06em] text-text-secondary">
+                      {BRAND_BY_VALUE[product.productBrand]?.label || product.productBrand}
                     </span>
-                  )}
+                    {!product.isActive && (
+                      <span className="rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.06em] text-gray-600">
+                        Inactive
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <PoolEditor

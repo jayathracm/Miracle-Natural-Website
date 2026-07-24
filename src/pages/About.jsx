@@ -8,6 +8,7 @@ import aboutPage02Image01 from '../assets/about-us/about_page_02_img_01.png';
 import aboutPage02Image02 from '../assets/about-us/about_page_02_img_02.png';
 import aboutPage02Image03 from '../assets/about-us/about_page_02_img_03.png';
 import brandLogoMainImg from '../assets/branding-from-pdf/miracle-natural-logo-main-transparent.png';
+import { shopPathForBrand } from '../lib/brands';
 
 const About = () => {
   const groupCompanies = [
@@ -20,7 +21,7 @@ const About = () => {
       visualLabel: 'Leora Wellness Signature',
       points: [
         'Develops high-quality, innovative personal care products for evolving market needs',
-        'Builds and manages the Miracle Natural brand for the everyday consumer',
+        'Builds and manages the Miracle Natural brand for the everyday consumer, with Laira as a second brand in development',
         'Supported by experienced manufacturing leadership and systems',
       ],
     },
@@ -330,7 +331,7 @@ const About = () => {
             </Typography>
           </div>
           <Link
-            to="/shop"
+            to={shopPathForBrand('miracle_natural')}
             className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-lg border border-primary bg-primary text-white text-[0.76rem] font-semibold tracking-[0.1em] uppercase hover:bg-forest-800 transition-colors"
           >
             Shop Now

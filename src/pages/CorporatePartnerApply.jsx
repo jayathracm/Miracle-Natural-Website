@@ -8,6 +8,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useAuth } from '../context/AuthContext';
 import { fetchMyApplications, submitApplication } from '../lib/corporatePartnerApplications';
+import { shopPathForBrand } from '../lib/brands';
 
 const primaryLinkClasses = 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-primary bg-primary text-white text-[0.76rem] font-semibold tracking-[0.1em] uppercase hover:bg-forest-800 transition-colors';
 const ghostLinkClasses = 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-[var(--color-border-medium)] text-foreground text-[0.76rem] font-semibold tracking-[0.1em] uppercase hover:bg-[var(--color-hover-overlay)] transition-colors';
@@ -159,7 +160,7 @@ const CorporatePartnerApply = () => {
                 ? 'Your account has admin access, which already includes wholesale pricing.'
                 : 'Your account is already approved as a Corporate Partner.'}
             </Typography>
-            <Link to="/shop" className={`${primaryLinkClasses} inline-flex`}>
+            <Link to={shopPathForBrand('miracle_natural')} className={`${primaryLinkClasses} inline-flex`}>
               <ShoppingBag size={16} />
               Go to Shop
             </Link>
@@ -206,7 +207,7 @@ const CorporatePartnerApply = () => {
             <Typography variant="small" className="block mb-6 text-muted-foreground">
               A team member will review it and follow up by email — no action needed from you right now.
             </Typography>
-            <Link to="/shop" className={`${ghostLinkClasses} inline-flex`}>
+            <Link to={shopPathForBrand('miracle_natural')} className={`${ghostLinkClasses} inline-flex`}>
               <ShoppingBag size={16} />
               Continue Shopping
             </Link>

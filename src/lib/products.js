@@ -1,16 +1,26 @@
 import { supabase } from './supabaseClient';
 
 /**
- * Fetches active products from the Supabase `products` table.
+ * Fetches active products from the Supabase `products` table, optionally
+ * scoped to one storefront's brand (miracle_natural / laira / leora_wellness
+ * — see functional-requirements.md §1.0). Omitting `brand` returns the full
+ * catalog across all brands, which is what admin screens want; each Shop
+ * page passes its own brand so visitors only ever see that storefront's
+ * products.
  * Numeric columns come back over PostgREST as strings for precision safety,
  * so `price` is coerced back to a JS number here.
  */
-export async function fetchProducts() {
-  const { data, error } = await supabase
+export async function fetchProducts(brand) {
+  let query = supabase
     .from('products')
-    .select('id, name, category, size, price, compare_at_price, image_url, description, ingredients, benefits')
-    .eq('is_active', true)
-    .order('name', { ascending: true });
+    .select('id, name, category, size, price, compare_at_price, image_url, description, ingredients, benefits, brand')
+    .eq('is_active', true);
+
+  if (brand) {
+    query = query.eq('brand', brand);
+  }
+
+  const { data, error } = await query.order('name', { ascending: true });
 
   if (error) {
     throw error;
@@ -68,6 +78,7 @@ export async function createProduct(payload) {
       ingredients: payload.ingredients || null,
       benefits: payload.benefits || null,
       is_active: payload.isActive,
+      brand: payload.brand || 'miracle_natural',
     })
     .select('*')
     .single();
@@ -115,6 +126,7 @@ export async function updateProduct(id, payload) {
       ingredients: payload.ingredients || null,
       benefits: payload.benefits || null,
       is_active: payload.isActive,
+      brand: payload.brand || 'miracle_natural',
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

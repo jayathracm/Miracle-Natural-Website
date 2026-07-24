@@ -85,14 +85,6 @@ Logs errors with additional context information.
 
 Converts technical errors to user-friendly messages.
 
-#### withErrorHandling(asyncFn, onError)
-
-Wraps async operations with error handling.
-
-#### retryWithBackoff(fn, maxRetries, baseDelay)
-
-Retries failed operations with exponential backoff.
-
 ## Best Practices Implemented
 
 ### 1. Error Boundary Placement
@@ -160,24 +152,21 @@ const fetchUser = async (userId) => {
 };
 ```
 
-### Using Error Handling Utilities
+### Error Handling Utilities in Practice
 
-```javascript
-import { withErrorHandling, logError } from '../utils/errorHandling';
+In this codebase, `logError`, `sendToErrorService`, and `getUserFriendlyMessage`
+are consumed internally by `ErrorBoundary` (`componentDidCatch` and the
+fallback UI) rather than called directly from individual forms/pages — each
+admin/account form instead handles its own try/catch locally and shows an
+inline error message, which fits this app's simpler needs better than a
+shared async wrapper.
 
-const handleSubmit = async (formData) => {
-  await withErrorHandling(
-    async () => {
-      const result = await submitForm(formData);
-      return result;
-    },
-    (error, errorData) => {
-      // Custom error handling
-      console.error('Form submission failed:', errorData);
-    }
-  );
-};
-```
+Note: earlier versions of this file also exported `withErrorHandling`,
+`isNetworkError`, `isNotFoundError`, and `retryWithBackoff` — a
+generic async-wrapper, two error-type checks, and a retry-with-backoff
+helper. None of them were ever actually called anywhere in the app (only
+documented here), so they were removed in a dead-code cleanup pass. Re-add
+them if a real use case comes up.
 
 ## Testing Error Scenarios
 

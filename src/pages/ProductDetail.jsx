@@ -4,23 +4,28 @@ import { ArrowLeft, Heart, ImageOff, Minus, Plus, ShoppingBag } from 'lucide-rea
 import { Typography } from '../components/ui/Typography';
 import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
-import { useCart } from '../context/CartContext';
+import { useBrandCart } from '../context/CartContext';
 import { useWishlist } from '../hooks/useWishlist';
 import { useAuth } from '../context/AuthContext';
 import { getShopCategory } from '../lib/shopCategories';
 import { WholesalePricingPanel } from '../components/shop/WholesalePricingPanel';
+import { BRAND_BY_SLUG, shopPathForSlug } from '../lib/brands';
+import NotFound from '../components/NotFound';
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
-// Dedicated, deep-linkable product page (/shop/:productId) — separate from
-// the Shop grid's quick-view ProductDetailModal, which stays as-is for card
-// clicks. This page exists so the Ritual Builder, chatbot, or any other
-// surface can link straight to a single product, and so a product has a
-// real, shareable URL.
+// Dedicated, deep-linkable product page (/:brandSlug/shop/:productId) —
+// separate from the Shop grid's quick-view ProductDetailModal, which stays
+// as-is for card clicks. This page exists so the Ritual Builder, chatbot, or
+// any other surface can link straight to a single product, and so a product
+// has a real, shareable URL.
 const ProductDetail = () => {
-  const { productId } = useParams();
+  const { brandSlug, productId } = useParams();
+  const brandEntry = BRAND_BY_SLUG[brandSlug];
+  const brand = brandEntry?.brand;
+  const shopPath = shopPathForSlug(brandSlug);
   const navigate = useNavigate();
-  const { productById, isLoadingProducts, productsError, addToCart } = useCart();
+  const { productById, isLoadingProducts, productsError, addToCart } = useBrandCart(brand);
   const { isCorporatePartner, isAdmin } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [notice, setNotice] = useState(null);
@@ -39,12 +44,16 @@ const ProductDetail = () => {
     setNotice({ type: 'success', message: `${product.name} added to your cart.` });
   };
 
+  if (!brandEntry) {
+    return <NotFound />;
+  }
+
   return (
     <div className="pt-28 sm:pt-30 md:pt-32 pb-14 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8 min-h-screen">
       <div className="max-w-[1100px] mx-auto">
         <button
           type="button"
-          onClick={() => navigate('/shop')}
+          onClick={() => navigate(shopPath)}
           className="mb-5 inline-flex items-center gap-1.5 text-[0.8rem] font-semibold text-muted-foreground hover:text-primary transition-colors"
         >
           <ArrowLeft size={15} /> Back to Shop
@@ -70,7 +79,7 @@ const ProductDetail = () => {
             <p className="text-[0.9rem] text-muted-foreground mb-5">
               This product may have been removed or is no longer available.
             </p>
-            <Button onClick={() => navigate('/shop')}>Return to Shop</Button>
+            <Button onClick={() => navigate(shopPath)}>Return to Shop</Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1.1fr] gap-8 sm:gap-10">
@@ -173,7 +182,7 @@ const ProductDetail = () => {
                   {notice.type !== 'error' && (
                     <button
                       type="button"
-                      onClick={() => navigate('/shop', { state: { openCart: true } })}
+                      onClick={() => navigate(shopPath, { state: { openCart: true } })}
                       className="shrink-0 font-semibold underline underline-offset-2"
                     >
                       View Cart

@@ -6,6 +6,7 @@ import { Typography } from './ui/Typography';
 import { Button } from './ui/Button';
 import { ArrowRight } from 'lucide-react';
 import { fadeUpEmphasis, viewportOnce } from '../lib/motionVariants';
+import { shopPathForBrand } from '../lib/brands';
 
 const CTASection = () => {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ const CTASection = () => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Button
             variant="primary"
-            onClick={() => navigate('/shop')}
+            onClick={() => navigate(shopPathForBrand('miracle_natural'))}
             icon={ArrowRight}
             className="w-full sm:w-auto px-8 py-3"
           >
