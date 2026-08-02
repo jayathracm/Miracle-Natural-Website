@@ -1,11 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Inbox, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, Inbox, RefreshCw } from 'lucide-react';
 import { Typography } from '../../components/ui/Typography';
 import { Button } from '../../components/ui/Button';
 import { RowSkeletonList } from '../../components/ui/Skeleton';
 import { fetchAllMessages, updateMessageStatus } from '../../lib/messages';
 
 const STATUS_OPTIONS = ['new', 'read', 'replied'];
+
+// System-generated low-stock alerts (private.notify_low_stock() in
+// schema.sql) are inserted as ordinary contact_messages rows with this fixed
+// customer_email, so the inbox can recognize and visually distinguish them
+// from real customer messages without needing a new column.
+const INVENTORY_ALERT_EMAIL = 'system@inventory.alerts';
+const isInventoryAlert = (message) => message.customer_email === INVENTORY_ALERT_EMAIL;
 
 const STATUS_STYLES = {
   new: 'border-amber-300 bg-amber-50 text-amber-800',
@@ -128,7 +135,7 @@ const AdminMessages = () => {
               return (
                 <div
                   key={message.id}
-                  className="rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] shadow-[0_10px_24px_rgba(31,44,35,0.06)] overflow-hidden"
+                  className={`rounded-2xl border shadow-[0_10px_24px_rgba(31,44,35,0.06)] overflow-hidden ${isInventoryAlert(message) ? 'border-amber-300 bg-amber-50/60' : 'border-[var(--color-card-border)] bg-[var(--color-card-bg)]'}`}
                 >
                   <button
                     type="button"
@@ -137,9 +144,15 @@ const AdminMessages = () => {
                   >
                     <div className="flex-1 min-w-[220px]">
                       <p className="text-[0.9rem] font-semibold text-foreground">{message.subject}</p>
-                      <p className="text-[0.76rem] text-muted-foreground">
-                        {message.customer_name} · {message.customer_email}
-                      </p>
+                      {isInventoryAlert(message) ? (
+                        <p className="flex items-center gap-1.5 text-[0.76rem] font-semibold text-amber-800">
+                          <AlertTriangle size={13} /> Inventory Alert
+                        </p>
+                      ) : (
+                        <p className="text-[0.76rem] text-muted-foreground">
+                          {message.customer_name} · {message.customer_email}
+                        </p>
+                      )}
                       <p className="text-[0.72rem] text-text-tertiary mt-0.5">{formatDate(message.created_at)}</p>
                     </div>
 

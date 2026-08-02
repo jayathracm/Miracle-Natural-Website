@@ -18,6 +18,7 @@ import { useWishlist } from '../hooks/useWishlist';
 import DELIVERY_ZONES from '../data/deliveryZones';
 import { fetchAddresses } from '../lib/addresses';
 import { calculateB2BPrice } from '../lib/b2bPricing';
+import { fetchBundles } from '../lib/bundles';
 import { decrementInventoryForOrder } from '../lib/inventory';
 import { submitQuotation } from '../lib/quotations';
 import { staggerContainer } from '../lib/motionVariants';
@@ -82,6 +83,7 @@ const ShopPage = () => {
   const [bundlePopup, setBundlePopup] = useState(null);
   const [cartOpenSignal, setCartOpenSignal] = useState(0);
   const [wholesalePricing, setWholesalePricing] = useState({});
+  const [bundles, setBundles] = useState([]);
 
   const removeToast = (id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -123,6 +125,25 @@ const ShopPage = () => {
     // Only ever meant to run for the navigation that carried this state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
+
+  // Bundle price calculations reflected in the cart: loaded independently of
+  // PricingSection (which may not even be mounted from here), so a cart that
+  // happens to contain a bundle's full set of products — however the items
+  // got there, not just via "Buy This Bundle" — still gets credited with the
+  // bundle's price. See the bundleSavings memo below for the matching logic.
+  useEffect(() => {
+    let isMounted = true;
+    fetchBundles()
+      .then((rows) => {
+        if (isMounted) setBundles(rows);
+      })
+      .catch(() => {
+        // Non-fatal — cart just won't surface bundle savings this session.
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -230,9 +251,72 @@ const ShopPage = () => {
     });
   }, [cartItems, wholesalePricing, isWholesaleEligible]);
 
+  // MOQ enforcement (functional-requirements §2.2): calculate_b2b_price()
+  // already computes meets_moq server-side, but until now nothing actually
+  // blocked checkout on it — a wholesale-eligible cart under a product's MOQ
+  // just silently fell back to retail pricing instead of being rejected.
+  // Retail (non-wholesale) customers are never subject to MOQ at all, so
+  // this only ever applies for isWholesaleEligible carts. Only counts a line
+  // once its pricing has actually loaded (wholesalePricing[item.id] is set)
+  // — the 300ms debounce above means it's essentially always populated by
+  // the time a person reaches the checkout button, and treating a
+  // still-loading line as a violation would produce a confusing false block.
+  const moqViolations = useMemo(() => {
+    if (!isWholesaleEligible) return [];
+    return cartItems
+      .map((item) => ({ item, pricing: wholesalePricing[item.id] }))
+      .filter(({ pricing }) => pricing && !pricing.meetsMoq);
+  }, [isWholesaleEligible, cartItems, wholesalePricing]);
+
+  // Bundle price calculations reflected in the cart: if the cart's contents
+  // happen to cover a bundle's full item set (at retail prices — bundles
+  // don't stack with wholesale tier pricing, see isWholesaleEligible guard
+  // below), credit the customer the bundle's flat price instead of the sum
+  // of those items' individual prices. Greedy match, most-valuable bundle
+  // first, so overlapping bundles don't double-claim the same units; a
+  // "working" quantity map is decremented as each bundle is matched, and
+  // whatever's left over is priced normally.
+  const bundleSavings = useMemo(() => {
+    const empty = { matches: [], discount: 0 };
+    if (isWholesaleEligible || bundles.length === 0 || cartItems.length === 0) return empty;
+
+    const available = {};
+    cartItems.forEach((item) => {
+      available[item.id] = item.quantity;
+    });
+
+    const candidates = bundles
+      .filter((bundle) => bundle.items.length > 0)
+      .map((bundle) => ({
+        bundle,
+        individualTotal: bundle.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+      }))
+      .filter(({ individualTotal }) => individualTotal > 0)
+      .sort((a, b) => (b.individualTotal - b.bundle.price) - (a.individualTotal - a.bundle.price));
+
+    const matches = [];
+    let discount = 0;
+
+    candidates.forEach(({ bundle, individualTotal }) => {
+      const timesAvailable = Math.min(
+        ...bundle.items.map((item) => Math.floor((available[item.product.id] || 0) / item.quantity))
+      );
+      if (timesAvailable > 0) {
+        bundle.items.forEach((item) => {
+          available[item.product.id] -= item.quantity * timesAvailable;
+        });
+        const savingsForMatch = (individualTotal - bundle.price) * timesAvailable;
+        discount += savingsForMatch;
+        matches.push({ bundleId: bundle.id, bundleName: bundle.name, count: timesAvailable, savings: savingsForMatch });
+      }
+    });
+
+    return { matches, discount };
+  }, [bundles, cartItems, isWholesaleEligible]);
+
   const effectiveSubtotal = useMemo(
-    () => effectiveCartItems.reduce((sum, item) => sum + item.effectiveLineTotal, 0),
-    [effectiveCartItems]
+    () => effectiveCartItems.reduce((sum, item) => sum + item.effectiveLineTotal, 0) - bundleSavings.discount,
+    [effectiveCartItems, bundleSavings]
   );
 
   const effectiveGrandTotal = useMemo(
@@ -366,6 +450,16 @@ const ShopPage = () => {
       pushToast('error', 'Please select a delivery zone and enter the delivery address before placing the order.');
       return;
     }
+    if (moqViolations.length > 0) {
+      const summary = moqViolations
+        .map(({ item, pricing }) => `${item.name} (needs ${pricing.moq}, have ${item.quantity})`)
+        .join('; ');
+      pushToast(
+        'error',
+        `Increase quantity to meet the minimum order quantity before placing a wholesale order: ${summary}.`
+      );
+      return;
+    }
 
     if (isSendingOrder) return;
 
@@ -375,12 +469,17 @@ const ShopPage = () => {
         `- ${item.name} (${item.size}) x ${item.quantity} = ${formatCurrency(item.effectiveLineTotal)}${item.wholesaleDiscountPercent > 0 ? ` (wholesale -${item.wholesaleDiscountPercent}%)` : ''}`
     );
 
+    const bundleLines = bundleSavings.matches.map(
+      (match) => `- Bundle savings: ${match.bundleName}${match.count > 1 ? ` x${match.count}` : ''} = -${formatCurrency(match.savings)}`
+    );
+
     const body = [
       'Hello,',
       '',
       `I would like to place ${isWholesaleEligible ? 'a wholesale/bulk' : 'an'} order with the following products:`,
       '',
       ...orderLines,
+      ...(bundleLines.length > 0 ? ['', ...bundleLines] : []),
       '',
       `Total Items: ${totalItems}`,
       `Subtotal: ${formatCurrency(effectiveSubtotal)}`,
@@ -405,6 +504,15 @@ const ShopPage = () => {
 
     setIsSendingOrder(true);
 
+    // There's no dedicated discount column on `orders` — rather than adding
+    // a migration for this, the bundle-savings breakdown is appended to
+    // `notes` so it's still auditable from AdminOrders.jsx, while
+    // `subtotal`/`grand_total` reflect what the customer actually pays.
+    const bundleNoteLines = bundleSavings.matches.map(
+      (match) => `Bundle savings: ${match.bundleName}${match.count > 1 ? ` x${match.count}` : ''} (-${formatCurrency(match.savings)})`
+    );
+    const combinedNotes = [customerNotes.trim(), ...bundleNoteLines].filter(Boolean).join('\n') || null;
+
     const { data: orderRow, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -418,7 +526,7 @@ const ShopPage = () => {
         subtotal: effectiveSubtotal,
         shipping_cost: shippingCost,
         grand_total: effectiveGrandTotal,
-        notes: customerNotes.trim() || null,
+        notes: combinedNotes,
         channel: isWholesaleEligible ? 'b2b' : 'retail',
         brand,
       })
@@ -543,7 +651,9 @@ const ShopPage = () => {
     shippingCost,
     deliveryZoneLabel,
     grandTotal: effectiveGrandTotal,
+    bundleSavings,
     isWholesaleEligible,
+    moqViolations,
     onChangeQuantity: changeQuantity,
     onClearCart: clearCart,
     user,

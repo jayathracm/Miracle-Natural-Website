@@ -15,6 +15,7 @@ import {
 } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import ScrollProgressBar from './components/ScrollProgressBar';
+import ChatWidget from './components/ChatWidget';
 import { Landing, MiracleNatural, Laira, About, Pricing, Shop, ProductDetail, RitualBuilder, CorporatePartnerApply, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminMessages from './pages/admin/AdminMessages';
@@ -94,6 +95,7 @@ const App = () => {
             <SEOEffect />
             <ScrollToTop />
             <ScrollProgressBar />
+            <ChatWidget />
             <MainLayout>
               <div className="flex flex-col min-h-screen">
                 <Navbar />

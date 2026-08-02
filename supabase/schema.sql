@@ -1167,3 +1167,53 @@ drop policy if exists "Admins can view all profiles" on public.profiles;
 create policy "Admins can view all profiles"
   on public.profiles for select
   using (private.is_admin());
+
+-- ----------------------------------------------------------------------------
+-- 18. LOW-STOCK ALERTS — surfaced as a system message on /admin/messages
+-- Fires only on the *crossing* into low stock (previous stock_count above its
+-- threshold, new stock_count at/below it) so a pool that's already low
+-- doesn't spam a fresh message on every subsequent order; restocking above
+-- the threshold and later dropping low again produces a new alert, which is
+-- the desired behavior. Covers both real-time checkout decrements
+-- (decrement_inventory_for_order) and manual admin edits (AdminInventory.jsx
+-- via updateProductStock) since both go through an UPDATE on this table.
+-- SECURITY DEFINER is required because contact_messages' insert policy only
+-- allows auth.uid() = user_id, and this system row's user_id is null. Lives
+-- in `private` (not `public`), so — unlike calculate_b2b_price() etc — it's
+-- never directly callable via RPC, only ever fired by the trigger below.
+-- AdminMessages.jsx recognizes customer_email = 'system@inventory.alerts' to
+-- show a distinct "Inventory Alert" badge instead of a customer name/email.
+-- ----------------------------------------------------------------------------
+create or replace function private.notify_low_stock()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_product_name text;
+begin
+  if new.stock_count <= new.low_stock_threshold
+     and old.stock_count > old.low_stock_threshold then
+    select name into v_product_name from public.products where id = new.product_id;
+
+    insert into public.contact_messages (user_id, customer_name, customer_email, subject, message, status)
+    values (
+      null,
+      'Inventory Alert System',
+      'system@inventory.alerts',
+      'Low Stock Alert: ' || coalesce(v_product_name, new.product_id) || ' (' || new.pool || ')',
+      coalesce(v_product_name, new.product_id) || '''s ' || new.pool || ' pool has dropped to ' ||
+        new.stock_count || ' unit' || (case when new.stock_count = 1 then '' else 's' end) ||
+        ', at or below its low-stock threshold of ' || new.low_stock_threshold || ' units. Restock soon to avoid running out.',
+      'new'
+    );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_notify_low_stock on public.product_inventory;
+create trigger trg_notify_low_stock
+  after update on public.product_inventory
+  for each row execute function private.notify_low_stock();

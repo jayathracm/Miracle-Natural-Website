@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>, <motion.button>)
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ImageOff, Mail, Minus, Percent, Plus, ShoppingBag, Truck, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, Gift, ImageOff, Mail, Minus, Percent, Plus, ShoppingBag, Truck, X } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -26,7 +26,9 @@ const CartInner = ({
   shippingCost,
   deliveryZoneLabel,
   grandTotal,
+  bundleSavings,
   isWholesaleEligible,
+  moqViolations = [],
   onChangeQuantity,
   onClearCart,
   user,
@@ -106,6 +108,32 @@ const CartInner = ({
                 Wholesale pricing applied to eligible items
               </div>
             )}
+            {moqViolations.length > 0 && (
+              <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[0.74rem] text-amber-800">
+                <p className="flex items-center gap-1.5 font-semibold">
+                  <AlertTriangle size={13} />
+                  Minimum order quantity not met
+                </p>
+                {moqViolations.map(({ item, pricing }) => (
+                  <p key={item.id} className="mt-0.5 pl-[19px] text-[0.72rem] opacity-90">
+                    {item.name}: need {pricing.moq}, have {item.quantity}
+                  </p>
+                ))}
+              </div>
+            )}
+            {bundleSavings?.matches?.length > 0 && (
+              <div className="mb-3 rounded-lg border border-accent/30 bg-accent/[0.06] px-3 py-2 text-[0.74rem] text-accent">
+                <p className="flex items-center gap-1.5 font-semibold">
+                  <Gift size={13} />
+                  Bundle pricing applied
+                </p>
+                {bundleSavings.matches.map((match) => (
+                  <p key={match.bundleId} className="mt-0.5 pl-[19px] text-[0.72rem] opacity-90">
+                    {match.bundleName}{match.count > 1 ? ` ×${match.count}` : ''} — you save {formatCurrency(match.savings)}
+                  </p>
+                ))}
+              </div>
+            )}
             <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1 -mr-1">
               {cartItems.map((item) => (
                 <div key={item.id} className="flex items-center gap-3">
@@ -157,9 +185,15 @@ const CartInner = ({
 
             <div className="mt-4 pt-3.5 border-t border-[var(--color-border-light)] space-y-1.5">
               <div className="flex items-center justify-between text-[0.8rem]">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-semibold text-foreground">{formatCurrency(subtotal)}</span>
+                <span className="text-muted-foreground">Items Subtotal</span>
+                <span className="font-semibold text-foreground">{formatCurrency(subtotal + (bundleSavings?.discount || 0))}</span>
               </div>
+              {bundleSavings?.discount > 0 && (
+                <div className="flex items-center justify-between text-[0.8rem]">
+                  <span className="text-muted-foreground">Bundle Savings</span>
+                  <span className="font-semibold text-accent">-{formatCurrency(bundleSavings.discount)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-[0.8rem]">
                 <span className="text-muted-foreground">Shipping</span>
                 <span className="font-semibold text-foreground">{deliveryZoneLabel ? formatCurrency(shippingCost) : 'Calculated at checkout'}</span>
@@ -170,8 +204,12 @@ const CartInner = ({
               </div>
             </div>
 
-            <Button className="w-full mt-4 py-2.5 text-[0.76rem]" onClick={() => setMode('checkout')}>
-              Checkout
+            <Button
+              className="w-full mt-4 py-2.5 text-[0.76rem]"
+              onClick={() => setMode('checkout')}
+              disabled={moqViolations.length > 0}
+            >
+              {moqViolations.length > 0 ? 'Adjust Quantities to Continue' : 'Checkout'}
             </Button>
           </>
         )}
@@ -248,7 +286,26 @@ const CartInner = ({
           <Truck size={13} /> Cash on Delivery only — online payment isn't available yet.
         </p>
 
-        <Button type="submit" className="w-full py-2.5 text-[0.76rem]" icon={Mail} disabled={isSendingOrder}>
+        {moqViolations.length > 0 && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[0.74rem] text-amber-800">
+            <p className="flex items-center gap-1.5 font-semibold">
+              <AlertTriangle size={13} />
+              Adjust quantities before placing this order
+            </p>
+            {moqViolations.map(({ item, pricing }) => (
+              <p key={item.id} className="mt-0.5 pl-[19px] text-[0.72rem] opacity-90">
+                {item.name}: need {pricing.moq}, have {item.quantity}
+              </p>
+            ))}
+          </div>
+        )}
+
+        <Button
+          type="submit"
+          className="w-full py-2.5 text-[0.76rem]"
+          icon={Mail}
+          disabled={isSendingOrder || moqViolations.length > 0}
+        >
           {isSendingOrder ? 'Placing Order...' : 'Place Order'}
         </Button>
 
