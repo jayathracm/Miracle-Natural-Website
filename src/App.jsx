@@ -12,7 +12,7 @@ import {
   useLocation,
   useNavigate,
   useParams,
-} from 'react-router-dom';
+} from 'react-router';
 import MainLayout from './components/layout/MainLayout';
 import ScrollProgressBar from './components/ScrollProgressBar';
 import ChatWidget from './components/ChatWidget';

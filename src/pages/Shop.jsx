@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion } from 'framer-motion';
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ImageOff, LayoutGrid, List, Search, ShoppingBag, Sparkles, X } from 'lucide-react';

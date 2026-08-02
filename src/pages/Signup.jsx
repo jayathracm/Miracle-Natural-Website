@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { ChevronDown, Eye, EyeOff, Lock, Mail, MapPin, Phone, User } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 import { Button } from '../components/ui/Button';

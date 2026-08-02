@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>, <motion.button>)
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, ChevronLeft, Gift, ImageOff, Mail, Minus, Percent, Plus, ShoppingBag, Truck, X } from 'lucide-react';

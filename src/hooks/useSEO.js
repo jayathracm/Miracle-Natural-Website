@@ -1,6 +1,6 @@
 // src/hooks/useSEO.js
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import { SEO_CONFIG, SITE_URL } from '../seoConfig.js';
 
 export const useSEO = () => {

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { shopPathForBrand } from '../lib/brands';
 
 const PricingPage = () => {

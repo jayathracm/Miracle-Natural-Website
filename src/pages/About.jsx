@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Leaf, Factory, ShieldCheck, Handshake, Phone, Mail, MapPin } from 'lucide-react';
 import { Typography } from '../components/ui/Typography';
 import aboutPage01Image01 from '../assets/about-us/about_page_01_img_01.png';

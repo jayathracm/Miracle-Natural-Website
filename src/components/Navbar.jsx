@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { BarChart3, Boxes, Briefcase, FileText, LayoutDashboard, Mail, Menu, Package, Percent, ShieldCheck, User, X } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router';
 import leoraIcon from '../assets/branding/leora-wellness-icon-transparent.png';
 import { cn } from '../lib/utils';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.nav>, <motion.div>)
