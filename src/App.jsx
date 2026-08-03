@@ -1,11 +1,5 @@
 import React, { useEffect } from 'react';
 import {
-  Navbar,
-  Footer,
-  ErrorBoundary,
-  NotFound,
-} from './components';
-import {
   BrowserRouter as Router,
   Routes,
   Route,
@@ -13,24 +7,28 @@ import {
   useNavigate,
   useParams,
 } from 'react-router';
-import MainLayout from './components/layout/MainLayout';
-import ScrollProgressBar from './components/ScrollProgressBar';
-import ChatWidget from './components/ChatWidget';
-import { Landing, MiracleNatural, Laira, About, Pricing, Shop, ProductDetail, RitualBuilder, CorporatePartnerApply, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from './pages';
-import AdminOrders from './pages/admin/AdminOrders';
-import AdminMessages from './pages/admin/AdminMessages';
-import AdminProducts from './pages/admin/AdminProducts';
-import AdminCorporatePartners from './pages/admin/AdminCorporatePartners';
-import AdminDiscountTiers from './pages/admin/AdminDiscountTiers';
-import AdminQuotations from './pages/admin/AdminQuotations';
-import AdminInventory from './pages/admin/AdminInventory';
-import AdminAnalytics from './pages/admin/AdminAnalytics';
-import AdminAccounts from './pages/admin/AdminAccounts';
-import RequireAdmin from './components/RequireAdmin';
-import RequireSuperAdmin from './components/RequireSuperAdmin';
-import { useSEO } from './hooks/useSEO';
-import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
+import Navbar from '@/shared/layout/Navbar';
+import Footer from '@/shared/layout/Footer';
+import ErrorBoundary from '@/shared/ErrorBoundary';
+import NotFound from '@/shared/NotFound';
+import MainLayout from '@/shared/layout/MainLayout';
+import ScrollProgressBar from '@/shared/layout/ScrollProgressBar';
+import ChatWidget from '@/features/chat/ChatWidget';
+import { Landing, MiracleNatural, Laira, About, Pricing, Shop, ProductDetail, RitualBuilder, CorporatePartnerApply, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from '@/routes';
+import AdminOrders from '@/features/orders/admin/AdminOrders';
+import AdminMessages from '@/features/messages/admin/AdminMessages';
+import AdminProducts from '@/features/shop/admin/AdminProducts';
+import AdminCorporatePartners from '@/features/b2b/admin/AdminCorporatePartners';
+import AdminDiscountTiers from '@/features/b2b/admin/AdminDiscountTiers';
+import AdminQuotations from '@/features/quotations/admin/AdminQuotations';
+import AdminInventory from '@/features/inventory/admin/AdminInventory';
+import AdminAnalytics from '@/features/analytics/admin/AdminAnalytics';
+import AdminAccounts from '@/features/superadmin/admin/AdminAccounts';
+import RequireAdmin from '@/shared/guards/RequireAdmin';
+import RequireSuperAdmin from '@/shared/guards/RequireSuperAdmin';
+import { useSEO } from '@/shared/hooks/useSEO';
+import { AuthProvider } from '@/features/auth/AuthContext';
+import { CartProvider } from '@/features/shop/CartContext';
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
