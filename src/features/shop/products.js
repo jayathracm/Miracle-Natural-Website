@@ -1,0 +1,146 @@
+import { supabase } from '@/shared/lib/supabaseClient';
+
+/**
+ * Fetches active products from the Supabase `products` table, optionally
+ * scoped to one storefront's brand (miracle_natural / laira / leora_wellness
+ * — see functional-requirements.md §1.0). Omitting `brand` returns the full
+ * catalog across all brands, which is what admin screens want; each Shop
+ * page passes its own brand so visitors only ever see that storefront's
+ * products.
+ * Numeric columns come back over PostgREST as strings for precision safety,
+ * so `price` is coerced back to a JS number here.
+ */
+export async function fetchProducts(brand) {
+  let query = supabase
+    .from('products')
+    .select('id, name, category, size, price, compare_at_price, image_url, description, ingredients, benefits, brand')
+    .eq('is_active', true);
+
+  if (brand) {
+    query = query.eq('brand', brand);
+  }
+
+  const { data, error } = await query.order('name', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []).map((product) => ({
+    ...product,
+    price: Number(product.price),
+    compare_at_price: product.compare_at_price === null ? null : Number(product.compare_at_price),
+  }));
+}
+
+/**
+ * Admin-only in practice: the "Admins can view all products" RLS policy
+ * means an admin's session sees inactive products too, not just active ones
+ * like fetchProducts() above.
+ */
+export async function fetchAllProductsForAdmin() {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []).map((product) => ({
+    ...product,
+    price: Number(product.price),
+    compare_at_price: product.compare_at_price === null ? null : Number(product.compare_at_price),
+    moq: product.moq === null || product.moq === undefined ? null : Number(product.moq),
+  }));
+}
+
+/**
+ * `id` is a text slug the caller chooses (not auto-generated) — it's the
+ * same key used for order_items.product_id, wishlist_items.product_id, and
+ * the local src/data/productImages.js map, so it can't be changed later
+ * without breaking those references.
+ */
+export async function createProduct(payload) {
+  const { data, error } = await supabase
+    .from('products')
+    .insert({
+      id: payload.id,
+      name: payload.name,
+      category: payload.category,
+      size: payload.size || null,
+      price: payload.price,
+      compare_at_price: payload.compareAtPrice ?? null,
+      moq: payload.moq ?? null,
+      image_url: payload.imageUrl || null,
+      description: payload.description || null,
+      ingredients: payload.ingredients || null,
+      benefits: payload.benefits || null,
+      is_active: payload.isActive,
+      brand: payload.brand || 'miracle_natural',
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    ...data,
+    price: Number(data.price),
+    compare_at_price: data.compare_at_price === null ? null : Number(data.compare_at_price),
+    moq: data.moq === null || data.moq === undefined ? null : Number(data.moq),
+  };
+}
+
+/**
+ * Permanently deletes a product. Historical order_items/quotation_items rows
+ * keep their own denormalized product_name/unit_price, so past records stay
+ * readable. If the product is still linked from a bundle, the DB's foreign
+ * key on bundle_items rejects the delete (code 23503) — the caller should
+ * show a message telling the admin to remove it from the bundle first.
+ */
+export async function deleteProduct(id) {
+  const { error } = await supabase.from('products').delete().eq('id', id);
+
+  if (error) {
+    throw error;
+  }
+}
+
+/** `id` is intentionally not editable here — see createProduct's note. */
+export async function updateProduct(id, payload) {
+  const { data, error } = await supabase
+    .from('products')
+    .update({
+      name: payload.name,
+      category: payload.category,
+      size: payload.size || null,
+      price: payload.price,
+      compare_at_price: payload.compareAtPrice ?? null,
+      moq: payload.moq ?? null,
+      image_url: payload.imageUrl || null,
+      description: payload.description || null,
+      ingredients: payload.ingredients || null,
+      benefits: payload.benefits || null,
+      is_active: payload.isActive,
+      brand: payload.brand || 'miracle_natural',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    ...data,
+    price: Number(data.price),
+    compare_at_price: data.compare_at_price === null ? null : Number(data.compare_at_price),
+    moq: data.moq === null || data.moq === undefined ? null : Number(data.moq),
+  };
+}
