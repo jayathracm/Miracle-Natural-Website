@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart3, RefreshCw, ShoppingBag, TrendingUp } from 'lucide-react';
+import { BarChart3, RefreshCw, ShoppingBag, Sparkles, TrendingUp } from 'lucide-react';
 import { Typography } from '@/shared/ui/Typography';
 import { Button } from '@/shared/ui/Button';
+import { Input } from '@/shared/ui/Input';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { fetchSalesSummary } from '@/features/analytics/salesSummary';
+import { askBusinessAnalytics } from '@/features/analytics/businessAnalytics';
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK', { maximumFractionDigits: 0 })}`;
 
@@ -32,6 +34,11 @@ const AdminAnalytics = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState(null);
+  const [isAsking, setIsAsking] = useState(false);
+  const [askError, setAskError] = useState(null);
+
   const loadSummary = () => {
     setIsLoading(true);
     setError(null);
@@ -44,6 +51,21 @@ const AdminAnalytics = () => {
   useEffect(() => {
     loadSummary();
   }, []);
+
+  const handleAsk = (event) => {
+    event.preventDefault();
+    const trimmed = question.trim();
+    if (!trimmed || isAsking) return;
+
+    setIsAsking(true);
+    setAskError(null);
+    setAnswer(null);
+
+    askBusinessAnalytics(trimmed)
+      .then(setAnswer)
+      .catch((askErr) => setAskError(askErr.message || 'Could not answer that question.'))
+      .finally(() => setIsAsking(false));
+  };
 
   return (
     <div className="pt-30 sm:pt-32 md:pt-34 pb-14 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8 min-h-screen">
@@ -145,6 +167,52 @@ const AdminAnalytics = () => {
                 </table>
               </div>
             )}
+
+            <div className="mt-8 rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 sm:p-6 shadow-[0_10px_24px_rgba(31,44,35,0.06)]">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-8 w-8 rounded-lg bg-primary/12 border border-primary/25 inline-flex items-center justify-center shrink-0">
+                  <Sparkles size={15} className="text-primary" />
+                </div>
+                <Typography variant="h3" className="text-foreground text-[1.05rem]">
+                  Ask about your business
+                </Typography>
+              </div>
+              <p className="mb-4 text-[0.8rem] text-muted-foreground max-w-prose">
+                Ask a question about revenue, order counts, or top products — e.g. "which product
+                sold best this month?" Answers are limited to the numbers shown above.
+              </p>
+
+              <form onSubmit={handleAsk} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <Input
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  placeholder="e.g. How does this month's revenue compare to all-time?"
+                  maxLength={300}
+                  disabled={isAsking}
+                  wrapperClassName="flex-1"
+                />
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  className="shrink-0 px-5 py-2.5"
+                  disabled={isAsking || !question.trim()}
+                >
+                  {isAsking ? 'Asking…' : 'Ask'}
+                </Button>
+              </form>
+
+              {askError && (
+                <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[0.82rem] text-red-700">
+                  {askError}
+                </div>
+              )}
+
+              {answer && !askError && (
+                <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3.5 text-[0.88rem] text-foreground leading-relaxed">
+                  {answer}
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
