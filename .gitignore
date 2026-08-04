@@ -138,6 +138,9 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
+# Wrangler (Cloudflare) local state/logs
+.wrangler/
+
 # Project tracking docs (not part of the codebase)
 Miracle_Natural_Thesis_Checklist.docx
 docs/functional-requirements.md
