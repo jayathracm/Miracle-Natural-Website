@@ -7,6 +7,7 @@ import { Typography } from '@/shared/ui/Typography';
 import { Button } from '@/shared/ui/Button';
 import { ArrowRight } from 'lucide-react';
 import { shopPathForBrand } from '@/shared/lib/brands';
+import miracleNaturalIcon from '@/assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
 
 // import.meta.glob's path is resolved by Vite relative to *this file's own
 // location on disk* — not the `@` alias, and not caught by the reorg's
@@ -143,6 +144,10 @@ const HeroSection = () => {
         {/* Text Content */}
         <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 sm:space-y-5 lg:space-y-7 z-10">
           <div ref={textRef} className="space-y-1.5 sm:space-y-3 md:space-y-4 w-full">
+            <div className="flex items-center justify-center lg:justify-start gap-2.5 sm:gap-3 mb-1">
+              <img src={miracleNaturalIcon} alt="" aria-hidden="true" className="h-14 sm:h-16 w-auto object-contain" />
+              <span className="font-display text-foreground text-[1.4rem] sm:text-[1.65rem] tracking-tight">Miracle Natural</span>
+            </div>
             <Typography variant="label" className="mb-2 block text-primary">Herbal Care by Leora Wellness</Typography>
             <Typography
               variant="h1"
