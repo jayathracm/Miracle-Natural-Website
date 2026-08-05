@@ -29,30 +29,47 @@ import RequireSuperAdmin from '@/shared/guards/RequireSuperAdmin';
 import { useSEO } from '@/shared/hooks/useSEO';
 import { AuthProvider } from '@/features/auth/AuthContext';
 import { CartProvider } from '@/features/shop/CartContext';
+import { getLenisInstance } from '@/shared/lib/lenisInstance';
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
   useEffect(() => {
+    // MainLayout runs a Lenis smooth-scroll instance on desktop that persists
+    // across route changes and keeps its own internal scroll target. Calling
+    // window.scrollTo() alone doesn't tell Lenis about the reset — on its
+    // next animation frame it reasserts its stale target from the previous
+    // page and snaps the viewport back, which is what showed up as landing
+    // "on random places" after clicking a link. Route the reset through
+    // Lenis (when active) so both the native scroll and Lenis's internal
+    // state agree; fall back to native APIs on mobile/touch, where Lenis is
+    // never initialized.
+    const lenis = getLenisInstance();
+
     if (hash) {
       const elementId = hash.replace('#', '');
-      const targetElement = document.getElementById(elementId);
-
-      if (targetElement) {
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return;
-      }
-
-      // If the section is not mounted yet, try once after paint.
-      window.requestAnimationFrame(() => {
-        const delayedTarget = document.getElementById(elementId);
-        if (delayedTarget) {
-          delayedTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const scrollToHash = () => {
+        const target = document.getElementById(elementId);
+        if (!target) return false;
+        if (lenis) {
+          lenis.scrollTo(target, { offset: 0 });
+        } else {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      });
+        return true;
+      };
+
+      if (!scrollToHash()) {
+        // If the section is not mounted yet, try once after paint.
+        window.requestAnimationFrame(scrollToHash);
+      }
       return;
     }
 
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (lenis) {
+      lenis.scrollTo(0, { immediate: true, force: true });
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
   }, [pathname, hash]);
   return null;
 }

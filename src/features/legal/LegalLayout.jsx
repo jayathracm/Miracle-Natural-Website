@@ -12,8 +12,11 @@ const LegalLayout = ({ title, subtitle, date, sections }) => {
     const contentRefs = useRef([]);
 
     useEffect(() => {
-        // Scroll To Top on Mount
-        window.scrollTo(0, 0);
+        // Scroll-to-top on route change is already handled globally by
+        // ScrollToTop in App.jsx (which is Lenis-aware). A second, plain
+        // window.scrollTo(0, 0) here used to race with it and could snap the
+        // page to a stale Lenis scroll target — removed rather than
+        // duplicated.
 
         const ctx = gsap.context(() => {
             // Create ScrollTriggers for each section to update active state

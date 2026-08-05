@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { setLenisInstance } from '@/shared/lib/lenisInstance';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -34,6 +35,7 @@ const MainLayout = ({ children }) => {
             infinite: false,
         });
         lenisRef.current = lenis;
+        setLenisInstance(lenis);
 
         // Sync GSAP ScrollTrigger with Lenis
         lenis.on('scroll', ScrollTrigger.update);
@@ -47,6 +49,7 @@ const MainLayout = ({ children }) => {
         return () => {
             gsap.ticker.remove(lenis.raf);
             lenis.destroy();
+            setLenisInstance(null);
             ScrollTrigger.getAll().forEach(trigger => trigger.kill());
         };
     }, []);
