@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { BarChart3, Boxes, Briefcase, FileText, LayoutDashboard, Mail, Menu, Package, Percent, ShieldCheck, User, X } from 'lucide-react';
+import { BarChart3, Boxes, Briefcase, FileText, LayoutDashboard, Leaf, Mail, Menu, Package, Percent, ShieldCheck, Sparkles, User, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
 import leoraIcon from '@/assets/branding/leora-wellness-icon-transparent.png';
 import { cn } from '@/shared/lib/utils';
@@ -7,6 +7,14 @@ import { cn } from '@/shared/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/features/auth/AuthContext';
 import { shopPathForBrand } from '@/shared/lib/brands';
+
+// Kept visually separate from NAV_SECTIONS (below) so the two storefronts —
+// the main reason most visitors are here — read as distinct, button-like
+// entry points rather than blending into plain site-page links.
+const BRAND_LINKS = [
+  { to: '/miracle-natural', label: 'Miracle Natural', icon: Leaf },
+  { to: '/laira', label: 'Laira', icon: Sparkles },
+];
 
 const NAV_SECTIONS = [
   { to: '/ritual-builder', label: 'Ritual Builder' },
@@ -116,9 +124,24 @@ const Navbar = () => {
         </Link>
 
         {/* Desktop Menu - Only show on lg+ (1024px) */}
-        <div className="hidden lg:flex items-center gap-5 xl:gap-6">
+        <div className="hidden lg:flex items-center gap-3.5 xl:gap-5">
+          <div className="flex items-center gap-1.5 xl:gap-2">
+            {BRAND_LINKS.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/8 px-3 xl:px-3.5 py-1.5 text-[0.7rem] xl:text-[0.76rem] font-bold tracking-[0.06em] uppercase text-primary transition-colors hover:border-primary/45 hover:bg-primary/14 whitespace-nowrap"
+              >
+                <link.icon size={13} strokeWidth={2.25} aria-hidden="true" />
+                {link.label}
+              </Link>
+            ))}
+          </div>
+
+          <div className="h-5 w-px bg-[var(--color-border-medium)]" aria-hidden="true" />
+
           {NAV_SECTIONS.map((link) => (
-            <Link key={link.to} to={link.to} className="text-[0.78rem] xl:text-[0.8rem] font-semibold tracking-[0.1em] uppercase text-muted-foreground hover:text-primary transition-colors">
+            <Link key={link.to} to={link.to} className="text-[0.72rem] xl:text-[0.78rem] font-semibold tracking-[0.08em] uppercase text-muted-foreground hover:text-primary transition-colors whitespace-nowrap">
               {link.label}
             </Link>
           ))}
@@ -278,6 +301,22 @@ const Navbar = () => {
               className="fixed inset-0 z-40 bg-[rgba(247,241,227,0.98)] backdrop-blur-sm pt-24 px-6 pb-8 overflow-y-auto lg:hidden"
             >
               <div className="mx-auto w-full max-w-sm flex flex-col items-stretch gap-3">
+                <div className="flex flex-col gap-2">
+                  {BRAND_LINKS.map((link) => (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      onClick={() => setIsMenuOpen(false)}
+                      className="w-full rounded-lg border border-primary/30 bg-primary/8 px-4 py-3 text-[0.95rem] font-sans font-bold tracking-[0.08em] uppercase text-primary text-left inline-flex items-center gap-2.5"
+                    >
+                      <link.icon size={18} strokeWidth={2.25} aria-hidden="true" />
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+
+                <div className="h-px w-full bg-[var(--color-border-light)]" aria-hidden="true" />
+
                 {NAV_SECTIONS.map((link) => (
                   <Link key={link.to} to={link.to} onClick={() => setIsMenuOpen(false)} className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left">
                     {link.label}

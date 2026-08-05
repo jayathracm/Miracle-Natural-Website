@@ -184,7 +184,7 @@ const HeroSection = () => {
             <Button
               icon={ArrowRight}
               className="w-full sm:w-auto px-4 py-2 text-sm sm:text-base"
-              onClick={() => document.getElementById('product')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => navigate(shopPathForBrand('miracle_natural'))}
             >
               Explore Collection
             </Button>
