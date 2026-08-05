@@ -3,10 +3,10 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Typography } from '@/shared/ui/Typography';
 import { TiltCard } from '@/shared/ui/TiltCard';
-import shampooImg from '@/assets/catalog/herbal-shampoo.png';
-import bodyLotionImg from '@/assets/catalog/golden-glow-body-lotion.png';
-import faceWashImg from '@/assets/catalog/golden-glow-face-wash.png';
-import serumImg from '@/assets/catalog/golden-glow-serum-24k.png';
+import shampooImg from '@/assets/lifestyle/hair-care-lifestyle.jpeg';
+import bodyLotionImg from '@/assets/lifestyle/body-care-lifestyle.jpeg';
+import faceWashImg from '@/assets/lifestyle/face-care-lifestyle.jpeg';
+import serumImg from '@/assets/lifestyle/treatment-lifestyle.jpeg';
 
 const products = [
   {
