@@ -8,7 +8,16 @@ import { Button } from '@/shared/ui/Button';
 import { ArrowRight } from 'lucide-react';
 import { shopPathForBrand } from '@/shared/lib/brands';
 
-const catalogImageModules = import.meta.glob('../assets/catalog/*.{png,jpg,jpeg,webp}', {
+// import.meta.glob's path is resolved by Vite relative to *this file's own
+// location on disk* — not the `@` alias, and not caught by the reorg's
+// automated import-path rewriter (which only rewrites `from '...'` and
+// `import('...')` specifiers, not string arguments to arbitrary calls like
+// this one). This file lived at src/components/HeroSection.jsx before the
+// feature-based reorg (where '../assets/catalog' correctly reached
+// src/assets/catalog); it now lives two directories deeper at
+// src/features/landing/sections/HeroSection.jsx, so the path needs the
+// matching extra '../../'.
+const catalogImageModules = import.meta.glob('../../../assets/catalog/*.{png,jpg,jpeg,webp}', {
   eager: true,
   import: 'default',
 });
