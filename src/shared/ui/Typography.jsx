@@ -21,7 +21,9 @@ export const Typography = ({
     ...props
 }) => {
     const Component = as || (variant === 'label' ? 'span' : variant);
-    const MotionComponent = motion(Component);
+    // motion(Component) is deprecated in framer-motion v11+ in favor of
+    // motion.create(Component) — same behavior, just the current API.
+    const MotionComponent = motion.create(Component);
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
     if (animate) {

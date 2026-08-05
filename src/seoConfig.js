@@ -72,12 +72,6 @@ export const SEO_CONFIG = {
     canonical: '/laira/shop',
     keywords: ['Laira shop', 'Leora Wellness'],
   },
-  '/leora-wellness/shop': {
-    title: 'Shop | Leora Wellness',
-    description: 'The Leora Wellness shop is coming soon.',
-    canonical: '/leora-wellness/shop',
-    keywords: ['Leora Wellness shop'],
-  },
   '/login': {
     title: 'Sign In | Miracle Natural',
     description: 'Sign in to your Miracle Natural account.',

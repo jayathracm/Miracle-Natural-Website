@@ -25,10 +25,9 @@ const Navbar = () => {
   // where the visitor already is (so it's never a surprise which storefront
   // it opens); anywhere else (Leora Wellness home, About, Account, etc.) it
   // defaults to Miracle Natural, the only brand with real products today.
+  // Leora Wellness itself has no shop — there's no branch for it here.
   const contextualShopPath = location.pathname.startsWith('/laira')
     ? shopPathForBrand('laira')
-    : location.pathname.startsWith('/leora-wellness')
-    ? shopPathForBrand('leora_wellness')
     : shopPathForBrand('miracle_natural');
 
   // Optimized scroll handler - only updates when crossing threshold

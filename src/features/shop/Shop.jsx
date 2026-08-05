@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion } from 'framer-motion';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ImageOff, LayoutGrid, List, Search, ShoppingBag, Sparkles, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ImageOff, LayoutGrid, List, Search, ShoppingBag, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { Input } from '@/shared/ui/Input';
 import { Typography } from '@/shared/ui/Typography';
 import { Button } from '@/shared/ui/Button';
@@ -38,6 +38,90 @@ const PRICE_FILTERS = [
 ];
 
 const formatCurrency = (amount) => `LKR ${amount.toLocaleString('en-LK')}`;
+
+// Shared between the desktop sidebar (always visible, lg:block) and the
+// mobile filter drawer (hidden until opened) so the search/category/price
+// controls only ever exist in one place — the two call sites just decide
+// where/whether to render it.
+const ShopFilters = ({
+  searchTerm,
+  onSearchChange,
+  categoryFilter,
+  onCategoryChange,
+  totalCount,
+  categoryCounts,
+  priceFilter,
+  onPriceChange,
+  hasActiveFilters,
+  onResetFilters,
+}) => (
+  <>
+    <div className="rounded-xl border border-[var(--color-border-light)] bg-white p-4">
+      <p className="mb-3 text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary">Search Product</p>
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+        <Input
+          type="text"
+          placeholder="Search products..."
+          value={searchTerm}
+          onChange={(event) => onSearchChange(event.target.value)}
+          className="pl-8"
+        />
+      </div>
+    </div>
+
+    <div className="rounded-xl border border-[var(--color-border-light)] bg-white p-4">
+      <p className="mb-3 text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary">Product Categories</p>
+      <div className="space-y-1">
+        <button
+          type="button"
+          onClick={() => onCategoryChange('all')}
+          className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-[0.86rem] transition-colors ${categoryFilter === 'all' ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground hover:bg-[var(--color-hover-overlay)]'}`}
+        >
+          <span>All Categories</span>
+          <span className="text-[0.76rem] text-muted-foreground">({totalCount})</span>
+        </button>
+        {SHOP_CATEGORY_ORDER.map((category) => (
+          <button
+            key={category}
+            type="button"
+            onClick={() => onCategoryChange(category)}
+            className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-[0.86rem] transition-colors ${categoryFilter === category ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground hover:bg-[var(--color-hover-overlay)]'}`}
+          >
+            <span>{category}</span>
+            <span className="text-[0.76rem] text-muted-foreground">({categoryCounts[category] || 0})</span>
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <div className="rounded-xl border border-[var(--color-border-light)] bg-white p-4">
+      <p className="mb-3 text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary">Filter By Price</p>
+      <div className="space-y-1">
+        {PRICE_FILTERS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onPriceChange(option.value)}
+            className={`w-full rounded-lg px-2.5 py-1.5 text-left text-[0.86rem] transition-colors ${priceFilter === option.value ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground hover:bg-[var(--color-hover-overlay)]'}`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {hasActiveFilters && (
+      <button
+        type="button"
+        onClick={onResetFilters}
+        className="text-[0.8rem] font-semibold text-primary underline underline-offset-2"
+      >
+        Reset all filters
+      </button>
+    )}
+  </>
+);
 
 const ShopPage = () => {
   const { brandSlug } = useParams();
@@ -77,6 +161,7 @@ const ShopPage = () => {
   const [sortOption, setSortOption] = useState('featured');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('manual');
@@ -728,74 +813,43 @@ const ShopPage = () => {
         ) : (
           <>
             <div className="flex flex-col lg:flex-row items-start gap-6 lg:gap-8">
-              <aside className="w-full lg:w-64 shrink-0 space-y-5">
-                <div className="rounded-xl border border-[var(--color-border-light)] bg-white p-4">
-                  <p className="mb-3 text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary">Search Product</p>
-                  <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
-                    <Input
-                      type="text"
-                      placeholder="Search products..."
-                      value={searchTerm}
-                      onChange={(event) => setSearchTerm(event.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-[var(--color-border-light)] bg-white p-4">
-                  <p className="mb-3 text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary">Product Categories</p>
-                  <div className="space-y-1">
-                    <button
-                      type="button"
-                      onClick={() => setCategoryFilter('all')}
-                      className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-[0.86rem] transition-colors ${categoryFilter === 'all' ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground hover:bg-[var(--color-hover-overlay)]'}`}
-                    >
-                      <span>All Categories</span>
-                      <span className="text-[0.76rem] text-muted-foreground">({productCatalog.length})</span>
-                    </button>
-                    {SHOP_CATEGORY_ORDER.map((category) => (
-                      <button
-                        key={category}
-                        type="button"
-                        onClick={() => setCategoryFilter(category)}
-                        className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-[0.86rem] transition-colors ${categoryFilter === category ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground hover:bg-[var(--color-hover-overlay)]'}`}
-                      >
-                        <span>{category}</span>
-                        <span className="text-[0.76rem] text-muted-foreground">({categoryCounts[category] || 0})</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-[var(--color-border-light)] bg-white p-4">
-                  <p className="mb-3 text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary">Filter By Price</p>
-                  <div className="space-y-1">
-                    {PRICE_FILTERS.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setPriceFilter(option.value)}
-                        className={`w-full rounded-lg px-2.5 py-1.5 text-left text-[0.86rem] transition-colors ${priceFilter === option.value ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground hover:bg-[var(--color-hover-overlay)]'}`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={resetFilters}
-                    className="text-[0.8rem] font-semibold text-primary underline underline-offset-2"
-                  >
-                    Reset all filters
-                  </button>
-                )}
+              <aside className="hidden lg:block lg:w-64 shrink-0 space-y-5">
+                <ShopFilters
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  categoryFilter={categoryFilter}
+                  onCategoryChange={setCategoryFilter}
+                  totalCount={productCatalog.length}
+                  categoryCounts={categoryCounts}
+                  priceFilter={priceFilter}
+                  onPriceChange={setPriceFilter}
+                  hasActiveFilters={hasActiveFilters}
+                  onResetFilters={resetFilters}
+                />
               </aside>
 
               <section className="flex-1 min-w-0 w-full">
+                {/* Mobile only: filters start collapsed behind this toggle
+                    instead of taking up a full screen of vertical space
+                    before any products are visible — opens the bottom-sheet
+                    drawer below. Desktop keeps the always-visible sidebar. */}
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFiltersOpen(true)}
+                  className="lg:hidden mb-4 w-full flex items-center justify-between gap-2 rounded-xl border border-[var(--color-border-light)] bg-white px-4 py-3 text-[0.86rem] font-semibold text-foreground"
+                >
+                  <span className="flex items-center gap-2">
+                    <SlidersHorizontal size={15} className="text-primary" />
+                    Filters
+                    {hasActiveFilters && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+                    )}
+                  </span>
+                  <span className="text-[0.76rem] font-normal text-muted-foreground">
+                    {filteredProducts.length} results
+                  </span>
+                </button>
+
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--color-border-light)] bg-white px-3.5 py-2.5">
                   <div className="flex items-center gap-1.5">
                     <button
@@ -919,6 +973,56 @@ const ShopPage = () => {
           </>
         )}
       </div>
+
+      {isMobileFiltersOpen && (
+        <div
+          className="fixed inset-0 z-[95] bg-[rgba(13,20,16,0.58)] backdrop-blur-sm lg:hidden"
+          onClick={() => setIsMobileFiltersOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Filters"
+        >
+          <div
+            className="absolute inset-x-0 bottom-0 max-h-[82vh] overflow-y-auto rounded-t-3xl border-t border-[var(--color-card-border)] bg-[linear-gradient(160deg,rgba(255,253,248,0.98),rgba(248,243,232,0.96))] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-20px_60px_rgba(8,14,10,0.3)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[var(--color-border-medium)]" />
+            <div className="flex items-center justify-between mb-4">
+              <Typography variant="h4" className="text-foreground">Filters</Typography>
+              <button
+                type="button"
+                onClick={() => setIsMobileFiltersOpen(false)}
+                aria-label="Close filters"
+                className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:bg-[var(--color-hover-overlay)] transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <ShopFilters
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                categoryFilter={categoryFilter}
+                onCategoryChange={setCategoryFilter}
+                totalCount={productCatalog.length}
+                categoryCounts={categoryCounts}
+                priceFilter={priceFilter}
+                onPriceChange={setPriceFilter}
+                hasActiveFilters={hasActiveFilters}
+                onResetFilters={resetFilters}
+              />
+            </div>
+
+            <Button
+              className="mt-5 w-full justify-center px-6 py-2.5 text-[0.74rem]"
+              onClick={() => setIsMobileFiltersOpen(false)}
+            >
+              Show {filteredProducts.length} Results
+            </Button>
+          </div>
+        </div>
+      )}
 
       {toasts.length > 0 && (
         <div className="fixed bottom-20 right-4 sm:right-6 lg:bottom-24 z-[110] flex w-[min(92vw,390px)] flex-col-reverse gap-2.5">

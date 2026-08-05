@@ -8,6 +8,30 @@ import { supabase } from '@/shared/lib/supabaseClient';
 // on the rare browser without crypto.randomUUID().
 const CHAT_SESSION_STORAGE_KEY = 'leoraWellness.chatSessionId';
 
+// Whether the first-visit "try the chatbot" nudge (ChatWidget.jsx) has
+// already been shown in this browser. Set the moment the nudge is displayed
+// (not on dismiss) so it never reappears even if the visitor navigates away
+// before interacting with it — a true one-time, first-load nudge.
+const CHAT_NUDGE_SEEN_STORAGE_KEY = 'leoraWellness.chatNudgeSeen';
+
+export function hasSeenChatNudge() {
+  try {
+    return window.localStorage.getItem(CHAT_NUDGE_SEEN_STORAGE_KEY) === 'true';
+  } catch {
+    // Private browsing / storage disabled — treat as already seen so we
+    // don't risk the nudge popping up on every single page load.
+    return true;
+  }
+}
+
+export function markChatNudgeSeen() {
+  try {
+    window.localStorage.setItem(CHAT_NUDGE_SEEN_STORAGE_KEY, 'true');
+  } catch {
+    // Ignore — worst case the nudge shows again next time storage works.
+  }
+}
+
 function generateId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();

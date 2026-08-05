@@ -1,8 +1,10 @@
-// Central registry for the three storefronts (functional-requirements.md
-// §1.0 / §1.9): Miracle Natural, Laira, and Leora Wellness each have their
-// own shop, their own cart, and their own product-detail routes, but all
-// share one `products` table (tagged by `brand`) and one CartContext
-// (partitioned by brand) rather than fully separate schemas/contexts.
+// Central registry for the two storefronts (functional-requirements.md
+// §1.0 / §1.9): Miracle Natural and Laira each have their own shop, their
+// own cart, and their own product-detail routes, but both share one
+// `products` table (tagged by `brand`) and one CartContext (partitioned by
+// brand) rather than fully separate schemas/contexts. Leora Wellness is the
+// parent company (leorawellness.lk itself) and deliberately has no shop of
+// its own — it only ever appears as a brand owner, not a `brand` value here.
 //
 // `slug` is the URL segment used in routes like `/:brandSlug/shop`; `brand`
 // is the value stored in `products.brand` / `orders.brand`.
@@ -16,11 +18,6 @@ export const BRANDS = [
     brand: 'laira',
     slug: 'laira',
     label: 'Laira',
-  },
-  {
-    brand: 'leora_wellness',
-    slug: 'leora-wellness',
-    label: 'Leora Wellness',
   },
 ];
 
