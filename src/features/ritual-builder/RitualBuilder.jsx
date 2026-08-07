@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion } from 'framer-motion';
-import { AlertCircle, ArrowRight, ImageOff, RotateCcw, Sparkles, Sun, Moon, SunMoon } from 'lucide-react';
+import { AlertCircle, ArrowRight, ImageOff, RotateCcw, Sparkles } from 'lucide-react';
 import { Typography } from '@/shared/ui/Typography';
 import { Button } from '@/shared/ui/Button';
 import { Textarea } from '@/shared/ui/Textarea';
@@ -37,12 +37,6 @@ const SENSITIVITY_LEVELS = [
   { value: 'medium', label: 'Medium — sometimes reacts' },
   { value: 'high', label: 'High — reacts easily, needs gentle formulas' },
 ];
-
-const STEP_META = {
-  AM: { label: 'Morning', Icon: Sun },
-  PM: { label: 'Evening', Icon: Moon },
-  'AM/PM': { label: 'Morning & Evening', Icon: SunMoon },
-};
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
@@ -177,7 +171,6 @@ const RitualBuilder = () => {
               animate="visible"
             >
               {result.routine.map((item, index) => {
-                const meta = STEP_META[item.step] || STEP_META['AM/PM'];
                 const image = productImageById[item.productId];
 
                 return (
@@ -194,10 +187,6 @@ const RitualBuilder = () => {
                           <ImageOff size={26} />
                         </div>
                       )}
-                      <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full border border-white/60 bg-white/85 backdrop-blur-sm px-2.5 py-1 text-[0.66rem] font-bold tracking-[0.08em] uppercase text-foreground">
-                        <meta.Icon size={12} className="text-primary" />
-                        {meta.label}
-                      </span>
                     </div>
                     <div className="p-4 sm:p-5 flex flex-col flex-1">
                       <p className="text-[0.66rem] font-bold tracking-[0.16em] uppercase text-accent mb-1.5">{item.product.category}</p>

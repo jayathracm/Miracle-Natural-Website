@@ -8,33 +8,37 @@ import bodyLotionImg from '@/assets/lifestyle/body-care-lifestyle.jpeg';
 import faceWashImg from '@/assets/lifestyle/face-care-lifestyle.jpeg';
 import serumImg from '@/assets/lifestyle/treatment-lifestyle.jpeg';
 
+// Each card now represents a product category rather than one specific SKU
+// (the photos are lifestyle shots, not packaging shots — see HeroSection's
+// lifestyle assets), so the copy stays deliberately general to the range of
+// products within that category rather than describing a single item.
 const products = [
   {
-    title: 'Herbal Shampoo - 250ml',
+    title: 'Hair Care Essentials',
     category: 'Hair Care',
-    stat: '96% ingredient-derived actives',
-    description: 'Cinnamon, Neem, Aloe Vera, Amla and more for scalp comfort, root repair, and fuller-looking hair.',
+    stat: 'Herbal actives in every formula',
+    description: 'Shampoo, conditioner, and hair oil formulated with cinnamon, neem, aloe vera, and amla for scalp comfort, root repair, and fuller-looking hair.',
     image: shampooImg,
   },
   {
-    title: 'Golden Glow Body Lotion - 250ml',
+    title: 'Body Care Essentials',
     category: 'Body Care',
-    stat: '24-hour moisture lock feel',
-    description: 'Sandalwood, Alpha Arbutin, Niacinamide and Vitamin C for deep moisturization and even-looking skin.',
+    stat: 'Lotion & herbal soap bars',
+    description: 'Body lotion and herbal soap bars in sandalwood, moringa, cinnamon, venivel, and turmeric — daily moisture and gentle, naturally-derived cleansing.',
     image: bodyLotionImg,
   },
   {
-    title: 'Golden Glow Face Wash - 100ml',
+    title: 'Face Care Essentials',
     category: 'Face Care',
-    stat: 'pH-balanced daily cleanse',
-    description: 'Harankaha, Aloe Vera, and Manjishta blend for daily cleansing, pH support, and refreshed glow.',
+    stat: 'Daily cleanse to weekly care',
+    description: 'Cleansers, day and night creams, and weekly treatment packs and scrubs — pH-balanced formulas for daily cleansing and a refreshed, even-looking glow.',
     image: faceWashImg,
   },
   {
-    title: 'Golden Glow Serum (24K) - 20ml',
+    title: 'Targeted Treatments',
     category: 'Treatment',
-    stat: 'High-concentrate brightening blend',
-    description: 'Hyaluronic Acid, Kojic Acid, Turmeric and Gold Extract to target marks and visible uneven tone.',
+    stat: 'Concentrated, targeted formulas',
+    description: 'Serums and targeted gels for visible marks, uneven tone, and specific skin concerns — an extra step for when your routine needs more focus.',
     image: serumImg,
   },
 ];

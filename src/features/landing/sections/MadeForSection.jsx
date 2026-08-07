@@ -8,18 +8,18 @@ import { staggerContainer, fadeUpItem, viewportOnce } from '@/shared/lib/motionV
 const FEATURES = [
   {
     icon: Leaf,
-    title: "Herbal-Driven Formulas",
-    desc: "Carefully selected herbal ingredients blended for affordable, effective daily personal care."
+    title: "Rooted in Tradition",
+    desc: "Inspired by the herbs and botanicals Sri Lankan households have trusted for generations."
   },
   {
     icon: ShieldCheck,
-    title: "ISO & GMP Certified",
-    desc: "Products are developed and manufactured under certified quality standards."
+    title: "Refined by Modern Science",
+    desc: "Traditional botanical knowledge combined with careful formulation and certified (ISO & GMP) manufacturing standards."
   },
   {
     icon: Sparkles,
-    title: "Mass-Market Friendly",
-    desc: "Vibrant and approachable products designed for everyday consumers without compromising effectiveness."
+    title: "Made for Everyday Life",
+    desc: "Convenient, ready-to-use formulas — nature's benefits without the time and effort of preparing them yourself."
   }
 ];
 
@@ -42,7 +42,11 @@ const MadeForSection = () => {
               Crafted with care. <br /> <span className="text-primary">Rooted in nature.</span>
             </Typography>
             <Typography variant="p" className="mb-7 sm:mb-9 max-w-lg">
-              Leora Wellness was established in 2025 and is backed by 25+ years of manufacturing expertise through Lanka Minerals and Chemicals.
+              For generations, Sri Lankan households have turned to herbs and botanicals for
+              everyday care — trusted remedies that take time and effort to prepare at home.
+              Miracle Natural bridges that gap, transforming nature&rsquo;s finest ingredients into
+              safe, effective, and convenient products for modern life, without compromising on
+              quality.
             </Typography>
 
             <motion.div
@@ -84,6 +88,17 @@ const MadeForSection = () => {
                   <p className="mt-2 text-[0.78rem] uppercase tracking-[0.16em] text-[rgba(247,241,227,0.75)]">{stat.label}</p>
                 </motion.div>
               ))}
+
+              {/* Wise Wellness — Miracle Natural's brand essence, folded in
+                  here rather than given its own full-width section so it
+                  doesn't add extra page height. */}
+              <motion.div variants={fadeUpItem} className="relative z-10 pt-6 sm:pt-7 border-t border-white/12">
+                <p className="font-display italic text-[0.98rem] sm:text-[1.05rem] leading-snug text-[rgba(247,241,227,0.92)]">
+                  &ldquo;We believe choosing what you put on your skin should be an informed
+                  decision.&rdquo;
+                </p>
+                <p className="mt-2 text-[0.68rem] uppercase tracking-[0.18em] text-secondary">— Wise Wellness</p>
+              </motion.div>
             </motion.div>
           </div>
         </div>

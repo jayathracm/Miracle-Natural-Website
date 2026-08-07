@@ -1,6 +1,7 @@
 import HeroSection from '@/features/landing/sections/HeroSection';
 import FeatureGridSection from '@/features/landing/sections/FeatureGridSection';
 import ProductSection from '@/features/landing/sections/ProductSection';
+import IngredientsSection from '@/features/landing/sections/IngredientsSection';
 import MadeForSection from '@/features/landing/sections/MadeForSection';
 import TestimonialSection from '@/features/landing/sections/TestimonialSection';
 import PricingSection from '@/features/bundles/PricingSection';
@@ -32,6 +33,8 @@ const MiracleNatural = () => {
 
       <SectionBand>
         <ProductSection />
+        <ChapterDivider />
+        <IngredientsSection />
         <ChapterDivider />
         <MadeForSection />
       </SectionBand>

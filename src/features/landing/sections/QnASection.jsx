@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus } from 'lucide-react';
@@ -7,6 +7,11 @@ import { cn } from '@/shared/lib/utils';
 import { staggerContainer, fadeUpItem, viewportOnce } from '@/shared/lib/motionVariants';
 
 const faqs = [
+  {
+    question: 'What makes Miracle Natural different from other herbal brands?',
+    answer:
+      "Traditional Sri Lankan herbal remedies take time and effort to prepare at home. Miracle Natural bridges that gap — the same trusted botanical ingredients, combined with modern manufacturing and formulation science, so you get the benefits without the effort, at a price that doesn't ask you to compromise.",
+  },
   {
     question: 'Are Miracle Natural products suitable for sensitive skin?',
     answer:
@@ -83,6 +88,33 @@ const QnASection = () => {
   const [openIndex, setOpenIndex] = useState(0);
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
+  // FAQPage structured data (schema.org / Google's FAQ rich-result format) —
+  // lets search engines (and AI answer engines that read JSON-LD) surface
+  // these Q&As directly, rather than only being readable inside the
+  // accordion UI. Injected/removed with the section itself rather than
+  // living in useSEO, since it's tied to this specific content, not a
+  // per-route <head> tag.
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.answer,
+        },
+      })),
+    });
+    document.head.appendChild(script);
+    return () => {
+      document.head.removeChild(script);
+    };
+  }, []);
+
   return (
     <section className="relative py-16 sm:py-20 md:py-24 px-4 sm:px-6 overflow-hidden">
       {/* Decorative background element */}
@@ -123,6 +155,18 @@ const QnASection = () => {
             </motion.div>
           ))}
         </motion.div>
+
+        <div className="mt-10 sm:mt-12 text-center">
+          <Typography variant="p" className="mb-2">
+            Still have questions?
+          </Typography>
+          <p className="text-[0.92rem] sm:text-[0.95rem]">
+            Email{' '}
+            <a href="mailto:dinisha@lanmic.com" className="email-link">dinisha@lanmic.com</a>
+            {' '}or call/WhatsApp{' '}
+            <a href="tel:+94112636832" className="email-link">+94 11 2636 832</a>.
+          </p>
+        </div>
       </div>
     </section>
   );

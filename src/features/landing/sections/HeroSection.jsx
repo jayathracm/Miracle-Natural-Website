@@ -146,7 +146,10 @@ const HeroSection = () => {
           <div ref={textRef} className="space-y-1.5 sm:space-y-3 md:space-y-4 w-full">
             <div className="flex items-center justify-center lg:justify-start gap-2.5 sm:gap-3 mb-1">
               <img src={miracleNaturalIcon} alt="" aria-hidden="true" className="h-14 sm:h-16 w-auto object-contain" />
-              <span className="font-display text-foreground text-[1.4rem] sm:text-[1.65rem] tracking-tight">Miracle Natural</span>
+              <div className="flex flex-col items-center lg:items-start">
+                <span className="font-display text-foreground text-[1.4rem] sm:text-[1.65rem] tracking-tight leading-tight">Miracle Natural</span>
+                <span className="font-display italic text-muted-foreground text-[0.82rem] sm:text-[0.92rem] tracking-tight leading-tight">For Those Who Know Better</span>
+              </div>
             </div>
             <Typography variant="label" className="mb-2 block text-primary">Herbal Care by Leora Wellness</Typography>
             <Typography
@@ -176,7 +179,7 @@ const HeroSection = () => {
 
           <div ref={subtextRef} className="w-full flex justify-center lg:justify-start">
             <Typography variant="p" className="max-w-2xl text-muted-foreground leading-relaxed text-[1rem] sm:text-[1.02rem] md:text-[1.05rem] lg:text-[1.08rem]">
-              Miracle Natural is a herbal-based personal care brand under Leora Wellness, combining carefully selected herbal ingredients with modern formulation expertise.
+              Nature&rsquo;s goodness, made practical for modern life.
             </Typography>
           </div>
 
