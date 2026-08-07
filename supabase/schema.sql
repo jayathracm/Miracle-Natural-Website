@@ -171,6 +171,9 @@ create table if not exists public.orders (
   customer_name text not null,
   customer_email text not null,
   customer_phone text not null,
+  -- Free text, no CHECK constraint — 'cash_on_delivery' and 'payhere' are
+  -- the two values the app actually writes today (see payment_status below
+  -- for the PayHere-specific gateway status).
   payment_method text not null default 'cash_on_delivery',
   delivery_zone text not null check (delivery_zone in ('colombo_1_15', 'island_wide')),
   delivery_address text not null,
@@ -439,6 +442,21 @@ create policy "Admins manage raw materials"
 -- just inserted.
 alter table public.orders
   add column if not exists inventory_adjusted boolean not null default false;
+
+-- PayHere online payments (docs/payhere-integration-plan.md). payment_status
+-- is deliberately separate from the fulfillment `status` column above — a
+-- PayHere order can be payment_status='paid' while status is still 'pending'
+-- (paid for, but not yet fulfilled). Existing COD orders default to
+-- 'not_required' since COD was never "paid" through a gateway in the first
+-- place; only PayHere orders actually move through
+-- 'pending' -> 'paid'/'failed'/'cancelled'/'chargedback'.
+-- payhere_payment_id stores PayHere's own payment id (from the notify_url
+-- webhook) so admins can cross-reference the transaction in the PayHere
+-- dashboard when handling a refund.
+alter table public.orders
+  add column if not exists payment_status text not null default 'not_required'
+    check (payment_status in ('not_required', 'pending', 'paid', 'failed', 'cancelled', 'chargedback')),
+  add column if not exists payhere_payment_id text;
 
 create or replace function public.decrement_inventory_for_order(p_order_id uuid)
 returns void
