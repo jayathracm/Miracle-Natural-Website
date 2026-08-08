@@ -29,6 +29,13 @@ import NotFound from '@/shared/NotFound';
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 const PRODUCTS_PER_PAGE = 12;
 
+// PayHere Onsite Checkout — sandbox for now. Flip to false at go-live
+// (docs/payhere-integration-plan.md §10) once the Live merchant account +
+// production PAYHERE_MERCHANT_SECRET are in place.
+const PAYHERE_SANDBOX = true;
+const PAYHERE_POLL_INTERVAL_MS = 2000;
+const PAYHERE_POLL_MAX_ATTEMPTS = 15; // ~30s total
+
 const PRICE_FILTERS = [
   { value: 'all', label: 'All Prices' },
   { value: 'under_500', label: 'Under LKR 500' },
@@ -153,6 +160,14 @@ const ShopPage = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isSendingOrder, setIsSendingOrder] = useState(false);
   const [showOrderSuccessPopup, setShowOrderSuccessPopup] = useState(false);
+  // PayHere Onsite Checkout state — see docs/payhere-integration-plan.md §7.
+  // 'idle' | 'awaiting_payment' (popup open) | 'confirming' (popup closed,
+  // polling for the webhook-verified result) | 'failed' | 'timeout'.
+  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
+  const [paymentUiState, setPaymentUiState] = useState('idle');
+  const [paymentOrderId, setPaymentOrderId] = useState(null);
+  const [paymentErrorMessage, setPaymentErrorMessage] = useState(null);
+  const [lastPaidWithPayHere, setLastPaidWithPayHere] = useState(false);
   const [isRequestingQuote, setIsRequestingQuote] = useState(false);
   const [showQuoteSuccessPopup, setShowQuoteSuccessPopup] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -228,6 +243,20 @@ const ShopPage = () => {
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  // Loads PayHere's Onsite Checkout SDK once per page load — not tied to
+  // whether the customer has selected "Pay Online" yet, so the popup can
+  // open immediately on submit rather than waiting on a script fetch at
+  // that moment. Safe to call from every Shop.jsx mount (idempotent via the
+  // id check) even though only some visitors will ever use it.
+  useEffect(() => {
+    if (window.payhere || document.getElementById('payhere-js-sdk')) return;
+    const script = document.createElement('script');
+    script.id = 'payhere-js-sdk';
+    script.src = 'https://www.payhere.lk/lib/payhere.js';
+    script.async = true;
+    document.body.appendChild(script);
   }, []);
 
   useEffect(() => {
@@ -681,6 +710,7 @@ const ShopPage = () => {
       // up for admins regardless of whether this notification email went out.
     }
 
+    setLastPaidWithPayHere(false);
     setShowOrderSuccessPopup(true);
     pushToast('success', 'Order placed successfully.');
     clearCart();
@@ -691,6 +721,246 @@ const ShopPage = () => {
     setDeliveryZone('');
     setDeliveryAddress('');
     setIsSendingOrder(false);
+  };
+
+  // Resets the online-payment flow back to a fresh state — used after a
+  // successful payment, and available to the checkout UI as a manual
+  // "start over" escape hatch from a failed/timed-out attempt.
+  const resetPaymentFlow = () => {
+    setPaymentUiState('idle');
+    setPaymentOrderId(null);
+    setPaymentErrorMessage(null);
+  };
+
+  // Polls the order's payment_status until it resolves away from 'pending'
+  // (or the attempt cap is reached). This — not payhere.onCompleted — is
+  // what actually decides whether the customer sees a success screen, since
+  // onCompleted only means the checkout popup finished, not that the
+  // payment was verified. Only payhere-notify (server-side, signature
+  // verified) is allowed to move payment_status off 'pending' in the first
+  // place. See docs/payhere-integration-plan.md §3 and §7.
+  const pollPaymentStatus = (orderId, attempt = 1) => {
+    window.setTimeout(async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('payment_status')
+        .eq('id', orderId)
+        .single();
+
+      if (error || !data) {
+        if (attempt < PAYHERE_POLL_MAX_ATTEMPTS) {
+          pollPaymentStatus(orderId, attempt + 1);
+        } else {
+          setPaymentUiState('timeout');
+        }
+        return;
+      }
+
+      if (data.payment_status === 'paid') {
+        setLastPaidWithPayHere(true);
+        setShowOrderSuccessPopup(true);
+        pushToast('success', 'Payment confirmed — order placed successfully.');
+        clearCart();
+        setCustomerName('');
+        setCustomerPhone('');
+        setCustomerEmail('');
+        setCustomerNotes('');
+        setDeliveryZone('');
+        setDeliveryAddress('');
+        resetPaymentFlow();
+        return;
+      }
+
+      if (['failed', 'cancelled', 'chargedback'].includes(data.payment_status)) {
+        setPaymentUiState('failed');
+        setPaymentErrorMessage('Your payment did not go through. You can try again below, or switch to Cash on Delivery.');
+        return;
+      }
+
+      // Still 'pending' — keep polling until the cap.
+      if (attempt < PAYHERE_POLL_MAX_ATTEMPTS) {
+        pollPaymentStatus(orderId, attempt + 1);
+      } else {
+        setPaymentUiState('timeout');
+      }
+    }, PAYHERE_POLL_INTERVAL_MS);
+  };
+
+  // Mirrors handleEmailOrder's validation + order/order_items insert
+  // deliberately duplicated rather than shared, so the already-working COD
+  // path above can't be affected by changes made here. The two diverge
+  // after the insert: COD decrements inventory and emails immediately
+  // (an order is "committed" the moment it's placed); PayHere does neither
+  // here — both happen server-side in payhere-notify, and only once the
+  // payment is actually verified as successful, never before.
+  const handlePayHereOrder = async () => {
+    if (cartItems.length === 0) {
+      pushToast('error', 'Your shopping cart is empty. Add at least one product to continue.');
+      return;
+    }
+    if (!customerName.trim()) {
+      pushToast('error', 'Please enter your name before placing the order.');
+      return;
+    }
+    if (!customerPhone.trim()) {
+      pushToast('error', 'Please enter your phone number before placing the order.');
+      return;
+    }
+    if (!customerEmail.trim()) {
+      pushToast('error', 'Please enter your email address before placing the order.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) {
+      pushToast('error', 'Please enter a valid email address.');
+      return;
+    }
+    if (!deliveryZone || !deliveryAddress.trim()) {
+      pushToast('error', 'Please select a delivery zone and enter the delivery address before placing the order.');
+      return;
+    }
+    if (moqViolations.length > 0) {
+      const summary = moqViolations
+        .map(({ item, pricing }) => `${item.name} (needs ${pricing.moq}, have ${item.quantity})`)
+        .join('; ');
+      pushToast(
+        'error',
+        `Increase quantity to meet the minimum order quantity before placing a wholesale order: ${summary}.`
+      );
+      return;
+    }
+    if (!window.payhere) {
+      pushToast('error', 'Online payment is still loading — please try again in a moment.');
+      return;
+    }
+
+    if (isSendingOrder) return;
+    setIsSendingOrder(true);
+    setPaymentErrorMessage(null);
+
+    try {
+      let orderId = paymentOrderId;
+
+      // Only create a new order row on a fresh attempt — retrying after a
+      // failed/cancelled/dismissed payment reuses the same order instead of
+      // writing a duplicate one, since payhere-initiate allows re-initiating
+      // payment on any order that isn't already 'paid'.
+      if (!orderId) {
+        const bundleNoteLines = bundleSavings.matches.map(
+          (match) => `Bundle savings: ${match.bundleName}${match.count > 1 ? ` x${match.count}` : ''} (-${formatCurrency(match.savings)})`
+        );
+        const combinedNotes = [customerNotes.trim(), ...bundleNoteLines].filter(Boolean).join('\n') || null;
+
+        const { data: orderRow, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            user_id: user?.id ?? null,
+            customer_name: customerName.trim(),
+            customer_email: customerEmail.trim(),
+            customer_phone: customerPhone.trim(),
+            payment_method: 'payhere',
+            payment_status: 'pending',
+            delivery_zone: deliveryZone,
+            delivery_address: deliveryAddress.trim(),
+            subtotal: effectiveSubtotal,
+            shipping_cost: shippingCost,
+            grand_total: effectiveGrandTotal,
+            notes: combinedNotes,
+            channel: isWholesaleEligible ? 'b2b' : 'retail',
+            brand,
+          })
+          .select('id')
+          .single();
+
+        if (orderError || !orderRow) {
+          pushToast('error', 'Could not start your order. Please try again.');
+          setIsSendingOrder(false);
+          return;
+        }
+
+        const { error: itemsError } = await supabase.from('order_items').insert(
+          effectiveCartItems.map((item) => ({
+            order_id: orderRow.id,
+            product_id: item.id,
+            product_name: item.name,
+            quantity: item.quantity,
+            unit_price: item.effectiveUnitPrice,
+            line_total: item.effectiveLineTotal,
+          }))
+        );
+
+        if (itemsError) {
+          pushToast('error', 'Could not save your order items. Please try again.');
+          setIsSendingOrder(false);
+          return;
+        }
+
+        orderId = orderRow.id;
+        setPaymentOrderId(orderId);
+      }
+
+      const { data: initiateData, error: initiateError } = await supabase.functions.invoke('payhere-initiate', {
+        body: { orderId },
+      });
+
+      if (initiateError || initiateData?.error) {
+        pushToast('error', initiateData?.error || 'Could not start online payment. Please try again.');
+        setIsSendingOrder(false);
+        return;
+      }
+
+      setIsSendingOrder(false);
+      setPaymentUiState('awaiting_payment');
+
+      window.payhere.onCompleted = function onCompleted() {
+        // The popup finished — that does NOT mean the payment succeeded.
+        // Show a confirming state and poll for the verified result instead
+        // of trusting this callback directly.
+        setPaymentUiState('confirming');
+        pollPaymentStatus(orderId);
+      };
+
+      window.payhere.onDismissed = function onDismissed() {
+        // Customer closed the popup without paying — order stays 'pending',
+        // cart is preserved, they can retry from the same form.
+        setPaymentUiState('idle');
+      };
+
+      window.payhere.onError = function onError(error) {
+        setPaymentUiState('failed');
+        setPaymentErrorMessage(typeof error === 'string' ? error : 'Something went wrong starting the payment.');
+      };
+
+      window.payhere.startPayment({
+        sandbox: PAYHERE_SANDBOX,
+        merchant_id: initiateData.merchantId,
+        return_url: undefined,
+        cancel_url: undefined,
+        notify_url: initiateData.notifyUrl,
+        order_id: initiateData.orderId,
+        items: initiateData.items,
+        amount: initiateData.amount,
+        currency: initiateData.currency,
+        hash: initiateData.hash,
+        first_name: initiateData.customer.firstName,
+        last_name: initiateData.customer.lastName,
+        email: initiateData.customer.email,
+        phone: initiateData.customer.phone,
+        address: initiateData.customer.address,
+        city: initiateData.customer.city,
+        country: initiateData.customer.country,
+      });
+    } catch {
+      setIsSendingOrder(false);
+      pushToast('error', 'Could not start online payment. Please try again.');
+    }
+  };
+
+  const handleSubmitOrder = () => {
+    if (paymentMethod === 'payhere') {
+      handlePayHereOrder();
+    } else {
+      handleEmailOrder();
+    }
   };
 
   // Quotation Requests (§2.4): an alternative to placing an order outright —
@@ -758,7 +1028,18 @@ const ShopPage = () => {
     selectedAddressId,
     onSelectSavedAddress: handleSelectSavedAddress,
     isSendingOrder,
-    onSubmitOrder: handleEmailOrder,
+    onSubmitOrder: handleSubmitOrder,
+    paymentMethod,
+    setPaymentMethod,
+    paymentUiState,
+    paymentErrorMessage,
+    onCheckPaymentAgain: () => {
+      if (paymentOrderId) {
+        setPaymentUiState('confirming');
+        pollPaymentStatus(paymentOrderId);
+      }
+    },
+    lastPaidWithPayHere,
     isRequestingQuote,
     onRequestQuote: handleRequestQuote,
   };
@@ -1079,7 +1360,9 @@ const ShopPage = () => {
               </Typography>
 
               <p className="text-center text-[0.95rem] leading-relaxed text-muted-foreground mb-6">
-                Your order was sent successfully. A team member will get back to you once the order is confirmed via email.
+                {lastPaidWithPayHere
+                  ? 'Your payment was successful and your order is confirmed. A confirmation has been sent to your email.'
+                  : "Your order was sent successfully. A team member will get back to you once the order is confirmed via email."}
               </p>
 
               <div className="flex justify-center">

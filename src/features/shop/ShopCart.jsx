@@ -49,6 +49,11 @@ const CartInner = ({
   onSelectSavedAddress,
   isSendingOrder,
   onSubmitOrder,
+  paymentMethod,
+  setPaymentMethod,
+  paymentUiState,
+  paymentErrorMessage,
+  onCheckPaymentAgain,
   isRequestingQuote,
   onRequestQuote,
 }) => (
@@ -214,6 +219,16 @@ const CartInner = ({
           </>
         )}
       </div>
+    ) : paymentUiState === 'confirming' ? (
+      <div className="p-4 sm:p-5 py-14 flex flex-col items-center justify-center gap-3 text-center">
+        <div className="h-9 w-9 rounded-full border-2 border-primary/25 border-t-primary animate-spin" />
+        <Typography variant="h4" className="text-foreground text-[0.92rem]">
+          Confirming your payment…
+        </Typography>
+        <p className="text-[0.76rem] text-muted-foreground max-w-[230px]">
+          This usually takes a few seconds. Please don&rsquo;t close this window.
+        </p>
+      </div>
     ) : (
       <form
         onSubmit={(event) => {
@@ -282,9 +297,68 @@ const CartInner = ({
           onChange={(e) => setCustomerNotes(e.target.value)}
         />
 
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setPaymentMethod('cash_on_delivery')}
+            className={`rounded-lg border px-3 py-2.5 text-[0.76rem] font-semibold tracking-[0.01em] transition-colors ${
+              paymentMethod === 'cash_on_delivery'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-[var(--color-border-medium)] bg-white/85 text-muted-foreground'
+            }`}
+          >
+            Cash on Delivery
+          </button>
+          <button
+            type="button"
+            onClick={() => setPaymentMethod('payhere')}
+            className={`rounded-lg border px-3 py-2.5 text-[0.76rem] font-semibold tracking-[0.01em] transition-colors ${
+              paymentMethod === 'payhere'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-[var(--color-border-medium)] bg-white/85 text-muted-foreground'
+            }`}
+          >
+            Pay Online
+          </button>
+        </div>
+
         <p className="flex items-center gap-1.5 text-[0.74rem] text-muted-foreground">
-          <Truck size={13} /> Cash on Delivery only — online payment isn't available yet.
+          <Truck size={13} />
+          {paymentMethod === 'payhere'
+            ? "Secure card payment via PayHere — you'll complete payment in a popup before your order is confirmed."
+            : 'Pay in cash when your order arrives.'}
         </p>
+
+        {paymentUiState === 'failed' && (
+          <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[0.74rem] text-red-800">
+            <p className="flex items-center gap-1.5 font-semibold">
+              <AlertTriangle size={13} />
+              Payment unsuccessful
+            </p>
+            <p className="mt-0.5 pl-[19px] text-[0.72rem] opacity-90">
+              {paymentErrorMessage || 'Your payment did not go through. Please try again.'}
+            </p>
+          </div>
+        )}
+
+        {paymentUiState === 'timeout' && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[0.74rem] text-amber-800">
+            <p className="flex items-center gap-1.5 font-semibold">
+              <AlertTriangle size={13} />
+              Still confirming your payment
+            </p>
+            <p className="mt-0.5 pl-[19px] text-[0.72rem] opacity-90">
+              This is taking longer than usual. If you completed the payment, tap below to check again.
+            </p>
+            <button
+              type="button"
+              onClick={onCheckPaymentAgain}
+              className="mt-1.5 ml-[19px] text-[0.72rem] font-semibold text-primary underline underline-offset-2"
+            >
+              Check Again
+            </button>
+          </div>
+        )}
 
         {moqViolations.length > 0 && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[0.74rem] text-amber-800">
@@ -304,9 +378,15 @@ const CartInner = ({
           type="submit"
           className="w-full py-2.5 text-[0.76rem]"
           icon={Mail}
-          disabled={isSendingOrder || moqViolations.length > 0}
+          disabled={isSendingOrder || paymentUiState === 'awaiting_payment' || moqViolations.length > 0}
         >
-          {isSendingOrder ? 'Placing Order...' : 'Place Order'}
+          {paymentUiState === 'awaiting_payment'
+            ? 'Complete Payment in Popup…'
+            : isSendingOrder
+            ? 'Placing Order...'
+            : paymentMethod === 'payhere'
+            ? 'Pay & Place Order'
+            : 'Place Order'}
         </Button>
 
         {isWholesaleEligible && (
