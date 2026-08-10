@@ -1235,3 +1235,30 @@ drop trigger if exists trg_notify_low_stock on public.product_inventory;
 create trigger trg_notify_low_stock
   after update on public.product_inventory
   for each row execute function private.notify_low_stock();
+
+-- ----------------------------------------------------------------------------
+-- 19. CART ITEMS — per-account cart persistence
+-- Signed-out carts stay client-only (localStorage, CartContext.jsx) same as
+-- always. Signed-in carts additionally sync here so a customer who adds
+-- items on one device/browser sees the same cart after logging in on
+-- another. Partitioned by brand for the same reason wishlist_items isn't:
+-- Miracle Natural and Laira (brands.js) are separate storefronts with
+-- separate carts, functional-requirements.md §1.0/§1.9.
+-- ----------------------------------------------------------------------------
+create table if not exists public.cart_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  brand text not null check (brand in ('miracle_natural', 'laira')),
+  product_id text not null references public.products (id) on delete cascade,
+  quantity integer not null check (quantity > 0),
+  updated_at timestamptz not null default now(),
+  unique (user_id, brand, product_id)
+);
+
+alter table public.cart_items enable row level security;
+
+drop policy if exists "Users manage their own cart" on public.cart_items;
+create policy "Users manage their own cart"
+  on public.cart_items for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

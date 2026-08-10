@@ -1,9 +1,21 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchProducts } from '@/features/shop/products';
 import { BRANDS } from '@/shared/lib/brands';
 import PRODUCT_IMAGES from '@/features/shop/productImages';
+import { fetchCart, syncCartForBrand } from '@/features/shop/cart';
+import { useAuth } from '@/features/auth/AuthContext';
 
 const CART_STORAGE_KEY = 'miracleNatural.cart';
+// Remembers, per device/browser (not per tab — localStorage, not
+// sessionStorage), which signed-in account's cart the *local* cart currently
+// reflects. Lets the login-merge effect below tell "this account just logged
+// in for the first time on this device, fold in whatever's in the guest
+// cart" apart from "this is just a page reload/second tab for an account
+// that's already synced" — without it, a reload would re-sum an
+// already-synced local cart with the same server cart and double every
+// quantity.
+const CART_SYNCED_USER_KEY = 'miracleNatural.cart.syncedUserId';
+const CART_SYNC_DEBOUNCE_MS = 800;
 const BRAND_VALUES = BRANDS.map((entry) => entry.brand);
 
 // Shared across the whole app (not just Shop.jsx) so that a product's
@@ -54,10 +66,16 @@ const readStoredCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
+  const { user } = useAuth();
   const [productCatalog, setProductCatalog] = useState([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState(null);
   const [cartByBrand, setCartByBrand] = useState(readStoredCart);
+  // Starts as `undefined` (never observed), distinct from `null` (observed,
+  // and signed out) — so the very first render, before we know whether
+  // there's a session at all, never gets mistaken for "just signed out" and
+  // wipes a guest's local cart. See the sign-out branch below.
+  const previousUserIdRef = useRef(undefined);
 
   useEffect(() => {
     let isMounted = true;
@@ -95,6 +113,95 @@ export const CartProvider = ({ children }) => {
       // Non-fatal — cart just won't survive a refresh this session.
     }
   }, [cartByBrand]);
+
+  // Runs on sign-in and sign-out (not on every render — only when the user
+  // id actually changes). See docs at CART_SYNCED_USER_KEY above for why the
+  // sign-in branch needs the localStorage marker, not just a merge-on-login.
+  useEffect(() => {
+    const currentUserId = user?.id || null;
+    const previousUserId = previousUserIdRef.current;
+    previousUserIdRef.current = currentUserId;
+
+    if (currentUserId) {
+      let lastSyncedUserId = null;
+      try {
+        lastSyncedUserId = window.localStorage.getItem(CART_SYNCED_USER_KEY);
+      } catch {
+        // Non-fatal — falls through to treating this as a first sync.
+      }
+      const isFirstSyncForThisAccountOnThisDevice = lastSyncedUserId !== currentUserId;
+
+      fetchCart()
+        .then((serverCartByBrand) => {
+          setCartByBrand((prevLocal) => {
+            if (!isFirstSyncForThisAccountOnThisDevice) {
+              // Local storage already reflects this account's last-synced
+              // cart (a page reload, or a second tab) — just refresh from
+              // the server (in case another device changed it since) rather
+              // than summing local+server again, which would double every
+              // quantity already in both.
+              return serverCartByBrand;
+            }
+            // First time this account has been active on this device —
+            // fold in whatever was added to the cart before logging in
+            // (guest browsing, or a different account's now-cleared cart)
+            // instead of silently discarding it.
+            const merged = emptyCartByBrand();
+            BRAND_VALUES.forEach((brand) => {
+              merged[brand] = { ...serverCartByBrand[brand] };
+              Object.entries(prevLocal[brand] || {}).forEach(([productId, quantity]) => {
+                merged[brand][productId] = (merged[brand][productId] || 0) + quantity;
+              });
+            });
+            return merged;
+          });
+        })
+        .catch(() => {
+          // Best-effort — if the fetch fails, keep whatever's local rather
+          // than blocking shopping on a cart-sync error.
+        })
+        .finally(() => {
+          try {
+            window.localStorage.setItem(CART_SYNCED_USER_KEY, currentUserId);
+          } catch {
+            // Non-fatal.
+          }
+        });
+    } else if (previousUserId) {
+      // A real sign-out (previousUserId was set, meaning we'd actually
+      // observed a signed-in user before) — clear the local cart so the
+      // next person on this device/browser doesn't see the previous
+      // account's items. Nothing is lost: it's saved server-side and will
+      // be restored the next time this account logs in on any device.
+      setCartByBrand(emptyCartByBrand());
+      try {
+        window.localStorage.removeItem(CART_SYNCED_USER_KEY);
+      } catch {
+        // Non-fatal.
+      }
+    }
+  }, [user?.id]);
+
+  // Pushes the local cart to the server whenever it changes while signed
+  // in — covers both the customer's own edits (add/remove/change quantity)
+  // and the merge above (which updates cartByBrand like any other change,
+  // so it's persisted the same way). Debounced so rapid quantity clicks
+  // don't fire a request per click.
+  useEffect(() => {
+    if (!user?.id) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      BRAND_VALUES.forEach((brand) => {
+        syncCartForBrand(brand, cartByBrand[brand] || {}).catch(() => {
+          // Best-effort — a failed background save just means this
+          // device's cart catches up on the next change; nothing to
+          // interrupt the customer's shopping over.
+        });
+      });
+    }, CART_SYNC_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [cartByBrand, user?.id]);
 
   const addToCart = (brand, productId, quantity = 1) => {
     setCartByBrand((prev) => ({
