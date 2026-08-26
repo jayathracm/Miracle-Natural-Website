@@ -25,6 +25,13 @@ import { staggerContainer } from '@/shared/lib/motionVariants';
 import { SHOP_CATEGORY_ORDER, getShopCategory } from '@/features/shop/shopCategories';
 import { BRAND_BY_SLUG } from '@/shared/lib/brands';
 import NotFound from '@/shared/NotFound';
+import {
+  computeEffectiveCartItems,
+  computeMoqViolations,
+  computeBundleSavings,
+  computeEffectiveSubtotal,
+  computeEffectiveGrandTotal,
+} from '@/features/shop/cartPricing';
 
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 const PRODUCTS_PER_PAGE = 12;
@@ -352,18 +359,10 @@ const ShopPage = () => {
     // actually change), so it's safe as a dependency here.
   }, [isWholesaleEligible, cartItems]);
 
-  const effectiveCartItems = useMemo(() => {
-    return cartItems.map((item) => {
-      const pricing = wholesalePricing[item.id];
-      const applies = isWholesaleEligible && pricing && pricing.meetsMoq && pricing.appliedDiscountPercent > 0;
-      return {
-        ...item,
-        effectiveUnitPrice: applies ? pricing.unitPrice : item.price,
-        effectiveLineTotal: applies ? pricing.lineTotal : item.lineTotal,
-        wholesaleDiscountPercent: applies ? pricing.appliedDiscountPercent : 0,
-      };
-    });
-  }, [cartItems, wholesalePricing, isWholesaleEligible]);
+  const effectiveCartItems = useMemo(
+    () => computeEffectiveCartItems(cartItems, wholesalePricing, isWholesaleEligible),
+    [cartItems, wholesalePricing, isWholesaleEligible]
+  );
 
   // MOQ enforcement (functional-requirements §2.2): calculate_b2b_price()
   // already computes meets_moq server-side, but until now nothing actually
@@ -375,12 +374,10 @@ const ShopPage = () => {
   // — the 300ms debounce above means it's essentially always populated by
   // the time a person reaches the checkout button, and treating a
   // still-loading line as a violation would produce a confusing false block.
-  const moqViolations = useMemo(() => {
-    if (!isWholesaleEligible) return [];
-    return cartItems
-      .map((item) => ({ item, pricing: wholesalePricing[item.id] }))
-      .filter(({ pricing }) => pricing && !pricing.meetsMoq);
-  }, [isWholesaleEligible, cartItems, wholesalePricing]);
+  const moqViolations = useMemo(
+    () => computeMoqViolations(cartItems, wholesalePricing, isWholesaleEligible),
+    [isWholesaleEligible, cartItems, wholesalePricing]
+  );
 
   // Bundle price calculations reflected in the cart: if the cart's contents
   // happen to cover a bundle's full item set (at retail prices — bundles
@@ -390,51 +387,18 @@ const ShopPage = () => {
   // first, so overlapping bundles don't double-claim the same units; a
   // "working" quantity map is decremented as each bundle is matched, and
   // whatever's left over is priced normally.
-  const bundleSavings = useMemo(() => {
-    const empty = { matches: [], discount: 0 };
-    if (isWholesaleEligible || bundles.length === 0 || cartItems.length === 0) return empty;
-
-    const available = {};
-    cartItems.forEach((item) => {
-      available[item.id] = item.quantity;
-    });
-
-    const candidates = bundles
-      .filter((bundle) => bundle.items.length > 0)
-      .map((bundle) => ({
-        bundle,
-        individualTotal: bundle.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
-      }))
-      .filter(({ individualTotal }) => individualTotal > 0)
-      .sort((a, b) => (b.individualTotal - b.bundle.price) - (a.individualTotal - a.bundle.price));
-
-    const matches = [];
-    let discount = 0;
-
-    candidates.forEach(({ bundle, individualTotal }) => {
-      const timesAvailable = Math.min(
-        ...bundle.items.map((item) => Math.floor((available[item.product.id] || 0) / item.quantity))
-      );
-      if (timesAvailable > 0) {
-        bundle.items.forEach((item) => {
-          available[item.product.id] -= item.quantity * timesAvailable;
-        });
-        const savingsForMatch = (individualTotal - bundle.price) * timesAvailable;
-        discount += savingsForMatch;
-        matches.push({ bundleId: bundle.id, bundleName: bundle.name, count: timesAvailable, savings: savingsForMatch });
-      }
-    });
-
-    return { matches, discount };
-  }, [bundles, cartItems, isWholesaleEligible]);
+  const bundleSavings = useMemo(
+    () => computeBundleSavings(bundles, cartItems, isWholesaleEligible),
+    [bundles, cartItems, isWholesaleEligible]
+  );
 
   const effectiveSubtotal = useMemo(
-    () => effectiveCartItems.reduce((sum, item) => sum + item.effectiveLineTotal, 0) - bundleSavings.discount,
+    () => computeEffectiveSubtotal(effectiveCartItems, bundleSavings),
     [effectiveCartItems, bundleSavings]
   );
 
   const effectiveGrandTotal = useMemo(
-    () => effectiveSubtotal + shippingCost,
+    () => computeEffectiveGrandTotal(effectiveSubtotal, shippingCost),
     [effectiveSubtotal, shippingCost]
   );
 
