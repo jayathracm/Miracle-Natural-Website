@@ -4,6 +4,7 @@ import { BRANDS } from '@/shared/lib/brands';
 import PRODUCT_IMAGES from '@/features/shop/productImages';
 import { fetchCart, syncCartForBrand } from '@/features/shop/cart';
 import { useAuth } from '@/features/auth/AuthContext';
+import { emptyCartByBrand as emptyCartByBrandFor, parseStoredCart, mergeCartsOnLogin } from '@/features/shop/cartMerge';
 
 const CART_STORAGE_KEY = 'miracleNatural.cart';
 // Which account's cart the local cart currently reflects on this device.
@@ -12,6 +13,8 @@ const CART_STORAGE_KEY = 'miracleNatural.cart';
 const CART_SYNCED_USER_KEY = 'miracleNatural.cart.syncedUserId';
 const CART_SYNC_DEBOUNCE_MS = 800;
 const BRAND_VALUES = BRANDS.map((entry) => entry.brand);
+// Carts saved before the brand split are a flat map — treated as this brand's.
+const LEGACY_CART_BRAND = 'miracle_natural';
 
 // Shared app-wide so any entry point (Shop.jsx, product pages, Ritual
 // Builder) adds to the same cart. One cart per brand (Miracle Natural /
@@ -19,30 +22,12 @@ const BRAND_VALUES = BRANDS.map((entry) => entry.brand);
 // { miracle_natural: {productId: qty}, laira: {...}, leora_wellness: {...} }.
 const CartContext = createContext(undefined);
 
-const emptyCartByBrand = () => Object.fromEntries(BRAND_VALUES.map((brand) => [brand, {}]));
+const emptyCartByBrand = () => emptyCartByBrandFor(BRAND_VALUES);
 
 const readStoredCart = () => {
   try {
     const raw = window.localStorage.getItem(CART_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (!parsed || typeof parsed !== 'object') {
-      return emptyCartByBrand();
-    }
-
-    // Old carts (pre brand-split) are a flat { productId: qty } map.
-    // Treat that as the Miracle Natural cart instead of discarding it.
-    const looksLegacy = !BRAND_VALUES.some((brand) => brand in parsed);
-    if (looksLegacy) {
-      return { ...emptyCartByBrand(), miracle_natural: parsed };
-    }
-
-    const next = emptyCartByBrand();
-    BRAND_VALUES.forEach((brand) => {
-      if (parsed[brand] && typeof parsed[brand] === 'object') {
-        next[brand] = parsed[brand];
-      }
-    });
-    return next;
+    return parseStoredCart(raw, BRAND_VALUES, LEGACY_CART_BRAND);
   } catch {
     return emptyCartByBrand();
   }
@@ -119,14 +104,7 @@ export const CartProvider = ({ children }) => {
             }
             // First time this account's active on this device — merge in
             // whatever was in the cart before logging in.
-            const merged = emptyCartByBrand();
-            BRAND_VALUES.forEach((brand) => {
-              merged[brand] = { ...serverCartByBrand[brand] };
-              Object.entries(prevLocal[brand] || {}).forEach(([productId, quantity]) => {
-                merged[brand][productId] = (merged[brand][productId] || 0) + quantity;
-              });
-            });
-            return merged;
+            return mergeCartsOnLogin(serverCartByBrand, prevLocal, BRAND_VALUES);
           });
         })
         .catch(() => {

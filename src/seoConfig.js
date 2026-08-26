@@ -1,5 +1,4 @@
-// src/seoConfig.js
-// Centralized SEO configuration
+// Centralized SEO config, per route.
 export const SEO_CONFIG = {
   '/': {
     title: 'Leora Wellness | Miracle Natural & Laira',

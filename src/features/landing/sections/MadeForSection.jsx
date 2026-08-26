@@ -29,8 +29,7 @@ const STATS = [
   { value: "ISO & GMP", label: "Certified Manufacturing Standards" },
 ];
 
-// Deliberately asymmetric, full-bleed layout — a break from the repeated
-// pale-card-in-gradient-box pattern used elsewhere on the landing page.
+// Asymmetric, full-bleed layout — a break from the card pattern used elsewhere.
 const MadeForSection = () => {
   return (
     <section id="about" className="relative py-14 sm:py-16 md:py-18 px-4 sm:px-6">
