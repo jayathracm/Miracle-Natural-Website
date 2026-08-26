@@ -17,15 +17,9 @@ const ABOUT_STATS = [
   { icon: Sparkles, label: 'Manufacturing Backbone', value: '25+ Years via LANMIC' },
 ];
 
-// This is the neutral "parent company" landing page at "/" — Leora Wellness
-// (Pvt) Ltd itself, sitting above two consumer-facing sub-brand storefronts
-// (Miracle Natural and Laira), each with their own dedicated shop and cart
-// (functional-requirements.md §1.9: two separate storefronts, one shared
-// products table tagged by brand). Leora Wellness deliberately has no shop
-// of its own — it's the manufacturer/parent company, not a third storefront.
-// This page's job is purely to introduce Leora Wellness and route visitors
-// into whichever brand's storefront they came for — it deliberately does
-// not duplicate either brand's own marketing content.
+// Neutral parent-company landing page at "/" — Leora Wellness itself, with
+// no shop of its own. Just introduces the company and routes visitors into
+// whichever sub-brand storefront they want.
 const Landing = () => {
   const navigate = useNavigate();
 
@@ -149,10 +143,7 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* Leora Wellness Services (B2B) — moved here from the Miracle
-            Natural page, where it didn't belong once Leora Wellness stopped
-            being a shoppable brand: these are Leora Wellness's own services,
-            not something Miracle Natural offers. */}
+        {/* Leora Wellness's own B2B services, not something Miracle Natural offers. */}
         <LeoraServicesSection />
       </SectionBand>
 

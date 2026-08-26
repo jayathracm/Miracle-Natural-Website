@@ -7,10 +7,8 @@ import { fetchAllMessages, updateMessageStatus } from '@/features/messages/messa
 
 const STATUS_OPTIONS = ['new', 'read', 'replied'];
 
-// System-generated low-stock alerts (private.notify_low_stock() in
-// schema.sql) are inserted as ordinary contact_messages rows with this fixed
-// customer_email, so the inbox can recognize and visually distinguish them
-// from real customer messages without needing a new column.
+// Low-stock alerts land in this same inbox as contact_messages rows with
+// this fixed email, so they can be told apart from real customer messages.
 const INVENTORY_ALERT_EMAIL = 'system@inventory.alerts';
 const isInventoryAlert = (message) => message.customer_email === INVENTORY_ALERT_EMAIL;
 
@@ -74,8 +72,7 @@ const AdminMessages = () => {
     const isExpanded = expandedId === message.id;
     setExpandedId(isExpanded ? null : message.id);
 
-    // Reading a "new" message is effectively acknowledging it — mark it
-    // read automatically rather than making the admin do a second click.
+    // Opening a "new" message marks it read automatically.
     if (!isExpanded && message.status === 'new') {
       applyStatusChange(message.id, 'read');
     }

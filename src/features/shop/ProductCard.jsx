@@ -8,14 +8,9 @@ import { fadeUpItem } from '@/shared/lib/motionVariants';
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
-// A single, clean product tile: image, wishlist heart, name/size/price, and
-// a quick add-to-cart button. Deliberately spare — no gradients, no stacked
-// borders, no per-category chrome — so a page of these reads as one calm
-// grid instead of a wall of competing boxes.
-//
-// `view` switches between the grid tile (default) and a horizontal list row
-// — same data, same handlers, just a different layout for the Shop page's
-// grid/list toggle.
+// A single product tile: image, wishlist heart, name/size/price, add-to-cart.
+// `view` switches between the grid tile and a horizontal list row — same
+// data and handlers, just a different layout.
 export const ProductCard = ({ product, category, quantity, isWishlisted, onAddToCart, onToggleWishlist, onOpenDetail, view = 'grid' }) => {
   const hasSale = Boolean(product.compare_at_price) && Number(product.compare_at_price) > Number(product.price);
 

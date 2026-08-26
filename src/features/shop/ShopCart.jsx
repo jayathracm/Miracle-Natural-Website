@@ -11,10 +11,8 @@ import DELIVERY_ZONES from '@/features/addresses/deliveryZones';
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
-// Shared content rendered both inside the always-visible desktop sidebar and
-// the mobile slide-up drawer, so the two never drift out of sync. Switches
-// between a "cart" view (items + live totals) and a "checkout" view (the
-// order form) via local mode state passed down from ShopCart.
+// Shared by the desktop sidebar and mobile drawer so they never drift out
+// of sync. Switches between "cart" and "checkout" views via mode state.
 const CartInner = ({
   mode,
   setMode,
@@ -404,28 +402,21 @@ const CartInner = ({
   </div>
 );
 
-// Public component: a floating cart button (bottom-right on desktop, a
-// bottom bar with a live item count + total on mobile) that opens a drawer
-// with the same CartInner content — a right-side slide-in panel on desktop,
-// a bottom slide-up sheet on mobile. Both sizes share the same `isOpen`/
-// `mode` state, so the cart/checkout view stays consistent if the viewport
-// changes mid-session.
+// Floating cart button (FAB on desktop, bottom bar on mobile) that opens a
+// drawer with CartInner — slide-in panel on desktop, slide-up sheet on
+// mobile, sharing the same isOpen/mode state.
 export const ShopCart = (props) => {
   const { cartItems, totalItems, grandTotal, openSignal } = props;
   const [mode, setMode] = useState('cart');
   const [isOpen, setIsOpen] = useState(false);
 
-  // Lets a parent (e.g. Shop.jsx after a bundle purchase lands items in the
-  // cart) force the drawer open by passing a changing value — a timestamp
-  // works well since it's guaranteed to differ each time.
+  // Lets a parent force the drawer open by passing a changing value (e.g. a timestamp).
   useEffect(() => {
     if (openSignal) setIsOpen(true);
   }, [openSignal]);
 
-  // Reset back to the cart view (not left stranded on the checkout form)
-  // whenever the cart empties out — but don't auto-close the panel. Closing
-  // it here made "Clear"/emptying the cart look like nothing happened,
-  // since the whole drawer would vanish instead of showing "cart is empty."
+  // Back to the cart view when it empties out, without auto-closing the
+  // panel (closing made "Clear" look like nothing happened).
   useEffect(() => {
     if (cartItems.length === 0) {
       setMode('cart');
@@ -436,11 +427,7 @@ export const ShopCart = (props) => {
     <>
       {!isOpen && (
         <>
-          {/* Desktop: round floating action button, always present so the
-              cart stays reachable even when empty. Sits at bottom-24 (not
-              bottom-6) so it stacks above ChatWidget's global bubble, which
-              is present on every page and owns the base bottom-6 right-6
-              corner slot — this FAB only exists on Shop pages. */}
+          {/* Desktop FAB. Sits at bottom-24 so it stacks above ChatWidget's bubble. */}
           <motion.button
             key={`fab-${totalItems}`}
             type="button"
@@ -459,8 +446,7 @@ export const ShopCart = (props) => {
             )}
           </motion.button>
 
-          {/* Mobile: bottom bar with live count + total, only once there's
-              something in the cart to show. */}
+          {/* Mobile bottom bar, only shown once the cart has items. */}
           {cartItems.length > 0 && (
             <motion.button
               key={`bar-${totalItems}`}

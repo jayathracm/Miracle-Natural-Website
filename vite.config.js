@@ -26,11 +26,8 @@ export default defineConfig({
     }
   },
   test: {
-    // 'node' rather than 'jsdom': the first test suites are pure business
-    // logic (no DOM, no React rendering) extracted specifically so they
-    // don't need a browser-like environment. Switch a given test file to
-    // jsdom individually (via a `// @vitest-environment jsdom` comment) if a
-    // later suite actually renders a component/hook.
+    // No DOM needed yet — these are pure logic tests. Switch a file to
+    // jsdom individually if a later test renders a component.
     environment: 'node',
     globals: false,
   },

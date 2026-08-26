@@ -3,11 +3,8 @@ import { Navigate } from 'react-router';
 import { Typography } from '@/shared/ui/Typography';
 import { useAuth } from '@/features/auth/AuthContext';
 
-// Gates a route to signed-in superadmins only. Regular admins are bounced to
-// /account, same as RequireAdmin does for non-admins — the account
-// management page (role assignment) is a rank above ordinary admin access.
-// RLS/RPC-side private.is_superadmin() checks remain the real security
-// boundary; this is just a UX nicety.
+// Gates a route to signed-in superadmins, bouncing regular admins to
+// /account. RLS/RPC-side checks are the real security boundary.
 const RequireSuperAdmin = ({ children }) => {
   const { user, isSuperAdmin, loading, profileLoading } = useAuth();
 

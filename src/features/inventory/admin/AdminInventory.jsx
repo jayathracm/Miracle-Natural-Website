@@ -22,9 +22,8 @@ const slugify = (value) =>
 
 const isRowLow = (row) => !!row && row.stockCount <= row.lowStockThreshold;
 
-// One editable stock+threshold block for a single pool (retail or wholesale)
-// within a product's card. Kept inline (no modal) since this is meant for
-// quick "just restocked, bump the number" adjustments.
+// One editable stock+threshold block for a pool (retail or wholesale).
+// Kept inline for quick "just restocked" adjustments.
 const PoolEditor = ({ label, row, draft, onDraftChange, onSave, isSaving }) => {
   if (!row || !draft) return null;
   const low = isRowLow(row);

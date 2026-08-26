@@ -1,10 +1,6 @@
-// Product name/price/description/ingredients/benefits now live in Supabase
-// (see supabase/schema.sql + supabase/seed.sql, fetched via src/lib/products.js).
-//
-// Images stay bundled locally rather than in Supabase Storage for now — Vite
-// needs statically analyzable imports to bundle/optimize them, and this
-// avoids extra Storage egress on the free tier. This file just maps each
-// product's database id to its local image, so Shop.jsx can merge the two.
+// Product text data lives in Supabase; images stay bundled locally (Vite
+// needs static imports to optimize them, and it avoids Storage egress).
+// Maps each product's database id to its local image.
 import faceWashImg from '@/assets/catalog/golden-glow-face-wash.png';
 import dayGelImg from '@/assets/catalog/golden-glow-day-gel.png';
 import serumImg from '@/assets/catalog/golden-glow-serum-24k.png';

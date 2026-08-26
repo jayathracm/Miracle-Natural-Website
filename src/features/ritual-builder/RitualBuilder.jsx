@@ -54,13 +54,11 @@ const RitualBuilder = () => {
 
   const [productImageById, setProductImageById] = useState({});
 
-  // Only needed to attach a local bundled image to each recommended
-  // product — the Edge Function response itself only returns catalog data,
-  // not the Vite-bundled image asset.
+  // Attaches a local image to each recommended product — the Edge Function
+  // only returns catalog data, not the bundled image asset.
   useEffect(() => {
     let isMounted = true;
-    // Ritual Builder is a Miracle Natural feature (reached from its nav),
-    // so recommendations are scoped to that brand's catalog only.
+    // Ritual Builder is Miracle Natural only, so scope to that catalog.
     fetchProducts('miracle_natural')
       .then((rows) => {
         if (!isMounted) return;
@@ -71,7 +69,7 @@ const RitualBuilder = () => {
         setProductImageById(map);
       })
       .catch(() => {
-        // Non-fatal — recommended products just show a placeholder icon.
+        // Non-fatal — falls back to a placeholder icon.
       });
     return () => {
       isMounted = false;

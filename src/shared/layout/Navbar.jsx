@@ -8,9 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/features/auth/AuthContext';
 import { shopPathForBrand } from '@/shared/lib/brands';
 
-// Kept visually separate from NAV_SECTIONS (below) so the two storefronts —
-// the main reason most visitors are here — read as distinct, button-like
-// entry points rather than blending into plain site-page links.
+// Kept visually separate from NAV_SECTIONS so the two storefronts stand
+// out as their own button-like links.
 const BRAND_LINKS = [
   { to: '/miracle-natural', label: 'Miracle Natural', icon: Leaf },
   { to: '/laira', label: 'Laira', icon: Sparkles },
@@ -29,16 +28,13 @@ const Navbar = () => {
   const { user, isAdmin, isSuperAdmin, isCorporatePartner } = useAuth();
   const accountMenuRef = useRef(null);
 
-  // The global "Shop Now" button routes to whichever brand's shop matches
-  // where the visitor already is (so it's never a surprise which storefront
-  // it opens); anywhere else (Leora Wellness home, About, Account, etc.) it
-  // defaults to Miracle Natural, the only brand with real products today.
-  // Leora Wellness itself has no shop — there's no branch for it here.
+  // "Shop Now" routes to whatever brand's shop matches the current page,
+  // defaulting to Miracle Natural everywhere else.
   const contextualShopPath = location.pathname.startsWith('/laira')
     ? shopPathForBrand('laira')
     : shopPathForBrand('miracle_natural');
 
-  // Optimized scroll handler - only updates when crossing threshold
+  // Only updates state when crossing the threshold, not on every scroll tick.
   const handleScroll = useCallback(() => {
     const shouldBeScrolled = window.scrollY > 50;
     if (shouldBeScrolled !== scrolled) {
@@ -63,8 +59,7 @@ const Navbar = () => {
     };
   }, [isMenuOpen]);
 
-  // Close the desktop account/admin dropdown on outside click — it's not a
-  // full-screen overlay like the mobile menu, so it needs its own listener.
+  // Closes the account dropdown on outside click (not a full overlay like the mobile menu).
   useEffect(() => {
     if (!isAccountMenuOpen) return undefined;
 

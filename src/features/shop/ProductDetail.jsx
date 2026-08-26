@@ -14,11 +14,9 @@ import NotFound from '@/shared/NotFound';
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
-// Dedicated, deep-linkable product page (/:brandSlug/shop/:productId) —
-// separate from the Shop grid's quick-view ProductDetailModal, which stays
-// as-is for card clicks. This page exists so the Ritual Builder, chatbot, or
-// any other surface can link straight to a single product, and so a product
-// has a real, shareable URL.
+// Dedicated, shareable product page — separate from the Shop grid's
+// quick-view modal, so other surfaces (Ritual Builder, chatbot) can link
+// straight to one product.
 const ProductDetail = () => {
   const { brandSlug, productId } = useParams();
   const brandEntry = BRAND_BY_SLUG[brandSlug];

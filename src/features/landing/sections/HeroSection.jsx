@@ -9,15 +9,8 @@ import { ArrowRight } from 'lucide-react';
 import { shopPathForBrand } from '@/shared/lib/brands';
 import miracleNaturalIcon from '@/assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
 
-// import.meta.glob's path is resolved by Vite relative to *this file's own
-// location on disk* — not the `@` alias, and not caught by the reorg's
-// automated import-path rewriter (which only rewrites `from '...'` and
-// `import('...')` specifiers, not string arguments to arbitrary calls like
-// this one). This file lived at src/components/HeroSection.jsx before the
-// feature-based reorg (where '../assets/catalog' correctly reached
-// src/assets/catalog); it now lives two directories deeper at
-// src/features/landing/sections/HeroSection.jsx, so the path needs the
-// matching extra '../../'.
+// import.meta.glob resolves relative to this file's own location, not the
+// @ alias — path has an extra '../../' since this file moved deeper in the reorg.
 const catalogImageModules = import.meta.glob('../../../assets/catalog/*.{png,jpg,jpeg,webp}', {
   eager: true,
   import: 'default',
@@ -37,10 +30,8 @@ const HeroSection = () => {
   const heroRef = useRef(null);
   const [activeSlide, setActiveSlide] = useState(0);
 
-  // Scroll-linked parallax (separate from the blobs' own CSS time-based
-  // drift) — as the hero scrolls out of view, the two blobs and the product
-  // photo panel each move at a slightly different rate, giving the scroll
-  // itself a bit of depth instead of the whole hero moving as one flat block.
+  // Scroll parallax — blobs and the product panel move at slightly
+  // different rates as the hero scrolls out of view.
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
   const blob1Y = useTransform(scrollYProgress, [0, 1], [0, 70]);
   const blob2Y = useTransform(scrollYProgress, [0, 1], [0, -90]);

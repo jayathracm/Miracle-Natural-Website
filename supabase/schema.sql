@@ -1,19 +1,16 @@
 -- ============================================================================
 -- Miracle Natural — Supabase schema
 --
--- How to apply this:
---   1. Go to your Supabase project dashboard -> SQL Editor -> New query.
---   2. Paste the entire contents of this file and run it.
---   3. Then run supabase/seed.sql to load the existing product catalog.
+-- How to apply: paste this whole file into the Supabase SQL Editor and run
+-- it, then run supabase/seed.sql for the product catalog.
 --
--- This creates: profiles, products, orders, order_items, all with Row Level
--- Security enabled so users can only see/modify their own data.
+-- Creates profiles, products, orders, order_items, etc, all with Row Level
+-- Security so users only see/change their own data.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
 -- 1. PROFILES
--- One row per auth.users account, holding the extra fields collected at
--- signup (name, phone, optional default delivery address).
+-- Extra signup fields (name, phone, default address) for each auth user.
 -- ----------------------------------------------------------------------------
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
@@ -38,8 +35,7 @@ create policy "Users can update their own profile"
   on public.profiles for update
   using (auth.uid() = id);
 
--- Automatically create a profile row whenever someone signs up.
--- Reads the extra fields passed in supabase.auth.signUp({ options: { data } }).
+-- Auto-creates a profile row on signup, from the extra signup fields.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -65,13 +61,8 @@ create trigger on_auth_user_created
 
 -- ----------------------------------------------------------------------------
 -- 2. ADMIN HELPER
--- private.is_admin() lives outside the `public` schema on purpose: it's used
--- inside RLS policies throughout this file, but must NOT be directly
--- callable via the PostgREST API (Supabase auto-exposes any function with
--- EXECUTE granted in an exposed schema as /rest/v1/rpc/<name>). Keeping it
--- in `private` (not an exposed schema) avoids that while still working fine
--- inside policies. Defined early, right after profiles, since every table
--- below this point references it in an admin policy.
+-- Kept in `private`, not `public`, so it can't be called directly over the
+-- API — only used inside other policies/functions.
 -- ----------------------------------------------------------------------------
 create schema if not exists private;
 
@@ -93,8 +84,6 @@ grant execute on function private.is_admin() to authenticated, anon;
 
 -- ----------------------------------------------------------------------------
 -- 3. PRODUCTS
--- Mirrors src/data/productCatalog.js. `id` uses the same slugs already used
--- in the frontend so the two can be matched up later.
 -- ----------------------------------------------------------------------------
 create table if not exists public.products (
   id text primary key,
@@ -102,19 +91,14 @@ create table if not exists public.products (
   category text not null,
   size text,
   price numeric(10, 2) not null,
-  -- Optional "was" price. When set (and > price), the storefront shows a
-  -- real SALE badge + a struck-through original price — never fabricated,
-  -- since it's just another product column an admin sets.
+  -- Optional "was" price for a sale badge.
   compare_at_price numeric(10, 2),
   image_url text,
   description text,
   ingredients text,
   benefits text,
   is_active boolean not null default true,
-  -- Which storefront this product belongs to (functional-requirements
-  -- §1.0 — three separate shop pages, one shared products table). All
-  -- existing products are Miracle Natural; Laira and Leora Wellness have
-  -- no products yet, so their shop pages render an empty/coming-soon state.
+  -- Which storefront this belongs to.
   brand text not null default 'miracle_natural'
     check (brand in ('miracle_natural', 'laira', 'leora_wellness')),
   created_at timestamptz not null default now(),
@@ -132,8 +116,7 @@ create policy "Anyone can view active products"
   on public.products for select
   using (is_active = true);
 
--- Admins manage the full catalog, including deactivated products the policy
--- above hides from everyone else.
+-- Admins also see deactivated products.
 drop policy if exists "Admins can view all products" on public.products;
 create policy "Admins can view all products"
   on public.products for select
@@ -149,12 +132,7 @@ create policy "Admins can update products"
   on public.products for update
   using (private.is_admin());
 
--- Permanent delete. Safe against orphaning: order_items/quotation_items/
--- analytics_events.product_id are ON DELETE SET NULL (and already store
--- their own denormalized product_name/unit_price at transaction time),
--- wishlist_items.product_id is ON DELETE CASCADE. bundle_items.product_id
--- has no ON DELETE action (defaults to RESTRICT), so deleting a product
--- still used in a bundle correctly fails until it's removed from the bundle.
+-- Real delete — safe, other tables either null out or cascade product_id.
 drop policy if exists "Admins can delete products" on public.products;
 create policy "Admins can delete products"
   on public.products for delete
@@ -162,8 +140,7 @@ create policy "Admins can delete products"
 
 -- ----------------------------------------------------------------------------
 -- 4. ORDERS
--- user_id is nullable so guest checkout (no account) keeps working exactly
--- like the current email-based Shop checkout.
+-- user_id is nullable so guest checkout still works.
 -- ----------------------------------------------------------------------------
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
@@ -171,9 +148,6 @@ create table if not exists public.orders (
   customer_name text not null,
   customer_email text not null,
   customer_phone text not null,
-  -- Free text, no CHECK constraint — 'cash_on_delivery' and 'payhere' are
-  -- the two values the app actually writes today (see payment_status below
-  -- for the PayHere-specific gateway status).
   payment_method text not null default 'cash_on_delivery',
   delivery_zone text not null check (delivery_zone in ('colombo_1_15', 'island_wide')),
   delivery_address text not null,
@@ -181,14 +155,9 @@ create table if not exists public.orders (
   shipping_cost numeric(10, 2) not null default 0,
   grand_total numeric(10, 2) not null,
   status text not null default 'pending' check (status in ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
-  -- Distinguishes B2B/bulk orders from retail (functional-requirements §2.3).
-  -- Set by the checkout flow itself based on the signed-in user's role at
-  -- the moment of purchase — not something the client can misreport in a
-  -- way that matters, since it's purely a reporting/filtering label, not an
-  -- authorization boundary.
+  -- Retail vs. wholesale/bulk order.
   channel text not null default 'retail' check (channel in ('retail', 'b2b')),
-  -- Which storefront the order was placed through (see products.brand
-  -- above) — same reporting/filtering-label spirit as `channel`.
+  -- Which storefront the order came from.
   brand text not null default 'miracle_natural'
     check (brand in ('miracle_natural', 'laira', 'leora_wellness')),
   notes text,
@@ -221,8 +190,7 @@ create policy "Admins can update orders"
 
 -- ----------------------------------------------------------------------------
 -- 5. ORDER ITEMS
--- product_name/unit_price are captured at order time (denormalized) so an
--- order's history stays accurate even if a product's price changes later.
+-- Name/price copied at order time so history stays accurate later.
 -- ----------------------------------------------------------------------------
 create table if not exists public.order_items (
   id uuid primary key default gen_random_uuid(),
@@ -259,8 +227,7 @@ create policy "Admins can view all order items"
 
 -- ----------------------------------------------------------------------------
 -- 6. ADDRESSES
--- Multiple saved delivery addresses per customer, managed from the profile
--- page. set_default_address() flips the default atomically.
+-- Saved delivery addresses, managed from the profile page.
 -- ----------------------------------------------------------------------------
 create table if not exists public.addresses (
   id uuid primary key default gen_random_uuid(),
@@ -281,6 +248,7 @@ create policy "Users manage their own addresses"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- Flips the default address atomically.
 create or replace function public.set_default_address(target_address_id uuid)
 returns void
 language plpgsql
@@ -350,11 +318,9 @@ create policy "Admins can update messages"
   using (private.is_admin());
 
 -- ----------------------------------------------------------------------------
--- 9. INVENTORY — multi-pool (retail / wholesale) + raw materials
--- Supersedes the original single-pool design. products.stock_count/
--- low_stock_threshold below are left in place (never wired to anything) for
--- history rather than dropped; product_inventory is the authoritative source
--- from here on.
+-- 9. INVENTORY — retail/wholesale pools + raw materials
+-- product_inventory is the real source of stock now; the columns on
+-- products below are old and unused.
 -- ----------------------------------------------------------------------------
 alter table public.products
   add column if not exists stock_count integer not null default 0 check (stock_count >= 0),
@@ -371,8 +337,7 @@ create table if not exists public.product_inventory (
 
 alter table public.product_inventory enable row level security;
 
--- Admin-only end to end — stock levels aren't shown to customers anywhere
--- yet, so there's no public read policy (unlike products).
+-- Admin-only — stock isn't shown to customers.
 drop policy if exists "Admins can view all inventory" on public.product_inventory;
 create policy "Admins can view all inventory"
   on public.product_inventory for select
@@ -388,9 +353,7 @@ create policy "Admins can update inventory"
   on public.product_inventory for update
   using (private.is_admin());
 
--- Auto-provision both pool rows for every new product, so the inventory
--- screen and the decrement function below never have to special-case a
--- missing row.
+-- Creates both pool rows automatically for every new product.
 create or replace function private.ensure_product_inventory_rows()
 returns trigger
 language plpgsql
@@ -410,10 +373,8 @@ create trigger trg_ensure_product_inventory
   after insert on public.products
   for each row execute function private.ensure_product_inventory_rows();
 
--- Raw materials: a separate, simpler inventory track for manufacturing
--- ingredients (not finished products). Admin-managed only, manual stock
--- adjustment — nothing auto-decrements it yet (would need a
--- bill-of-materials linking table, out of scope for this pass).
+-- Raw materials: separate, simpler stock tracking for manufacturing
+-- ingredients. Admin-managed, manual adjustments only.
 create table if not exists public.raw_materials (
   id text primary key,
   name text not null,
@@ -433,26 +394,14 @@ create policy "Admins manage raw materials"
   using (private.is_admin())
   with check (private.is_admin());
 
--- Real-time stock decrement on checkout. Idempotent by design: flips
--- inventory_adjusted false->true and only proceeds if that update actually
--- affected a row, so calling this twice for the same order (e.g. a retried
--- client call) can't double-decrement. Callable by anon/authenticated since
--- guest checkout has no user_id to gate on — safety instead comes from only
--- ever touching the exact order_id passed in, using data checkout itself
--- just inserted.
+-- Decrements stock on checkout. inventory_adjusted flag stops it running
+-- twice for the same order.
 alter table public.orders
   add column if not exists inventory_adjusted boolean not null default false;
 
--- PayHere online payments (docs/payhere-integration-plan.md). payment_status
--- is deliberately separate from the fulfillment `status` column above — a
--- PayHere order can be payment_status='paid' while status is still 'pending'
--- (paid for, but not yet fulfilled). Existing COD orders default to
--- 'not_required' since COD was never "paid" through a gateway in the first
--- place; only PayHere orders actually move through
--- 'pending' -> 'paid'/'failed'/'cancelled'/'chargedback'.
--- payhere_payment_id stores PayHere's own payment id (from the notify_url
--- webhook) so admins can cross-reference the transaction in the PayHere
--- dashboard when handling a refund.
+-- PayHere online payments. payment_status is separate from the fulfillment
+-- `status` column — an order can be paid but not yet shipped. COD orders
+-- default to 'not_required' since there's no gateway involved.
 alter table public.orders
   add column if not exists payment_status text not null default 'not_required'
     check (payment_status in ('not_required', 'pending', 'paid', 'failed', 'cancelled', 'chargedback')),
@@ -473,7 +422,7 @@ begin
     returning channel into v_channel;
 
   if not found or v_channel is null then
-    -- Either already adjusted, or the order id doesn't exist — no-op.
+    -- Already adjusted, or order doesn't exist.
     return;
   end if;
 
@@ -492,8 +441,6 @@ grant execute on function public.decrement_inventory_for_order(uuid) to authenti
 
 -- ----------------------------------------------------------------------------
 -- 10. BUNDLES + BUNDLE_ITEMS
--- Productionizes the bundle cards currently hardcoded in PricingSection.jsx.
--- bundle_items links a bundle to real product rows (with quantities).
 -- ----------------------------------------------------------------------------
 create table if not exists public.bundles (
   id text primary key,
@@ -572,9 +519,8 @@ create policy "Admins can delete bundle items"
 
 -- ----------------------------------------------------------------------------
 -- 11. QUOTATIONS + QUOTATION_ITEMS
--- Corporate Partners request a formal quote for a custom product list
--- rather than placing an order outright (§2.4). Status flow: requested ->
--- quoted -> accepted/declined.
+-- Corporate partners request a formal quote instead of ordering outright.
+-- Status flow: requested -> quoted -> accepted/declined.
 -- ----------------------------------------------------------------------------
 create table if not exists public.quotations (
   id uuid primary key default gen_random_uuid(),
@@ -663,13 +609,8 @@ create policy "Admins can update quotation items"
 
 -- ----------------------------------------------------------------------------
 -- 12. AI_CONVERSATIONS + AI_MESSAGES
--- History storage for the future AI Customer Support Chatbot (§4.2) — the
--- Ritual Builder doesn't use this, it's deliberately single-shot/stateless.
--- No client-facing RLS policies on purpose: only the chatbot's Edge
--- Function (via the service-role key, which bypasses RLS) reads/writes
--- these — the frontend never talks to them directly. RLS stays enabled so
--- they fail closed if that assumption ever changes. An admin read policy is
--- included so a future "review chat logs" screen needs no new migration.
+-- History for the support chatbot. Only the chatbot's Edge Function (via
+-- the service-role key) reads/writes these — no client-facing policies.
 -- ----------------------------------------------------------------------------
 create table if not exists public.ai_conversations (
   id uuid primary key default gen_random_uuid(),
@@ -703,12 +644,8 @@ create policy "Admins can view all ai messages"
 
 -- ----------------------------------------------------------------------------
 -- 13. ANALYTICS_EVENTS
--- Lightweight behavioral event log — write-only from the frontend,
--- admin-only to read. Basic Analytics (§3.5) is computed directly from
--- orders/order_items and does not depend on this table; this feeds richer
--- signal (funnel drop-off, product-view interest) into the AI Business
--- Analytics Assistant (§4.3) later. No tracking calls are wired into the
--- frontend yet.
+-- Write-only event log, admin-only to read. Not used by the analytics
+-- dashboard yet (that reads orders directly) — for future use.
 -- ----------------------------------------------------------------------------
 create table if not exists public.analytics_events (
   id uuid primary key default gen_random_uuid(),
@@ -736,10 +673,7 @@ create index if not exists analytics_events_created_at_idx on public.analytics_e
 create index if not exists analytics_events_event_type_idx on public.analytics_events (event_type);
 
 -- ----------------------------------------------------------------------------
--- 14. B2B PRICING MATRIX ENGINE (functional-requirements §2.2)
--- private.is_corporate_partner() mirrors private.is_admin() exactly — same
--- reasoning, kept out of `public` so it isn't directly callable via
--- PostgREST but works inside RLS policies and SECURITY DEFINER functions.
+-- 14. B2B PRICING MATRIX ENGINE
 -- ----------------------------------------------------------------------------
 create or replace function private.is_corporate_partner()
 returns boolean
@@ -757,18 +691,14 @@ $$;
 revoke all on function private.is_corporate_partner() from public;
 grant execute on function private.is_corporate_partner() to authenticated, anon;
 
--- Per-product minimum order quantity override. Null means "use the global
--- fallback MOQ" (25 — see calculate_b2b_price() below).
+-- Per-product MOQ override. Null falls back to 25.
 alter table public.products
   add column if not exists moq integer;
 
 alter table public.products
   add constraint products_moq_check check (moq is null or moq > 0);
 
--- Admin-configurable quantity breakpoints for wholesale pricing. Global for
--- now (applies to every product) — a per-product override table is a
--- natural later extension if a specific product ever needs its own tier
--- schedule instead of the shared one.
+-- Quantity breakpoints for wholesale discounts. Global for all products.
 create table if not exists public.discount_tiers (
   id uuid primary key default gen_random_uuid(),
   min_quantity integer not null check (min_quantity > 0),
@@ -781,8 +711,7 @@ create table if not exists public.discount_tiers (
 
 alter table public.discount_tiers enable row level security;
 
--- Wholesale pricing is only visible to the roles allowed to see it at all
--- (functional-requirements §0: customers can't view wholesale pricing).
+-- Only admin/corporate partner can see wholesale pricing.
 drop policy if exists "B2B roles can view discount tiers" on public.discount_tiers;
 create policy "B2B roles can view discount tiers"
   on public.discount_tiers for select
@@ -799,27 +728,14 @@ create policy "Admins can update discount tiers"
   using (private.is_admin())
   with check (private.is_admin());
 
--- Unlike products/bundles, nothing references discount_tiers by foreign key,
--- so a real delete is safe here (no orphaning risk).
 drop policy if exists "Admins can delete discount tiers" on public.discount_tiers;
 create policy "Admins can delete discount tiers"
   on public.discount_tiers for delete
   using (private.is_admin());
 
--- Single source of truth for B2B pricing math, so the frontend, a future
--- Edge Function, and admin reporting all get the same answer instead of
--- duplicating this logic in JS.
---
--- SECURITY DEFINER on purpose: discount_tiers' own RLS only lets
--- admin/corporate_partner read it directly, but this function needs to read
--- it regardless of caller in order to compute a real MOQ-not-met/retail-only
--- response for a plain customer too. Eligibility is instead enforced
--- explicitly inside the function body, the same "gate manually, then bypass
--- RLS" pattern is_admin() itself already relies on. Lives in `public` (not
--- `private`) because, unlike is_admin(), this one *is* meant to be called
--- directly by the frontend/Edge Functions via
--- /rest/v1/rpc/calculate_b2b_price — confirmed via the Supabase security
--- advisor that anon/authenticated can call it; that's intentional, not a gap.
+-- Single source of truth for B2B pricing — used by the frontend directly.
+-- SECURITY DEFINER so it can check eligibility itself and still return a
+-- real (non-discounted) response for regular customers.
 create or replace function public.calculate_b2b_price(p_product_id text, p_quantity integer)
 returns table (
   base_price numeric,
@@ -905,19 +821,15 @@ $$;
 revoke all on function public.calculate_b2b_price(text, integer) from public;
 grant execute on function public.calculate_b2b_price(text, integer) to authenticated, anon;
 
--- Starter tiers so there's something to see immediately; fully editable
--- from day one via the discount_tiers table (no admin UI yet).
+-- Starter tiers, editable later.
 insert into public.discount_tiers (min_quantity, discount_percent)
 values (50, 10), (100, 15), (250, 20)
 on conflict (min_quantity) do update set discount_percent = excluded.discount_percent;
 
 -- ----------------------------------------------------------------------------
--- 15. CORPORATE_PARTNER_APPLICATIONS (functional-requirements §2.1/§3.4)
--- Public "apply for a business account" form. Form fields only, no document
--- upload — admin can verify manually offline if something looks off.
--- Applicant already has (or gets, via normal signup) a customer-role
--- account; approving an application is what flips profiles.role to
--- corporate_partner, unlocking wholesale pricing/bulk ordering.
+-- 15. CORPORATE_PARTNER_APPLICATIONS
+-- "Apply for a business account" form. Approving one flips the applicant's
+-- role to corporate_partner.
 -- ----------------------------------------------------------------------------
 create table if not exists public.corporate_partner_applications (
   id uuid primary key default gen_random_uuid(),
@@ -937,11 +849,7 @@ create table if not exists public.corporate_partner_applications (
   updated_at timestamptz not null default now()
 );
 
--- Prevents duplicate concurrent pending applications from the same user,
--- while still allowing a fresh re-application after a rejection (only one
--- row per user can ever be 'pending' at a time). Verified manually: a
--- second pending insert for the same user correctly raises a unique
--- violation.
+-- Only one pending application per user at a time.
 create unique index if not exists corporate_partner_applications_one_pending_per_user
   on public.corporate_partner_applications (user_id)
   where status = 'pending';
@@ -963,20 +871,10 @@ create policy "Admins can view all applications"
   on public.corporate_partner_applications for select
   using (private.is_admin());
 
--- Deliberately no UPDATE/DELETE policies at all, for anyone, admin included.
--- Every status change must go through review_corporate_partner_application()
--- below, which is the only place that (a) stamps reviewed_by/reviewed_at
--- and (b) flips profiles.role atomically with the status change — a raw
--- `.update()` from the client could do one without the other.
+-- No update/delete policy for anyone — status changes only go through
+-- review_corporate_partner_application() below.
 
--- The only supported way to approve/reject an application. SECURITY
--- DEFINER so it can both update this table (which has no client update
--- policy) and flip profiles.role for a *different* user than the caller —
--- both need to bypass RLS, but only after an explicit is_admin() check,
--- same pattern as calculate_b2b_price(). Verified manually: non-admin
--- caller is rejected, a full approve cycle correctly stamps
--- reviewed_by/reviewed_at and flips the applicant's profiles.role, then the
--- test row/role change were reverted.
+-- The only way to approve/reject an application.
 create or replace function public.review_corporate_partner_application(
   p_application_id uuid,
   p_decision text,
@@ -1025,13 +923,9 @@ revoke all on function public.review_corporate_partner_application(uuid, text, t
 grant execute on function public.review_corporate_partner_application(uuid, text, text) to authenticated, anon;
 
 -- ----------------------------------------------------------------------------
--- 16. SUPERADMIN ROLE + ACCOUNT MANAGEMENT (functional-requirements §3.6)
--- Adds a rank above 'admin'. private.is_admin() is redefined to treat
--- superadmin as admin-equivalent (role in ('admin','superadmin')), so every
--- existing admin-gated policy/page above this point automatically extends
--- to superadmins with no other changes. private.is_superadmin() is a
--- separate, stricter check (role = 'superadmin' only) used solely to gate
--- the two RPCs below.
+-- 16. SUPERADMIN ROLE + ACCOUNT MANAGEMENT
+-- A rank above admin. is_admin() treats superadmin as admin too, so
+-- existing admin checks extend automatically.
 -- ----------------------------------------------------------------------------
 alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles
@@ -1067,12 +961,8 @@ $$;
 revoke all on function private.is_superadmin() from public;
 grant execute on function private.is_superadmin() to authenticated, anon;
 
--- Read-only account directory for the /admin/accounts page. profiles has no
--- email column (email lives in auth.users), so this joins the two tables
--- server-side rather than exposing auth.users to the client directly.
--- SECURITY DEFINER, gated internally by private.is_superadmin() — there is
--- no client-facing "select all profiles" RLS policy, same "no direct table
--- access, only through a checked RPC" pattern as section 15 above.
+-- Account directory for /admin/accounts. Joins auth.users for email since
+-- profiles doesn't store it.
 create or replace function public.list_accounts_for_admin(
   p_search text default null,
   p_role_filter text default null
@@ -1113,15 +1003,7 @@ $$;
 revoke all on function public.list_accounts_for_admin(text, text) from public;
 grant execute on function public.list_accounts_for_admin(text, text) to authenticated, anon;
 
--- The only supported way to change someone's role. There is no client
--- update policy on profiles.role for anyone but the row owner, and even
--- that "Users can update their own profile" policy has no WITH CHECK
--- restricting which columns change — this RPC is the actual, controlled
--- write path going forward. Gated by private.is_superadmin(). Refuses to
--- demote the last remaining superadmin so this page can never lock everyone
--- out of itself. Verified manually: non-superadmin callers rejected, a full
--- promote/demote roundtrip on a real account worked and was reverted, and
--- attempting to demote the sole superadmin correctly raised an exception.
+-- The only way to change someone's role. Won't demote the last superadmin.
 create or replace function public.update_account_role(
   p_user_id uuid,
   p_new_role text
@@ -1173,13 +1055,8 @@ revoke all on function public.update_account_role(uuid, text) from public;
 grant execute on function public.update_account_role(uuid, text) to authenticated, anon;
 
 -- ----------------------------------------------------------------------------
--- 17. ADMIN PROFILE VISIBILITY (supports Quotation Requests UI, §2.4)
--- profiles was the one customer-facing table that never got an "Admins can
--- view all X" policy (every other table — orders, applications, quotations,
--- messages — already has one). AdminQuotations.jsx needs to show who
--- requested a quote (name/phone), which means looking up a profiles row
--- that isn't the admin's own — nothing else needed that until now. Read-only,
--- admin-gated, same pattern used everywhere else in this file.
+-- 17. ADMIN PROFILE VISIBILITY
+-- Lets admins look up a customer's profile (e.g. for quotation requests).
 -- ----------------------------------------------------------------------------
 drop policy if exists "Admins can view all profiles" on public.profiles;
 create policy "Admins can view all profiles"
@@ -1187,20 +1064,10 @@ create policy "Admins can view all profiles"
   using (private.is_admin());
 
 -- ----------------------------------------------------------------------------
--- 18. LOW-STOCK ALERTS — surfaced as a system message on /admin/messages
--- Fires only on the *crossing* into low stock (previous stock_count above its
--- threshold, new stock_count at/below it) so a pool that's already low
--- doesn't spam a fresh message on every subsequent order; restocking above
--- the threshold and later dropping low again produces a new alert, which is
--- the desired behavior. Covers both real-time checkout decrements
--- (decrement_inventory_for_order) and manual admin edits (AdminInventory.jsx
--- via updateProductStock) since both go through an UPDATE on this table.
--- SECURITY DEFINER is required because contact_messages' insert policy only
--- allows auth.uid() = user_id, and this system row's user_id is null. Lives
--- in `private` (not `public`), so — unlike calculate_b2b_price() etc — it's
--- never directly callable via RPC, only ever fired by the trigger below.
--- AdminMessages.jsx recognizes customer_email = 'system@inventory.alerts' to
--- show a distinct "Inventory Alert" badge instead of a customer name/email.
+-- 18. LOW-STOCK ALERTS
+-- Posts a system message to /admin/messages when a pool crosses below its
+-- threshold. Only fires on the crossing, not every update, so it doesn't
+-- spam once something's already low.
 -- ----------------------------------------------------------------------------
 create or replace function private.notify_low_stock()
 returns trigger
@@ -1238,12 +1105,8 @@ create trigger trg_notify_low_stock
 
 -- ----------------------------------------------------------------------------
 -- 19. CART ITEMS — per-account cart persistence
--- Signed-out carts stay client-only (localStorage, CartContext.jsx) same as
--- always. Signed-in carts additionally sync here so a customer who adds
--- items on one device/browser sees the same cart after logging in on
--- another. Partitioned by brand for the same reason wishlist_items isn't:
--- Miracle Natural and Laira (brands.js) are separate storefronts with
--- separate carts, functional-requirements.md §1.0/§1.9.
+-- Signed-out carts stay local (localStorage). Signed-in carts also save
+-- here so the cart follows the customer across devices.
 -- ----------------------------------------------------------------------------
 create table if not exists public.cart_items (
   id uuid primary key default gen_random_uuid(),

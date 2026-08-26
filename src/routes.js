@@ -1,7 +1,4 @@
-// Route-level page barrel — the single import surface App.jsx uses to wire up
-// <Route> elements. Kept as a barrel (unlike the old components/index.js and
-// data/index.js, which were removed) because it's genuinely exercised as one
-// clean import line in App.jsx and maps 1:1 onto the route table.
+// Route-level page barrel — the single import App.jsx uses to wire up routes.
 export { default as Landing } from '@/features/landing/Landing';
 export { default as MiracleNatural } from '@/features/landing/MiracleNatural';
 export { default as Laira } from '@/features/landing/Laira';

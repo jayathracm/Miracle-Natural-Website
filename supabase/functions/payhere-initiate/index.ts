@@ -1,25 +1,8 @@
-// Supabase Edge Function: payhere-initiate
-//
-// Computes the authoritative payment amount and the PayHere `hash` for an
-// order, entirely server-side, so neither the charged amount nor the
-// merchant_secret ever has to be trusted from (or exposed to) the browser.
-// See docs/payhere-integration-plan.md §3 and §6 for the full reasoning.
-//
-// No auth required (verify_jwt is off) — guest checkout has no signed-in
-// user, same reasoning as ritual-builder. This function uses the
-// service-role key to read the order back regardless of who's asking,
-// since there's no user JWT to check a guest order against in the first
-// place — the only thing that matters is that the orderId given actually
-// exists and hasn't already been paid.
-//
-// Required secrets: PAYHERE_MERCHANT_ID, PAYHERE_MERCHANT_SECRET
-// (Supabase dashboard -> Edge Functions -> Secrets, or `supabase secrets set`).
-//
-// The hashing/amount-recomputation math itself lives in
-// ../_shared/payhereLogic.js — a plain, dependency-free module with no Deno
-// APIs, so the exact same code is exercised directly by the Vitest unit
-// tests in ../_shared/payhereLogic.test.js instead of two implementations
-// drifting apart. See that file for the hash-formula documentation.
+// payhere-initiate: builds the PayHere payment hash server-side so the
+// amount and merchant secret can't be tampered with from the browser.
+// No auth required — guest checkout has no user to check a JWT against.
+// Needs PAYHERE_MERCHANT_ID and PAYHERE_MERCHANT_SECRET secrets set.
+// Hash math lives in ../_shared/payhereLogic.js (shared with the tests).
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { splitName, recomputeOrderAmount, amountsMatch, computeChargeHash, CURRENCY } from '../_shared/payhereLogic.js';
@@ -96,14 +79,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Order has no items to charge.' }, 400);
   }
 
-  // Authoritative amount: derived from what was actually persisted on the
-  // order at checkout time (order_items.unit_price), never from anything
-  // submitted fresh in this request — so the charged amount can't be swapped
-  // out between "place order" and "pay". Note: this does not re-validate
-  // unit_price itself against live product pricing/discount rules (wholesale
-  // tiers, bundle savings) — that integrity check belongs to the checkout
-  // flow that writes order_items in the first place, not this function; see
-  // docs/payhere-integration-plan.md for the full scope note.
+  // Recompute the amount from the saved order items, not from the request.
   const recomputed = recomputeOrderAmount(
     items.map((item) => ({ unitPrice: item.unit_price, quantity: item.quantity })),
     order.delivery_zone

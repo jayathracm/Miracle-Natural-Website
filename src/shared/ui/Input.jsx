@@ -8,8 +8,7 @@ export const labelFieldClasses =
   "mb-1.5 block text-[0.7rem] font-bold tracking-[0.1em] uppercase text-text-secondary";
 
 // Shared text input used across checkout, account, and admin forms so the
-// field chrome (border, focus ring, label style) stays consistent in one
-// place instead of a repeated `inputClasses`/`labelClasses` string per file.
+// field styling stays consistent in one place.
 export const Input = ({
   id,
   label,

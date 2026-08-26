@@ -5,10 +5,7 @@ import { calculateB2BPrice, fetchDiscountTiers } from '@/features/b2b/b2bPricing
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
-// Only ever rendered for a signed-in corporate_partner/admin — calculate_b2b_price
-// itself would happily return a valid retail-priced response for anyone else
-// (is_eligible: false), but there's no reason to call it or show this panel to
-// a plain customer, so the parent gates on role before mounting this.
+// Only rendered for a signed-in corporate_partner/admin — the parent gates on role.
 export const WholesalePricingPanel = ({ productId, quantity }) => {
   const [pricing, setPricing] = useState(null);
   const [isLoadingPricing, setIsLoadingPricing] = useState(true);
@@ -19,8 +16,7 @@ export const WholesalePricingPanel = ({ productId, quantity }) => {
     fetchDiscountTiers()
       .then((data) => setTiers(data.filter((tier) => tier.is_active)))
       .catch(() => {
-        // Reference-only ladder — if it fails to load, the live calculation
-        // below still works fine on its own.
+        // Reference-only — the live calculation below still works without it.
       });
   }, []);
 
@@ -30,8 +26,7 @@ export const WholesalePricingPanel = ({ productId, quantity }) => {
     setIsLoadingPricing(true);
     setPricingError(null);
 
-    // Small debounce so rapid +/- clicks on the quantity stepper don't fire
-    // a request per click.
+    // Debounced so quick +/- clicks don't fire a request per click.
     const timeoutId = setTimeout(() => {
       calculateB2BPrice(productId, quantity)
         .then(setPricing)

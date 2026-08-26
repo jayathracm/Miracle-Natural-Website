@@ -1,8 +1,6 @@
-// Error handling utilities for consistent error management across the application
+// Shared error-handling helpers.
 
-/**
- * Custom error class for application-specific errors
- */
+// App-specific error with a code and optional details attached.
 export class AppError extends Error {
   constructor(message, code = 'UNKNOWN_ERROR', details = null) {
     super(message);
@@ -13,9 +11,6 @@ export class AppError extends Error {
   }
 }
 
-/**
- * Error codes for different types of errors
- */
 export const ERROR_CODES = {
   NETWORK_ERROR: 'NETWORK_ERROR',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
@@ -26,11 +21,7 @@ export const ERROR_CODES = {
   UNKNOWN_ERROR: 'UNKNOWN_ERROR',
 };
 
-/**
- * Log error to console and optionally to external service
- * @param {Error} error - The error object
- * @param {Object} context - Additional context information
- */
+// Logs an error to the console (dev only) and returns the formatted data.
 export const logError = (error, context = {}) => {
   const errorData = {
     message: error.message,
@@ -42,41 +33,25 @@ export const logError = (error, context = {}) => {
     ...context,
   };
 
-  // Log to console in development
   if (import.meta.env.DEV) {
     console.error('Error logged:', errorData);
   }
 
-  // In production, you would send this to your error tracking service
-  // Example: sendToErrorService(errorData);
+  // Not wired up to a real tracking service yet.
 
   return errorData;
 };
 
-/**
- * Send error to external error tracking service
- * @param {Object} errorData - Error data to send
- */
+// Placeholder for sending errors to a tracking service later.
 export const sendToErrorService = async (errorData) => {
   try {
-    // Example implementation for sending to your error tracking service
-    // await fetch('/api/errors', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(errorData)
-    // });
-
     console.log('Error sent to tracking service:', errorData);
   } catch (loggingError) {
     console.error('Failed to send error to tracking service:', loggingError);
   }
 };
 
-/**
- * Create a user-friendly error message
- * @param {Error} error - The error object
- * @returns {string} - User-friendly error message
- */
+// Turns an error into a message safe to show the user.
 export const getUserFriendlyMessage = (error) => {
   if (error instanceof AppError) {
     switch (error.code) {

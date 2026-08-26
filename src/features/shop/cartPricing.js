@@ -1,24 +1,9 @@
-// Pure cart/bundle pricing math, extracted out of Shop.jsx's useMemo blocks
-// so it can be unit tested in isolation without rendering the whole Shop
-// page (Supabase, routing, auth, and a dozen other dependencies). Shop.jsx
-// still owns the memoization (useMemo wrapping calls into these functions)
-// — nothing about when this recomputes has changed, only where the actual
-// logic lives. See docs/payhere-integration-plan.md-style reasoning: keep
-// business logic testable, keep the component a thin caller.
+// Pure cart/bundle pricing math, pulled out of Shop.jsx so it can be unit
+// tested without rendering the whole page. Shop.jsx still owns the
+// memoization — only the math moved here.
 
-/**
- * Blends server-computed wholesale/tier pricing into each cart line, for
- * wholesale-eligible accounts whose current quantity both meets a product's
- * MOQ and actually earns a discount. Everyone else (not eligible, pricing
- * not loaded yet, under MOQ, or a 0% tier) gets plain retail pricing —
- * exactly what's already shown everywhere else in the app (ProductCard,
- * Ritual Builder, bundle popups), so this is purely a checkout-time
- * adjustment, never a source of a different "real" price.
- *
- * @param {Array<{id: string, price: number, lineTotal: number}>} cartItems
- * @param {Record<string, {unitPrice: number, lineTotal: number, meetsMoq: boolean, appliedDiscountPercent: number}>} wholesalePricing
- * @param {boolean} isWholesaleEligible
- */
+// Applies wholesale pricing to a line if the account is eligible, meets
+// MOQ, and actually gets a discount. Otherwise plain retail price.
 export function computeEffectiveCartItems(cartItems, wholesalePricing, isWholesaleEligible) {
   return cartItems.map((item) => {
     const pricing = wholesalePricing[item.id];
@@ -32,17 +17,8 @@ export function computeEffectiveCartItems(cartItems, wholesalePricing, isWholesa
   });
 }
 
-/**
- * Cart lines that fail their product's minimum order quantity, for
- * wholesale-eligible carts only — retail customers are never subject to
- * MOQ. A line only counts once its pricing has actually loaded
- * (wholesalePricing[item.id] is set); treating a still-loading line as a
- * violation would produce a confusing false block.
- *
- * @param {Array<{id: string}>} cartItems
- * @param {Record<string, {meetsMoq: boolean}>} wholesalePricing
- * @param {boolean} isWholesaleEligible
- */
+// Cart lines under a product's MOQ, wholesale accounts only. Skips lines
+// whose pricing hasn't loaded yet so we don't flag a false violation.
 export function computeMoqViolations(cartItems, wholesalePricing, isWholesaleEligible) {
   if (!isWholesaleEligible) return [];
   return cartItems
@@ -50,20 +26,9 @@ export function computeMoqViolations(cartItems, wholesalePricing, isWholesaleEli
     .filter(({ pricing }) => pricing && !pricing.meetsMoq);
 }
 
-/**
- * Detects which active bundles the cart's contents fully cover (at retail
- * prices — bundles don't stack with wholesale tier pricing) and credits the
- * bundle's flat price instead of the sum of its items' individual prices.
- * Greedy match, most-valuable bundle first (by absolute savings), so
- * overlapping bundles can't double-claim the same units: a "working"
- * quantity map is decremented as each bundle is matched, and whatever's
- * left over after all bundles are considered is priced normally.
- *
- * @param {Array<{id: string, price: number, items: Array<{product: {id: string, price: number}, quantity: number}>}>} bundles
- * @param {Array<{id: string, quantity: number}>} cartItems
- * @param {boolean} isWholesaleEligible
- * @returns {{matches: Array<{bundleId: string, bundleName: string, count: number, savings: number}>, discount: number}}
- */
+// Finds which bundles the cart fully covers and credits the bundle price
+// instead of the items' individual prices. Greedy, most-valuable bundle
+// first, so overlapping bundles can't double-claim the same units.
 export function computeBundleSavings(bundles, cartItems, isWholesaleEligible) {
   const empty = { matches: [], discount: 0 };
   if (isWholesaleEligible || bundles.length === 0 || cartItems.length === 0) return empty;
@@ -102,12 +67,12 @@ export function computeBundleSavings(bundles, cartItems, isWholesaleEligible) {
   return { matches, discount };
 }
 
-/** Sum of effective line totals, minus whatever bundle matching saved. */
+// Line totals minus bundle savings.
 export function computeEffectiveSubtotal(effectiveCartItems, bundleSavings) {
   return effectiveCartItems.reduce((sum, item) => sum + item.effectiveLineTotal, 0) - bundleSavings.discount;
 }
 
-/** Subtotal plus shipping — the actual amount charged/displayed at checkout. */
+// Subtotal plus shipping.
 export function computeEffectiveGrandTotal(effectiveSubtotal, shippingCost) {
   return effectiveSubtotal + shippingCost;
 }

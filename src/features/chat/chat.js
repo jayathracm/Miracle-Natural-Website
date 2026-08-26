@@ -1,25 +1,17 @@
 import { supabase } from '@/shared/lib/supabaseClient';
 
-// A durable per-browser id (not a Supabase auth session) that keys one
-// continuous ai_conversations row server-side (see the chat-support Edge
-// Function) — reused across page loads/reloads so a visitor's chat history
-// persists, but never sent anywhere except that one function. Generated
-// once and cached in localStorage; falls back to a timestamp+random string
-// on the rare browser without crypto.randomUUID().
+// Per-browser id that keys one chat history server-side. Cached in
+// localStorage so a visitor's conversation persists across reloads.
 const CHAT_SESSION_STORAGE_KEY = 'leoraWellness.chatSessionId';
 
-// Whether the first-visit "try the chatbot" nudge (ChatWidget.jsx) has
-// already been shown in this browser. Set the moment the nudge is displayed
-// (not on dismiss) so it never reappears even if the visitor navigates away
-// before interacting with it — a true one-time, first-load nudge.
+// Whether the first-visit chatbot nudge has already been shown here.
 const CHAT_NUDGE_SEEN_STORAGE_KEY = 'leoraWellness.chatNudgeSeen';
 
 export function hasSeenChatNudge() {
   try {
     return window.localStorage.getItem(CHAT_NUDGE_SEEN_STORAGE_KEY) === 'true';
   } catch {
-    // Private browsing / storage disabled — treat as already seen so we
-    // don't risk the nudge popping up on every single page load.
+    // Storage disabled — treat as already seen so it doesn't pop up every load.
     return true;
   }
 }
@@ -28,7 +20,7 @@ export function markChatNudgeSeen() {
   try {
     window.localStorage.setItem(CHAT_NUDGE_SEEN_STORAGE_KEY, 'true');
   } catch {
-    // Ignore — worst case the nudge shows again next time storage works.
+    // Ignore — worst case the nudge shows again next time.
   }
 }
 
@@ -48,19 +40,13 @@ export function getChatSessionId() {
     window.localStorage.setItem(CHAT_SESSION_STORAGE_KEY, created);
     return created;
   } catch {
-    // Private browsing / storage disabled — fall back to an in-memory id,
-    // so chat still works for this page view, just without continuity
-    // across reloads.
+    // Storage disabled — fall back to an in-memory id, works for this page view only.
     return generateId();
   }
 }
 
-/**
- * Sends one chat message to the `chat-support` Edge Function and returns the
- * assistant's reply. Conversation continuity (history, grounding) is all
- * handled server-side, keyed by `sessionId` — this call is stateless from
- * the frontend's point of view.
- */
+// Sends a message to the chat-support Edge Function and returns the reply.
+// History/context is handled server-side, keyed by sessionId.
 export async function sendChatMessage(sessionId, message) {
   const { data, error } = await supabase.functions.invoke('chat-support', {
     body: { sessionId, message },

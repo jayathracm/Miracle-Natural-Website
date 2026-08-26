@@ -36,9 +36,7 @@ import {
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 const PRODUCTS_PER_PAGE = 12;
 
-// PayHere Onsite Checkout — sandbox for now. Flip to false at go-live
-// (docs/payhere-integration-plan.md §10) once the Live merchant account +
-// production PAYHERE_MERCHANT_SECRET are in place.
+// Sandbox for now — flip to false once we go live with a real merchant account.
 const PAYHERE_SANDBOX = true;
 const PAYHERE_POLL_INTERVAL_MS = 2000;
 const PAYHERE_POLL_MAX_ATTEMPTS = 15; // ~30s total
@@ -53,10 +51,8 @@ const PRICE_FILTERS = [
 
 const formatCurrency = (amount) => `LKR ${amount.toLocaleString('en-LK')}`;
 
-// Shared between the desktop sidebar (always visible, lg:block) and the
-// mobile filter drawer (hidden until opened) so the search/category/price
-// controls only ever exist in one place — the two call sites just decide
-// where/whether to render it.
+// Used by both the desktop sidebar and the mobile filter drawer so the
+// search/category/price controls only exist in one place.
 const ShopFilters = ({
   searchTerm,
   onSearchChange,
@@ -167,9 +163,7 @@ const ShopPage = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isSendingOrder, setIsSendingOrder] = useState(false);
   const [showOrderSuccessPopup, setShowOrderSuccessPopup] = useState(false);
-  // PayHere Onsite Checkout state — see docs/payhere-integration-plan.md §7.
-  // 'idle' | 'awaiting_payment' (popup open) | 'confirming' (popup closed,
-  // polling for the webhook-verified result) | 'failed' | 'timeout'.
+  // Online payment state: 'idle' | 'awaiting_payment' | 'confirming' | 'failed' | 'timeout'.
   const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
   const [paymentUiState, setPaymentUiState] = useState('idle');
   const [paymentOrderId, setPaymentOrderId] = useState(null);
@@ -208,13 +202,10 @@ const ShopPage = () => {
     onError: (message) => pushToast('error', message),
   });
 
-  // Arriving here from a bundle's "Buy This Bundle" button (PricingSection)
-  // carries the bundle's real products via navigation state. Add them to
-  // the cart straight away and surface a confirmation — then clear the
-  // state so a refresh or back-navigation doesn't silently re-add them.
-  // The same navigation-state channel is used by ProductDetail.jsx's "View
-  // Cart" action (`{ openCart: true }`) to pop the floating cart drawer open
-  // on arrival, without needing to lift cart-drawer UI state into context.
+  // Coming from a bundle's "Buy This Bundle" button adds those products to
+  // the cart and shows a confirmation, then clears the nav state so a
+  // refresh doesn't re-add them. Also handles ProductDetail's "View Cart"
+  // (openCart) opening the cart drawer on arrival.
   useEffect(() => {
     const state = location.state;
     if (!state) return;
@@ -233,11 +224,8 @@ const ShopPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
-  // Bundle price calculations reflected in the cart: loaded independently of
-  // PricingSection (which may not even be mounted from here), so a cart that
-  // happens to contain a bundle's full set of products — however the items
-  // got there, not just via "Buy This Bundle" — still gets credited with the
-  // bundle's price. See the bundleSavings memo below for the matching logic.
+  // Load bundles so a cart that happens to cover one gets credited, even
+  // if the items weren't added via "Buy This Bundle".
   useEffect(() => {
     let isMounted = true;
     fetchBundles()
@@ -252,11 +240,8 @@ const ShopPage = () => {
     };
   }, []);
 
-  // Loads PayHere's Onsite Checkout SDK once per page load — not tied to
-  // whether the customer has selected "Pay Online" yet, so the popup can
-  // open immediately on submit rather than waiting on a script fetch at
-  // that moment. Safe to call from every Shop.jsx mount (idempotent via the
-  // id check) even though only some visitors will ever use it.
+  // Load PayHere's checkout SDK up front so the popup opens instantly on
+  // submit instead of waiting on a script fetch. Safe to call every mount.
   useEffect(() => {
     if (window.payhere || document.getElementById('payhere-js-sdk')) return;
     const script = document.createElement('script');
@@ -316,17 +301,10 @@ const ShopPage = () => {
     return DELIVERY_ZONES[deliveryZone]?.label || '';
   }, [deliveryZone]);
 
-  // Bulk ordering (functional-requirements §2.3): a Corporate Partner's cart
-  // totals should reflect the same discount-tier math as WholesalePricingPanel
-  // on the product page, not flat retail pricing. Recomputed per line item
-  // (not just the overall quantity) since MOQ/tier eligibility is evaluated
-  // per product, exactly like calculate_b2b_price does server-side. Debounced
-  // so rapid +/- clicks on cart quantities don't fire a request per click.
-  // Deliberately scoped to this page (not lifted into CartContext) — nothing
-  // else in the app reads cartItems, so there's no risk of silently changing
-  // prices shown elsewhere (ProductCard, RitualBuilder, bundle popups all
-  // show retail pricing, which is correct — this is purely a checkout-time
-  // adjustment for eligible accounts).
+  // Corporate Partner carts get wholesale tier pricing per line item,
+  // same math as the product page. Debounced so quick +/- clicks don't
+  // fire a request per click. Kept local to this page — nothing else
+  // reads cartItems, so prices shown elsewhere stay retail.
   useEffect(() => {
     if (!isWholesaleEligible || cartItems.length === 0) {
       setWholesalePricing({});
@@ -364,29 +342,15 @@ const ShopPage = () => {
     [cartItems, wholesalePricing, isWholesaleEligible]
   );
 
-  // MOQ enforcement (functional-requirements §2.2): calculate_b2b_price()
-  // already computes meets_moq server-side, but until now nothing actually
-  // blocked checkout on it — a wholesale-eligible cart under a product's MOQ
-  // just silently fell back to retail pricing instead of being rejected.
-  // Retail (non-wholesale) customers are never subject to MOQ at all, so
-  // this only ever applies for isWholesaleEligible carts. Only counts a line
-  // once its pricing has actually loaded (wholesalePricing[item.id] is set)
-  // — the 300ms debounce above means it's essentially always populated by
-  // the time a person reaches the checkout button, and treating a
-  // still-loading line as a violation would produce a confusing false block.
+  // Blocks checkout on MOQ violations for wholesale carts. Only flags a
+  // line once its pricing has loaded, so a still-loading line doesn't
+  // trigger a false block.
   const moqViolations = useMemo(
     () => computeMoqViolations(cartItems, wholesalePricing, isWholesaleEligible),
     [isWholesaleEligible, cartItems, wholesalePricing]
   );
 
-  // Bundle price calculations reflected in the cart: if the cart's contents
-  // happen to cover a bundle's full item set (at retail prices — bundles
-  // don't stack with wholesale tier pricing, see isWholesaleEligible guard
-  // below), credit the customer the bundle's flat price instead of the sum
-  // of those items' individual prices. Greedy match, most-valuable bundle
-  // first, so overlapping bundles don't double-claim the same units; a
-  // "working" quantity map is decremented as each bundle is matched, and
-  // whatever's left over is priced normally.
+  // Credits the bundle price if the cart covers a bundle's full item set.
   const bundleSavings = useMemo(
     () => computeBundleSavings(bundles, cartItems, isWholesaleEligible),
     [bundles, cartItems, isWholesaleEligible]
@@ -468,9 +432,7 @@ const ShopPage = () => {
     return categoryAndPriceFiltered;
   }, [categoryFilter, priceFilter, searchTerm, sortOption, productCatalog]);
 
-  // Any change to what's being filtered/sorted/searched invalidates whatever
-  // page the user was on — safest to just snap back to page 1 rather than
-  // risk landing on a page past the new (smaller) result set.
+  // Reset to page 1 whenever the filters/search/sort change.
   useEffect(() => {
     setCurrentPage(1);
   }, [categoryFilter, priceFilter, searchTerm, sortOption]);
@@ -483,9 +445,7 @@ const ShopPage = () => {
   }, [filteredProducts, currentPage]);
 
   const pageNumbers = useMemo(() => {
-    // Simple "1 2 3 ... last" style list — with ellipses collapsing the
-    // middle once there are enough pages that showing all of them would be
-    // more clutter than the pagination bar is worth.
+    // "1 2 3 ... last" style list, collapsing the middle with ellipses.
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
@@ -582,10 +542,8 @@ const ShopPage = () => {
 
     setIsSendingOrder(true);
 
-    // There's no dedicated discount column on `orders` — rather than adding
-    // a migration for this, the bundle-savings breakdown is appended to
-    // `notes` so it's still auditable from AdminOrders.jsx, while
-    // `subtotal`/`grand_total` reflect what the customer actually pays.
+    // No discount column on `orders`, so bundle savings go into `notes`
+    // instead — subtotal/grand_total already reflect what's actually paid.
     const bundleNoteLines = bundleSavings.matches.map(
       (match) => `Bundle savings: ${match.bundleName}${match.count > 1 ? ` x${match.count}` : ''} (-${formatCurrency(match.savings)})`
     );
@@ -631,10 +589,7 @@ const ShopPage = () => {
     if (itemsError) {
       pushToast('error', 'Order saved, but item details failed to record. Our team will follow up with you directly.');
     } else {
-      // Best-effort stock decrement — same "DB-first, this part can't sink
-      // the order" spirit as the notification email below. Idempotent
-      // server-side, so there's no real downside to firing it here even if
-      // something upstream retries.
+      // Best-effort — order is already saved either way.
       decrementInventoryForOrder(orderRow.id).catch(() => {});
     }
 
@@ -670,8 +625,7 @@ const ShopPage = () => {
         throw new Error(result?.message || 'Failed to send order email.');
       }
     } catch {
-      // Non-fatal: the order is already saved in the database and will show
-      // up for admins regardless of whether this notification email went out.
+      // Non-fatal — order's already saved, admins will still see it.
     }
 
     setLastPaidWithPayHere(false);
@@ -687,22 +641,17 @@ const ShopPage = () => {
     setIsSendingOrder(false);
   };
 
-  // Resets the online-payment flow back to a fresh state — used after a
-  // successful payment, and available to the checkout UI as a manual
-  // "start over" escape hatch from a failed/timed-out attempt.
+  // Resets the online-payment flow — used after success, and as a manual
+  // "try again" after a failed/timed-out attempt.
   const resetPaymentFlow = () => {
     setPaymentUiState('idle');
     setPaymentOrderId(null);
     setPaymentErrorMessage(null);
   };
 
-  // Polls the order's payment_status until it resolves away from 'pending'
-  // (or the attempt cap is reached). This — not payhere.onCompleted — is
-  // what actually decides whether the customer sees a success screen, since
-  // onCompleted only means the checkout popup finished, not that the
-  // payment was verified. Only payhere-notify (server-side, signature
-  // verified) is allowed to move payment_status off 'pending' in the first
-  // place. See docs/payhere-integration-plan.md §3 and §7.
+  // Polls payment_status until it leaves 'pending' or hits the attempt cap.
+  // This decides the success screen, not payhere.onCompleted — that only
+  // means the popup closed, not that the payment was verified.
   const pollPaymentStatus = (orderId, attempt = 1) => {
     window.setTimeout(async () => {
       const { data, error } = await supabase
@@ -750,13 +699,10 @@ const ShopPage = () => {
     }, PAYHERE_POLL_INTERVAL_MS);
   };
 
-  // Mirrors handleEmailOrder's validation + order/order_items insert
-  // deliberately duplicated rather than shared, so the already-working COD
-  // path above can't be affected by changes made here. The two diverge
-  // after the insert: COD decrements inventory and emails immediately
-  // (an order is "committed" the moment it's placed); PayHere does neither
-  // here — both happen server-side in payhere-notify, and only once the
-  // payment is actually verified as successful, never before.
+  // Mirrors handleEmailOrder's validation and order insert, deliberately
+  // duplicated so the working COD path can't be affected by changes here.
+  // Unlike COD, this doesn't decrement stock or email — that happens
+  // server-side in payhere-notify, only once payment is verified.
   const handlePayHereOrder = async () => {
     if (cartItems.length === 0) {
       pushToast('error', 'Your shopping cart is empty. Add at least one product to continue.');
@@ -804,10 +750,8 @@ const ShopPage = () => {
     try {
       let orderId = paymentOrderId;
 
-      // Only create a new order row on a fresh attempt — retrying after a
-      // failed/cancelled/dismissed payment reuses the same order instead of
-      // writing a duplicate one, since payhere-initiate allows re-initiating
-      // payment on any order that isn't already 'paid'.
+      // Retrying after a failed/cancelled payment reuses the same order
+      // instead of creating a duplicate.
       if (!orderId) {
         const bundleNoteLines = bundleSavings.matches.map(
           (match) => `Bundle savings: ${match.bundleName}${match.count > 1 ? ` x${match.count}` : ''} (-${formatCurrency(match.savings)})`
@@ -876,16 +820,13 @@ const ShopPage = () => {
       setPaymentUiState('awaiting_payment');
 
       window.payhere.onCompleted = function onCompleted() {
-        // The popup finished — that does NOT mean the payment succeeded.
-        // Show a confirming state and poll for the verified result instead
-        // of trusting this callback directly.
+        // Popup finished — doesn't mean payment succeeded. Poll for the real result.
         setPaymentUiState('confirming');
         pollPaymentStatus(orderId);
       };
 
       window.payhere.onDismissed = function onDismissed() {
-        // Customer closed the popup without paying — order stays 'pending',
-        // cart is preserved, they can retry from the same form.
+        // Closed without paying — order stays pending, they can retry.
         setPaymentUiState('idle');
       };
 
@@ -927,13 +868,9 @@ const ShopPage = () => {
     }
   };
 
-  // Quotation Requests (§2.4): an alternative to placing an order outright —
-  // Corporate Partner/admin only (enforced by RLS on the insert). Deliberately
-  // reuses whatever's in the cart as the "custom product list" rather than
-  // building a separate item picker from scratch, and deliberately doesn't
-  // send price data — quotations.quoted_unit_price starts null and is filled
-  // in by an admin later, so the retail/wholesale numbers in the cart aren't
-  // relevant here, only product + quantity.
+  // Alternative to placing an order — Corporate Partner/admin only (RLS
+  // enforced). Reuses the cart as the product list, no price sent since an
+  // admin fills in quoted pricing later.
   const handleRequestQuote = async () => {
     if (cartItems.length === 0) {
       pushToast('error', 'Your cart is empty. Add at least one product before requesting a quote.');
@@ -1017,10 +954,8 @@ const ShopPage = () => {
     setSearchTerm('');
   };
 
-  // Invalid brand segment in the URL (not one of miracle-natural/laira/
-  // leora-wellness) — all hooks above are safe to call with an undefined
-  // brand (they just resolve to empty carts/catalogs), so it's fine to bail
-  // out here rather than needing an early return before them.
+  // Invalid brand in the URL — safe to bail here since all hooks above
+  // handle an undefined brand fine.
   if (!brandEntry) {
     return <NotFound />;
   }
@@ -1074,10 +1009,7 @@ const ShopPage = () => {
               </aside>
 
               <section className="flex-1 min-w-0 w-full">
-                {/* Mobile only: filters start collapsed behind this toggle
-                    instead of taking up a full screen of vertical space
-                    before any products are visible — opens the bottom-sheet
-                    drawer below. Desktop keeps the always-visible sidebar. */}
+                {/* Mobile: filters collapsed behind this toggle, opens the drawer below. */}
                 <button
                   type="button"
                   onClick={() => setIsMobileFiltersOpen(true)}

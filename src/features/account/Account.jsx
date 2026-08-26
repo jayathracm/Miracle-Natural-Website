@@ -32,10 +32,8 @@ const primaryLinkClasses = "inline-flex items-center justify-center gap-2 px-5 p
 const ghostButtonClasses = "inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-[var(--color-border-medium)] text-foreground text-[0.76rem] font-semibold tracking-[0.1em] uppercase hover:bg-[var(--color-hover-overlay)] transition-colors";
 const ghostLinkClasses = "inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-[var(--color-border-medium)] text-foreground text-[0.76rem] font-semibold tracking-[0.1em] uppercase hover:bg-[var(--color-hover-overlay)] transition-colors";
 
-// Amazon-style "hub" pattern: the account page opens on a grid of feature
-// cards rather than dropping straight into a form. Each card carries a live
-// count where it makes sense (orders placed, addresses saved, etc.) so the
-// hub itself is useful at a glance, not just a menu.
+// Account page opens on a grid of feature cards, each with a live count
+// where it makes sense, rather than dropping straight into a form.
 const HUB_ITEMS = [
   {
     id: 'details',
@@ -105,16 +103,13 @@ const Account = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [counts, setCounts] = useState({});
 
-  // Quote Requests only makes sense for accounts that can actually request
-  // wholesale pricing — hidden for plain customers rather than shown as a
-  // permanently-empty tile.
+  // Quote Requests hidden for plain customers, not just shown empty.
   const isWholesaleEligible = isCorporatePartner || isAdmin;
   const visibleHubItems = HUB_ITEMS.filter((item) => !item.wholesaleOnly || isWholesaleEligible);
 
   const activeItem = visibleHubItems.find((item) => item.id === searchParams.get('tab')) || null;
 
-  // Lightweight counts for the hub cards — only fetched on the overview
-  // (each section already loads its own full data once it's opened).
+  // Counts for the hub cards, only fetched on the overview screen.
   useEffect(() => {
     if (activeItem || !user) return undefined;
     let isMounted = true;
@@ -149,8 +144,7 @@ const Account = () => {
     );
   }
 
-  // Signed out (or awaiting email confirmation): keep the original compact
-  // centered card rather than showing an empty hub.
+  // Signed out — show a compact card instead of an empty hub.
   if (!user) {
     return (
       <div className="pt-30 sm:pt-32 md:pt-34 pb-14 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8 min-h-screen">

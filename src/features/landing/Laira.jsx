@@ -8,11 +8,7 @@ import { Button } from '@/shared/ui/Button';
 import { shopPathForBrand } from '@/shared/lib/brands';
 import lairaWordmark from '@/assets/branding/laira-wordmark-transparent.png';
 
-// Laira is the second Leora Wellness sub-brand tab — deliberately a minimal
-// "work in progress" placeholder for now (per explicit scope decision: no
-// real product content yet). It still shares the Navbar's Shop link so
-// visitors aren't stuck, and links back to Miracle Natural for anyone who
-// landed here looking for the brand that's actually live today.
+// Laira's a "coming soon" placeholder for now — no real product content yet.
 const Laira = () => {
   const navigate = useNavigate();
 

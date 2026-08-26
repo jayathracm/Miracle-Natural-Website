@@ -1,9 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 
-// Subtle 3D perspective tilt on hover, following the pointer — same
-// mouse-tracking idea as the magnetic hover effect on Button.jsx, applied as
-// a rotation instead of a translation. Spread the returned handlers/style
-// onto the card element.
+// Subtle 3D tilt on hover that follows the pointer. Spread the returned
+// handlers/style onto the card element.
 export function useTilt({ max = 7, scale = 1.02 } = {}) {
   const ref = useRef(null);
   const [style, setStyle] = useState({});

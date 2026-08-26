@@ -8,10 +8,8 @@ import bodyLotionImg from '@/assets/lifestyle/body-care-lifestyle.jpeg';
 import faceWashImg from '@/assets/lifestyle/face-care-lifestyle.jpeg';
 import serumImg from '@/assets/lifestyle/treatment-lifestyle.jpeg';
 
-// Each card now represents a product category rather than one specific SKU
-// (the photos are lifestyle shots, not packaging shots — see HeroSection's
-// lifestyle assets), so the copy stays deliberately general to the range of
-// products within that category rather than describing a single item.
+// Each card represents a product category, not one specific SKU — lifestyle
+// photos, general copy for the whole category.
 const products = [
   {
     title: 'Hair Care Essentials',

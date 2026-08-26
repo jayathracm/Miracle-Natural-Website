@@ -17,11 +17,8 @@ const StatusMessage = ({ status }) => {
   );
 };
 
-// Account details, email, and password are three independent forms/requests
-// on purpose — updating name/phone (profiles table), changing email
-// (Supabase Auth, triggers a confirmation flow), and changing password
-// (Supabase Auth) are unrelated operations with different failure modes, so
-// each gets its own submit button and its own status message.
+// Three independent forms on purpose — name/phone, email, and password are
+// unrelated operations with different failure modes, each with its own submit and status.
 const AccountDetailsSection = () => {
   const { user, profile, refreshProfile } = useAuth();
 

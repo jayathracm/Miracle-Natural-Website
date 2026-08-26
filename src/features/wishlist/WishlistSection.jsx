@@ -19,9 +19,7 @@ const WishlistSection = () => {
   const loadWishlist = () => {
     setIsLoading(true);
     return fetchWishlist()
-      // A wishlisted product that's been deactivated comes back with
-      // `products: null` (RLS only exposes active products) — drop those
-      // rather than render a card with no data.
+      // Deactivated products come back as `products: null` — drop those.
       .then((rows) => setItems(rows.filter((row) => row.products)))
       .catch((fetchError) => setError(fetchError.message || 'Could not load your wishlist.'))
       .finally(() => setIsLoading(false));

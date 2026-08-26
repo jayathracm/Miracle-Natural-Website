@@ -88,12 +88,7 @@ const QnASection = () => {
   const [openIndex, setOpenIndex] = useState(0);
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // FAQPage structured data (schema.org / Google's FAQ rich-result format) —
-  // lets search engines (and AI answer engines that read JSON-LD) surface
-  // these Q&As directly, rather than only being readable inside the
-  // accordion UI. Injected/removed with the section itself rather than
-  // living in useSEO, since it's tied to this specific content, not a
-  // per-route <head> tag.
+  // FAQPage structured data so search engines can surface these Q&As directly.
   useEffect(() => {
     const script = document.createElement('script');
     script.type = 'application/ld+json';

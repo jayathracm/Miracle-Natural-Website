@@ -51,9 +51,7 @@ const ContactSection = () => {
 
     setIsSending(true);
 
-    // Save to the database first (source of truth, visible to admins) —
-    // the notification email below is best-effort on top, same pattern as
-    // checkout in Shop.jsx.
+    // Save to the DB first, the notification email is best-effort on top.
     try {
       await sendMessage({
         userId: user.id,

@@ -9,14 +9,10 @@ import { getChatSessionId, hasSeenChatNudge, markChatNudgeSeen, sendChatMessage 
 const GREETING =
   "Hi! I'm the Leora Wellness assistant. Ask me about our products, ingredients, shipping, or returns.";
 
-// Matches the /:brandSlug/shop and /:brandSlug/shop/:productId routes
-// (App.jsx) — the only pages where ShopCart's desktop cart FAB is mounted
-// and stacks in the same bottom-right corner at bottom-24.
+// Matches shop routes, where ShopCart's cart FAB also sits at bottom-24.
 const SHOP_ROUTE_PATTERN = /^\/[^/]+\/shop(\/|$)/;
 
-// First-visit nudge timing: wait a beat after load so it doesn't compete
-// with the page's own entrance animations, then auto-dismiss if ignored so
-// it doesn't linger and become annoying.
+// Wait a beat before showing the nudge, then auto-dismiss if ignored.
 const NUDGE_SHOW_DELAY_MS = 1800;
 const NUDGE_AUTO_HIDE_MS = 9000;
 
@@ -39,7 +35,7 @@ const ChatWidget = () => {
     sessionIdRef.current = getChatSessionId();
   }, []);
 
-  // First-time-load nudge: only ever shown once per browser (see chat.js).
+  // Shown once per browser — see chat.js.
   useEffect(() => {
     if (hasSeenChatNudge()) return undefined;
 
@@ -55,7 +51,7 @@ const ChatWidget = () => {
     };
   }, []);
 
-  // Opening the chat (however it happens) always retires the nudge.
+  // Opening the chat always retires the nudge.
   useEffect(() => {
     if (isOpen) {
       setShowNudge(false);
@@ -144,12 +140,7 @@ const ChatWidget = () => {
                     </span>
                   </span>
                 </span>
-                {/* Pointer, aimed toward the bottom-right corner where the
-                    chat bubble lives. On desktop, the vertical offset shifts
-                    up (lg:bottom-44 instead of lg:bottom-24) only on Shop
-                    routes, where ShopCart's desktop cart FAB stacks in that
-                    same corner — everywhere else it sits tight against the
-                    chat bubble instead of leaving a gap. */}
+                {/* Pointer toward the chat bubble; shifts up on Shop routes to clear the cart FAB. */}
                 <span className="absolute -bottom-1.5 right-7 h-3 w-3 rotate-45 bg-white border-b border-r border-[var(--color-border-light)]" />
               </button>
 

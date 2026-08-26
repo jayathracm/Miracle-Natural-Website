@@ -1,23 +1,8 @@
-// Supabase Edge Function: payhere-notify
-//
-// PayHere's server-to-server webhook (the notify_url passed to
-// payhere.startPayment). Verifies the md5sig checksum before trusting
-// anything in the payload, then updates the order's payment_status
-// accordingly. See docs/payhere-integration-plan.md §3 and §6.
-//
-// No auth required (verify_jwt is off) — this is PayHere's own backend
-// calling us directly with no Supabase session/JWT at all, same reasoning
-// as payhere-initiate and ritual-builder. Do NOT re-enable verify_jwt here
-// — PayHere's callback would get a 401 and the order would silently never
-// update.
-//
-// Required secret: PAYHERE_MERCHANT_SECRET (same one payhere-initiate uses).
-// Optional secret: ORDER_NOTIFICATION_EMAIL (defaults to dinisha@lanmic.com,
-// matching Shop.jsx's existing COD notification fallback).
-//
-// Signature verification and status-code mapping live in
-// ../_shared/payhereLogic.js — see that file and its Vitest tests for the
-// security-critical math itself; everything below is just request/DB I/O.
+// payhere-notify: PayHere's payment webhook. Checks the md5sig before
+// trusting anything, then updates the order's payment_status.
+// Keep verify_jwt off — PayHere calls this with no Supabase session, so
+// turning JWT checks on would just 401 every real notification.
+// Needs PAYHERE_MERCHANT_SECRET. ORDER_NOTIFICATION_EMAIL is optional.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { verifyNotifySignature, mapStatusCode } from '../_shared/payhereLogic.js';
@@ -89,8 +74,7 @@ Deno.serve(async (req) => {
   const merchantSecret = Deno.env.get('PAYHERE_MERCHANT_SECRET');
   if (!merchantSecret) {
     console.error('payhere-notify: missing PAYHERE_MERCHANT_SECRET secret.');
-    // Still 200 — this is a config issue on our end, not something PayHere
-    // can fix by retrying, so there's no point letting it retry-storm us.
+    // Still 200 so PayHere doesn't retry-storm us over a config issue.
     return new Response('OK', { status: 200 });
   }
 
@@ -127,11 +111,7 @@ Deno.serve(async (req) => {
   });
 
   if (!isVerified) {
-    // Signature mismatch — this notification did not genuinely come from
-    // PayHere (or the params were altered in transit). Do NOT touch the
-    // order. Still respond 200 so this doesn't trigger a PayHere retry
-    // storm — a real, correctly-signed notification (if any) will still
-    // come through and be processed normally.
+    // Bad signature — don't touch the order. Still 200 to avoid retries.
     console.error('payhere-notify: signature mismatch for order', orderId);
     return new Response('OK', { status: 200 });
   }
@@ -149,10 +129,7 @@ Deno.serve(async (req) => {
     .eq('id', orderId);
 
   if (paymentStatus === 'paid') {
-    // Guards against re-running inventory decrement / the confirmation email
-    // if PayHere retries an already-processed success notification — a
-    // second 'paid' notification for an order that's already 'paid' simply
-    // matches zero rows here instead of re-triggering side effects.
+    // Stops a retried notification from double-decrementing stock/emailing twice.
     updateQuery = updateQuery.neq('payment_status', 'paid');
   }
 
@@ -164,8 +141,7 @@ Deno.serve(async (req) => {
   }
 
   if (!updatedOrder) {
-    // Order not found, or (for 'paid') this was a duplicate/retried
-    // notification for an order already marked paid — nothing more to do.
+    // Not found, or a duplicate notification — nothing to do.
     return new Response('OK', { status: 200 });
   }
 

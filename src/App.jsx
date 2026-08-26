@@ -34,15 +34,8 @@ import { getLenisInstance } from '@/shared/lib/lenisInstance';
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
   useEffect(() => {
-    // MainLayout runs a Lenis smooth-scroll instance on desktop that persists
-    // across route changes and keeps its own internal scroll target. Calling
-    // window.scrollTo() alone doesn't tell Lenis about the reset — on its
-    // next animation frame it reasserts its stale target from the previous
-    // page and snaps the viewport back, which is what showed up as landing
-    // "on random places" after clicking a link. Route the reset through
-    // Lenis (when active) so both the native scroll and Lenis's internal
-    // state agree; fall back to native APIs on mobile/touch, where Lenis is
-    // never initialized.
+    // Route the scroll reset through Lenis when it's active, or it
+    // reasserts its stale scroll target next frame and snaps back.
     const lenis = getLenisInstance();
 
     if (hash) {
@@ -59,7 +52,7 @@ function ScrollToTop() {
       };
 
       if (!scrollToHash()) {
-        // If the section is not mounted yet, try once after paint.
+        // Section not mounted yet — try again after paint.
         window.requestAnimationFrame(scrollToHash);
       }
       return;
@@ -87,11 +80,7 @@ const Redirect = ({ to }) => {
   return null;
 };
 
-// The shop used to live at the site root (/shop, /shop/:productId) back when
-// there was only one storefront. Now that Miracle Natural, Laira, and Leora
-// Wellness each have their own shop under /:brandSlug/shop, old bookmarks/
-// links to the bare /shop paths redirect to Miracle Natural's — the only
-// brand with real products today — rather than 404ing outright.
+// Old bare /shop links redirect to Miracle Natural's shop instead of 404ing.
 const RedirectLegacyShopProduct = () => {
   const { productId } = useParams();
   const navigate = useNavigate();

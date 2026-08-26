@@ -1,7 +1,5 @@
-// Shared between Shop.jsx (filter dropdown + counts) and ProductDetail.jsx
-// (category label above the product name) so the two surfaces never drift
-// out of sync on which raw `products.category` values map to which
-// customer-facing shop category.
+// Shared between Shop.jsx and ProductDetail.jsx so both agree on which raw
+// `products.category` values map to which customer-facing category.
 export const SHOP_CATEGORY_ORDER = ['Face Care', 'Body Care', 'Hair Care', 'Lip Care'];
 
 export const SHOP_CATEGORY_MAP = {

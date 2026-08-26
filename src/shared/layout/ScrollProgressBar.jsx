@@ -2,9 +2,7 @@ import React from 'react';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion, useScroll, useSpring } from 'framer-motion';
 
-// A slim fixed bar that fills left-to-right as the page is scrolled —
-// sits above the navbar (which is z-50) so it's always visible as a
-// constant, gentle sense of progress through the page.
+// A slim bar that fills left-to-right as the page scrolls, above the navbar.
 const ScrollProgressBar = () => {
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {

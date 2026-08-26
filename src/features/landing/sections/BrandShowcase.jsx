@@ -8,15 +8,10 @@ import { cn } from '@/shared/lib/utils';
 import miracleNaturalIcon from '@/assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
 import lairaWordmark from '@/assets/branding/laira-wordmark-transparent.png';
 
-// Modeled on Call of Duty: Modern Warfare's mode-select screen — full-width
-// vertical panels, equal width at rest, where the hovered (or tapped) one
-// expands and sharpens while the other shrinks and blurs, revealing extra
-// detail that isn't shown in the resting state. Two panels, one per
-// consumer-facing sub-brand — Leora Wellness itself has no shop of its own
-// (it's the parent company these two brands are built under), so it isn't
-// one of the tiles. Miracle Natural is the default/"pinned" panel since it's
-// the only storefront with real products today (functional-requirements.md
-// §1.9).
+// Mode-select style panels — equal width at rest, the hovered/tapped one
+// expands and sharpens while the other shrinks and blurs. One tile per
+// consumer-facing sub-brand (Leora Wellness itself has no shop, so it's
+// not a tile).
 const TILES = [
   {
     brand: 'miracle_natural',
@@ -48,9 +43,7 @@ const ICON_SPRING = { type: 'spring', stiffness: 110, damping: 14 };
 const CONTENT_SPRING = { type: 'spring', stiffness: 280, damping: 26 };
 
 const BrandTile = ({ tile, isActive, isDimmed, onHoverStart, onToggle, navigate }) => {
-  // Cursor-tracked spotlight + parallax: the background icon drifts a few
-  // pixels toward the pointer and a soft radial highlight follows it, so the
-  // expanded panel feels alive rather than just a static resize.
+  // Cursor-tracked spotlight + parallax on the expanded panel.
   const [spot, setSpot] = useState({ x: 50, y: 50 });
 
   const handleMouseMove = (event) => {
@@ -84,8 +77,7 @@ const BrandTile = ({ tile, isActive, isDimmed, onHoverStart, onToggle, navigate 
         style={{ background: tile.gradient }}
       />
 
-      {/* Cursor-follow spotlight — only present on the expanded tile, a soft
-          glow that tracks the pointer for a bit of depth/interactivity. */}
+      {/* Cursor-follow spotlight, expanded tile only. */}
       {isActive && (
         <div
           className="pointer-events-none absolute inset-0 transition-opacity duration-300"
@@ -93,10 +85,7 @@ const BrandTile = ({ tile, isActive, isDimmed, onHoverStart, onToggle, navigate 
         />
       )}
 
-      {/* Oversized background texture, in the site's own cream tone (not the
-          brand's logo) so the dark tiles still tie back to the page's
-          palette. It "unfurls" — rotated and small at rest, straightening,
-          growing, and drifting toward the cursor on hover. */}
+      {/* Background icon "unfurls" toward the cursor on hover. */}
       <div className="pointer-events-none absolute inset-x-0 top-[6%] bottom-[38%] flex items-center justify-center">
         <motion.div
           animate={{ x: parallaxX, y: parallaxY, rotate: isActive ? 0 : -10, scale: isActive ? 1.06 : 1 }}
@@ -118,11 +107,7 @@ const BrandTile = ({ tile, isActive, isDimmed, onHoverStart, onToggle, navigate 
       <div className="relative z-10 flex h-full flex-col justify-end p-5 sm:p-7 md:p-9">
         <img src={tile.icon} alt="" aria-hidden="true" className={cn('mb-3 w-auto object-contain', tile.iconClassName)} />
 
-        {/* whitespace-nowrap means this only fits once each tile has real
-            room to breathe — on mobile all three sit in an equal three-way
-            split (~1/3 of the viewport each), too narrow for "Miracle
-            Natural"/"Leora Wellness" to render on one line without
-            overflowing, so the label is icon-only below the sm breakpoint. */}
+        {/* Icon-only below sm — full labels don't fit in the mobile three-way split. */}
         <p className="hidden sm:block text-[0.95rem] md:text-[1.05rem] font-bold uppercase tracking-[0.14em] text-white whitespace-nowrap">
           {tile.label}
         </p>
@@ -176,9 +161,7 @@ const BrandShowcase = () => {
 
   const activeBrand = hoveredBrand || pinnedBrand;
 
-  // Tapping outside the whole showcase (not just off a tile) collapses
-  // everything back to the equal-width resting state — the touch equivalent
-  // of the mouse simply wandering off the section entirely.
+  // Tapping outside the showcase collapses everything back to resting state.
   useEffect(() => {
     const handleOutsideClick = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
@@ -202,9 +185,7 @@ const BrandShowcase = () => {
         </h2>
       </div>
 
-      {/* Full-bleed: breaks out of the page's normal max-width container so
-          the three panels genuinely span the entire viewport width, edge to
-          edge, like the reference UI. */}
+      {/* Full-bleed: breaks out of the page's max-width container. */}
       <div
         ref={containerRef}
         onMouseLeave={() => setHoveredBrand(null)}
@@ -212,8 +193,7 @@ const BrandShowcase = () => {
       >
         {TILES.map((tile) => {
           const isActive = activeBrand === tile.brand;
-          // Only dim/blur a tile once some *other* tile is active — at rest
-          // (nothing hovered/pinned) all three stay fully sharp and equal.
+          // Only dim a tile once another one is active.
           const isDimmed = activeBrand !== null && !isActive;
           return (
             <BrandTile

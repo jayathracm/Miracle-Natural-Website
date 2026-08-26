@@ -10,29 +10,22 @@ gsap.registerPlugin(ScrollTrigger);
 const MainLayout = ({ children }) => {
     const lenisRef = useRef(null);
     const location = useLocation();
-    // Every page shares this same fixed cream/gold background, which is part
-    // of why the Miracle Natural page was hard to tell apart from the Leora
-    // Wellness parent site. Give it a light sage-green tint whenever browsing
-    // Miracle Natural (its landing page, shop, product pages, etc.) so the
-    // page reads as visually distinct at a glance, without touching the
-    // shared palette everywhere else.
+    // Light sage tint on Miracle Natural pages so it reads as visually
+    // distinct from the Leora Wellness parent site.
     const isMiracleNatural = location.pathname.startsWith('/miracle-natural');
 
     useEffect(() => {
-        // Detect if device supports touch (mobile/tablet)
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        const isMobile = window.innerWidth < 1024; // tablets and phones
-        
-        // Disable Lenis on touch devices for better native scrolling performance
+        const isMobile = window.innerWidth < 1024;
+
+        // Native scrolling on mobile/touch is faster and smoother than Lenis.
         if (isTouchDevice || isMobile) {
-            // Use native scrolling on mobile - it's faster and smoother
             ScrollTrigger.config({
                 autoRefreshEvents: 'visibilitychange,DOMContentLoaded,load'
             });
             return;
         }
 
-        // Only enable Lenis on desktop devices
         const lenis = new Lenis({
             duration: 1.2,
             easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -46,7 +39,6 @@ const MainLayout = ({ children }) => {
         lenisRef.current = lenis;
         setLenisInstance(lenis);
 
-        // Sync GSAP ScrollTrigger with Lenis
         lenis.on('scroll', ScrollTrigger.update);
 
         gsap.ticker.add((time) => {

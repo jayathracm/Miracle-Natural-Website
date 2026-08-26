@@ -4,12 +4,8 @@ import { motion } from 'framer-motion';
 import { Typography } from '@/shared/ui/Typography';
 import { staggerContainer, fadeUpItem, viewportOnce } from '@/shared/lib/motionVariants';
 
-// Small hand-drawn-style botanical line icons, matching lucide's own
-// conventions (24x24 viewBox, currentColor stroke, rounded caps/joins) so
-// they sit naturally next to the lucide icons used everywhere else on the
-// site. Per the brand portfolio's own visual identity guidance, Miracle
-// Natural deliberately avoids stock photography of leaves/plants in favor of
-// illustrated botanicals — these are that, scaled down to icon size.
+// Hand-drawn botanical line icons, styled like lucide's own icons so they
+// sit naturally next to them. Illustrated instead of stock photos, per the brand guidelines.
 const iconProps = {
   viewBox: '0 0 24 24',
   fill: 'none',
@@ -63,10 +59,7 @@ const TurmericIcon = (props) => (
   </svg>
 );
 
-// Real ingredients pulled from the actual product copy already on the site
-// (ProductSection.jsx / Shop catalog) — not invented for this section. The
-// benefit tags mirror the same language used on each product's own listing,
-// so this stays consistent with what customers find deeper in the site.
+// Pulled from the real product copy, kept consistent with the shop listings.
 const INGREDIENTS = [
   { icon: CinnamonIcon, name: 'Cinnamon', benefit: 'Root repair' },
   { icon: NeemIcon, name: 'Neem', benefit: 'Scalp comfort' },

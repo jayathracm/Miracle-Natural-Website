@@ -28,11 +28,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // Fetch the profile row (name, phone, role) for whoever's currently signed
-  // in, so the rest of the app can gate admin-only UI and prefill account
-  // forms without a separate call. profiles.full_name/phone are the single
-  // source of truth for display purposes — not auth user_metadata, which is
-  // only ever a snapshot from signup time.
+  // Loads the profile row (name, phone, role) for the signed-in user.
   const loadProfile = async (userId) => {
     if (!userId) {
       setProfile(null);
@@ -62,16 +58,12 @@ export const AuthProvider = ({ children }) => {
     profile,
     profileLoading,
     role: profile?.role ?? 'customer',
-    // Superadmin is a rank above admin, not a separate track — anything
-    // gated on isAdmin (RequireAdmin route guard, admin nav links) should
-    // also be visible to superadmins. isSuperAdmin is the stricter check,
-    // used only to gate the account-management page/nav link itself.
+    // Superadmin counts as admin everywhere isAdmin is checked.
     isAdmin: profile?.role === 'admin' || profile?.role === 'superadmin',
     isSuperAdmin: profile?.role === 'superadmin',
     isCorporatePartner: profile?.role === 'corporate_partner',
     signOut: () => supabase.auth.signOut(),
-    // Lets a component re-pull the profile row after editing it (name/phone
-    // changes), without waiting for a full auth-state change event.
+    // Re-pulls the profile after an edit, without a full auth-state event.
     refreshProfile: () => loadProfile(session?.user?.id),
   };
 

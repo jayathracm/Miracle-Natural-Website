@@ -6,32 +6,17 @@ import { fetchCart, syncCartForBrand } from '@/features/shop/cart';
 import { useAuth } from '@/features/auth/AuthContext';
 
 const CART_STORAGE_KEY = 'miracleNatural.cart';
-// Remembers, per device/browser (not per tab — localStorage, not
-// sessionStorage), which signed-in account's cart the *local* cart currently
-// reflects. Lets the login-merge effect below tell "this account just logged
-// in for the first time on this device, fold in whatever's in the guest
-// cart" apart from "this is just a page reload/second tab for an account
-// that's already synced" — without it, a reload would re-sum an
-// already-synced local cart with the same server cart and double every
-// quantity.
+// Which account's cart the local cart currently reflects on this device.
+// Lets us tell "just logged in, merge in the guest cart" apart from "same
+// account, just a reload" — otherwise a reload would double every quantity.
 const CART_SYNCED_USER_KEY = 'miracleNatural.cart.syncedUserId';
 const CART_SYNC_DEBOUNCE_MS = 800;
 const BRAND_VALUES = BRANDS.map((entry) => entry.brand);
 
-// Shared across the whole app (not just Shop.jsx) so that a product's
-// dedicated page (/:brandSlug/shop/:id) — or, later, the Ritual Builder
-// results, or any other entry point — can add to the same cart Shop.jsx's
-// checkout reads from, instead of each page keeping its own disconnected
-// copy.
-//
-// Three separate storefronts (Miracle Natural / Laira / Leora Wellness,
-// functional-requirements.md §1.0) means three separate carts too — an
-// item from one brand's shop should never show up in another brand's
-// checkout. Rather than three independent contexts, the cart is one object
-// partitioned by brand: `{ miracle_natural: {productId: qty}, laira: {...},
-// leora_wellness: {...} }`. `useBrandCart(brand)` below wraps this into the
-// same shape the old single-brand `useCart()` returned, so Shop.jsx and
-// ProductDetail.jsx only needed to swap which hook they call.
+// Shared app-wide so any entry point (Shop.jsx, product pages, Ritual
+// Builder) adds to the same cart. One cart per brand (Miracle Natural /
+// Laira / Leora Wellness) so items don't cross storefronts:
+// { miracle_natural: {productId: qty}, laira: {...}, leora_wellness: {...} }.
 const CartContext = createContext(undefined);
 
 const emptyCartByBrand = () => Object.fromEntries(BRAND_VALUES.map((brand) => [brand, {}]));
@@ -44,10 +29,8 @@ const readStoredCart = () => {
       return emptyCartByBrand();
     }
 
-    // Carts saved before the brand split are a flat { productId: qty } map
-    // with no brand keys at all — treat that legacy shape as the Miracle
-    // Natural cart, since that was the only storefront that existed at the
-    // time, rather than silently discarding a customer's in-progress cart.
+    // Old carts (pre brand-split) are a flat { productId: qty } map.
+    // Treat that as the Miracle Natural cart instead of discarding it.
     const looksLegacy = !BRAND_VALUES.some((brand) => brand in parsed);
     if (looksLegacy) {
       return { ...emptyCartByBrand(), miracle_natural: parsed };
@@ -71,18 +54,15 @@ export const CartProvider = ({ children }) => {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState(null);
   const [cartByBrand, setCartByBrand] = useState(readStoredCart);
-  // Starts as `undefined` (never observed), distinct from `null` (observed,
-  // and signed out) — so the very first render, before we know whether
-  // there's a session at all, never gets mistaken for "just signed out" and
-  // wipes a guest's local cart. See the sign-out branch below.
+  // undefined = never checked yet, null = checked and signed out. Keeps the
+  // very first render from being mistaken for a sign-out and wiping a
+  // guest's cart.
   const previousUserIdRef = useRef(undefined);
 
   useEffect(() => {
     let isMounted = true;
 
-    // No brand filter here — the full catalog is fetched once and split by
-    // brand client-side (see productsByBrand below), since it's small and
-    // this avoids three separate round trips.
+    // Fetch the whole catalog once, split by brand client-side below.
     fetchProducts()
       .then((rows) => {
         if (!isMounted) return;
@@ -114,9 +94,7 @@ export const CartProvider = ({ children }) => {
     }
   }, [cartByBrand]);
 
-  // Runs on sign-in and sign-out (not on every render — only when the user
-  // id actually changes). See docs at CART_SYNCED_USER_KEY above for why the
-  // sign-in branch needs the localStorage marker, not just a merge-on-login.
+  // Runs only when the signed-in user actually changes (sign-in/sign-out).
   useEffect(() => {
     const currentUserId = user?.id || null;
     const previousUserId = previousUserIdRef.current;
@@ -135,17 +113,12 @@ export const CartProvider = ({ children }) => {
         .then((serverCartByBrand) => {
           setCartByBrand((prevLocal) => {
             if (!isFirstSyncForThisAccountOnThisDevice) {
-              // Local storage already reflects this account's last-synced
-              // cart (a page reload, or a second tab) — just refresh from
-              // the server (in case another device changed it since) rather
-              // than summing local+server again, which would double every
-              // quantity already in both.
+              // Already synced on this device — just refresh from the
+              // server instead of summing again (would double quantities).
               return serverCartByBrand;
             }
-            // First time this account has been active on this device —
-            // fold in whatever was added to the cart before logging in
-            // (guest browsing, or a different account's now-cleared cart)
-            // instead of silently discarding it.
+            // First time this account's active on this device — merge in
+            // whatever was in the cart before logging in.
             const merged = emptyCartByBrand();
             BRAND_VALUES.forEach((brand) => {
               merged[brand] = { ...serverCartByBrand[brand] };
@@ -157,8 +130,7 @@ export const CartProvider = ({ children }) => {
           });
         })
         .catch(() => {
-          // Best-effort — if the fetch fails, keep whatever's local rather
-          // than blocking shopping on a cart-sync error.
+          // Best-effort — keep the local cart if the fetch fails.
         })
         .finally(() => {
           try {
@@ -168,11 +140,8 @@ export const CartProvider = ({ children }) => {
           }
         });
     } else if (previousUserId) {
-      // A real sign-out (previousUserId was set, meaning we'd actually
-      // observed a signed-in user before) — clear the local cart so the
-      // next person on this device/browser doesn't see the previous
-      // account's items. Nothing is lost: it's saved server-side and will
-      // be restored the next time this account logs in on any device.
+      // Real sign-out — clear the local cart so the next person on this
+      // device doesn't see it. Nothing's lost, it's saved server-side.
       setCartByBrand(emptyCartByBrand());
       try {
         window.localStorage.removeItem(CART_SYNCED_USER_KEY);
@@ -182,20 +151,15 @@ export const CartProvider = ({ children }) => {
     }
   }, [user?.id]);
 
-  // Pushes the local cart to the server whenever it changes while signed
-  // in — covers both the customer's own edits (add/remove/change quantity)
-  // and the merge above (which updates cartByBrand like any other change,
-  // so it's persisted the same way). Debounced so rapid quantity clicks
-  // don't fire a request per click.
+  // Pushes the local cart to the server on every change while signed in.
+  // Debounced so rapid quantity clicks don't fire a request each time.
   useEffect(() => {
     if (!user?.id) return undefined;
 
     const timeoutId = window.setTimeout(() => {
       BRAND_VALUES.forEach((brand) => {
         syncCartForBrand(brand, cartByBrand[brand] || {}).catch(() => {
-          // Best-effort — a failed background save just means this
-          // device's cart catches up on the next change; nothing to
-          // interrupt the customer's shopping over.
+          // Best-effort — a failed save just catches up next change.
         });
       });
     }, CART_SYNC_DEBOUNCE_MS);
@@ -284,22 +248,18 @@ export const useCart = () => {
   return context;
 };
 
-// Scopes the shared, brand-partitioned cart down to one brand, in the same
-// shape the pre-split `useCart()` used to return — so callers only deal with
-// "their" storefront's cart and never need to think about the other two.
+// Scopes the shared cart down to one brand, same shape the old
+// single-brand useCart() returned.
 // eslint-disable-next-line react-refresh/only-export-components -- hook is intentionally colocated with its provider
 export const useBrandCart = (brand) => {
   const ctx = useCart();
-  // Memoized (rather than `|| {}` / `|| []` inline) so an invalid/undefined
-  // brand — which falls back to a fresh literal every render — doesn't
-  // change identity on every render and invalidate the useMemos below.
+  // Memoized so an invalid/undefined brand doesn't change identity every
+  // render and invalidate the useMemos below.
   const cart = useMemo(() => ctx.cartByBrand[brand] || {}, [ctx.cartByBrand, brand]);
   const productCatalog = useMemo(() => ctx.productsByBrand[brand] || [], [ctx.productsByBrand, brand]);
 
-  // Scoped to this brand's own catalog (not the cross-brand map on the raw
-  // context) so a URL like /laira/shop/<a-miracle-natural-product-id>
-  // correctly resolves to "not found" instead of leaking another brand's
-  // product into this storefront.
+  // Scoped to this brand's catalog so another brand's product id can't
+  // leak into this storefront.
   const productById = useMemo(() => {
     const map = new Map();
     productCatalog.forEach((product) => map.set(product.id, product));

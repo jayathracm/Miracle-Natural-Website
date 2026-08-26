@@ -3,10 +3,8 @@ import { Navigate } from 'react-router';
 import { Typography } from '@/shared/ui/Typography';
 import { useAuth } from '@/features/auth/AuthContext';
 
-// Gates a route to signed-in admins only. Anyone else is redirected rather
-// than shown a "forbidden" page — RLS on the backend is the real security
-// boundary, this is just a UX nicety so non-admins don't land on an empty
-// dashboard full of failed queries.
+// Gates a route to signed-in admins, redirecting everyone else. RLS on the
+// backend is the real security boundary, this is just a UX nicety.
 const RequireAdmin = ({ children }) => {
   const { user, isAdmin, loading, profileLoading } = useAuth();
 

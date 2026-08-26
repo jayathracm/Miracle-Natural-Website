@@ -7,12 +7,7 @@ import { Typography } from '@/shared/ui/Typography';
 import { Button } from '@/shared/ui/Button';
 import { staggerContainer, fadeUpItem, viewportOnce } from '@/shared/lib/motionVariants';
 
-// The B2B/manufacturing side of Leora Wellness — moved here from
-// FeatureGridSection.jsx, which originally rendered this alongside a
-// consumer-picks panel on the Miracle Natural page. That placement didn't
-// make sense once Leora Wellness stopped being a shoppable brand and became
-// the parent-company homepage: these are Leora Wellness's own services, not
-// something Miracle Natural offers, so they belong here instead.
+// Leora Wellness's own B2B/manufacturing services.
 const SERVICES = [
   {
     icon: Leaf,

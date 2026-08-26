@@ -5,12 +5,7 @@ import { Droplets, Moon, Heart } from 'lucide-react';
 import { Typography } from '@/shared/ui/Typography';
 import { staggerContainer, fadeUpItem, viewportOnce } from '@/shared/lib/motionVariants';
 
-// This used to render two side-by-side panels — a B2B "Leora Wellness
-// Services" grid plus this consumer-picks list. The B2B half moved to the
-// Leora Wellness homepage (LeoraServicesSection.jsx): those are Leora
-// Wellness's own manufacturing/wholesale services, not something the
-// Miracle Natural page should be advertising. What's left here is purely
-// Miracle Natural's own consumer-facing content.
+// Miracle Natural's own consumer-facing picks (B2B services live on the Leora Wellness homepage instead).
 const consumerPicks = [
   {
     icon: Droplets,

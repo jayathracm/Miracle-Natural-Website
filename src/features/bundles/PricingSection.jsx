@@ -39,9 +39,8 @@ const PricingSection = () => {
     };
   }, []);
 
-  // Hands the bundle's real products off to the Shop page, which adds them
-  // straight to the cart on arrival and shows a confirmation with a
-  // checkout shortcut — no re-fetching, the items are already in hand here.
+  // Hands the bundle's products off to the Shop page, which adds them to
+  // the cart on arrival and shows a confirmation.
   const handleBuyBundle = (bundle) => {
     setSelectedBundle(null);
     navigate(shopPathForBrand('miracle_natural'), {

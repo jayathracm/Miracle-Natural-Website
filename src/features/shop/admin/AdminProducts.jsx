@@ -9,9 +9,7 @@ import PRODUCT_IMAGES from '@/features/shop/productImages';
 import { createProduct, deleteProduct, fetchAllProductsForAdmin, updateProduct } from '@/features/shop/products';
 import { BRANDS, BRAND_BY_VALUE } from '@/shared/lib/brands';
 
-// Suggestions only (via <datalist>) — not an enum. Category is a free-text
-// column; Shop.jsx groups anything unrecognized under its own name rather
-// than breaking, so a brand-new category here is safe, just ungrouped.
+// Suggestions only, not an enum — category is a free-text column.
 const KNOWN_CATEGORIES = ['Face Care', 'Treatment', 'Weekly Care', 'Body Care', 'Hair Care', 'Lip Care'];
 
 const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
@@ -99,8 +97,7 @@ const AdminProducts = () => {
       size: product.size || '',
       price: String(product.price),
       compareAtPrice: product.compare_at_price === null || product.compare_at_price === undefined ? '' : String(product.compare_at_price),
-      // Derived purely for display — lets an admin editing an existing sale
-      // see it expressed as a percentage instead of two raw prices.
+      // Display only — shows the existing sale as a percentage.
       discountPercent:
         product.compare_at_price && product.price
           ? String(Math.round((1 - Number(product.price) / Number(product.compare_at_price)) * 100))
@@ -133,10 +130,8 @@ const AdminProducts = () => {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [formOpen]);
 
-  // Discount % is a manual-sale helper, not a stored field — it just
-  // back-calculates the Compare-at Price so an admin can type "20% off"
-  // instead of doing the math themselves. Compare-at Price stays editable
-  // directly too; this only overwrites it while a valid % is present.
+  // Discount % is just a helper — back-calculates Compare-at Price so an
+  // admin can type "20% off" instead of doing the math. Compare-at Price stays editable directly too.
   useEffect(() => {
     if (!formOpen || !form.discountPercent.trim()) return;
     const discount = Number(form.discountPercent);
@@ -245,8 +240,7 @@ const AdminProducts = () => {
         prev.map((p) => (p.id === product.id ? { ...p, is_active: !p.is_active } : p))
       );
     } catch {
-      // Silently ignore — a stale row would show back to its real state on
-      // next refresh, and this is a quick toggle, not a form submission.
+      // Ignore — a stale row corrects itself on next refresh.
     }
   };
 
@@ -258,8 +252,7 @@ const AdminProducts = () => {
       setProducts((prev) => prev.filter((p) => p.id !== product.id));
       setPendingDeleteId(null);
     } catch (deleteErrorCaught) {
-      // 23503: still referenced by a bundle — the DB's foreign key on
-      // bundle_items has no ON DELETE action, so it blocks this on purpose.
+      // 23503: still used in a bundle, blocked on purpose.
       if (deleteErrorCaught?.code === '23503') {
         setDeleteError(`"${product.name}" is still part of a bundle — remove it from that bundle first, then delete it.`);
       } else {
