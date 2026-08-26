@@ -1,0 +1,187 @@
+// Supabase Edge Function: payhere-notify
+//
+// PayHere's server-to-server webhook (the notify_url passed to
+// payhere.startPayment). Verifies the md5sig checksum before trusting
+// anything in the payload, then updates the order's payment_status
+// accordingly. See docs/payhere-integration-plan.md §3 and §6.
+//
+// No auth required (verify_jwt is off) — this is PayHere's own backend
+// calling us directly with no Supabase session/JWT at all, same reasoning
+// as payhere-initiate and ritual-builder. Do NOT re-enable verify_jwt here
+// — PayHere's callback would get a 401 and the order would silently never
+// update.
+//
+// Required secret: PAYHERE_MERCHANT_SECRET (same one payhere-initiate uses).
+// Optional secret: ORDER_NOTIFICATION_EMAIL (defaults to dinisha@lanmic.com,
+// matching Shop.jsx's existing COD notification fallback).
+//
+// Signature verification and status-code mapping live in
+// ../_shared/payhereLogic.js — see that file and its Vitest tests for the
+// security-critical math itself; everything below is just request/DB I/O.
+
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { verifyNotifySignature, mapStatusCode } from '../_shared/payhereLogic.js';
+
+async function sendOrderConfirmationEmail(supabase, orderId) {
+  const orderEmail = Deno.env.get('ORDER_NOTIFICATION_EMAIL') || 'dinisha@lanmic.com';
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('customer_name, customer_email, customer_phone, delivery_address, subtotal, shipping_cost, grand_total')
+    .eq('id', orderId)
+    .single();
+
+  if (!order) return;
+
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('product_name, quantity, line_total')
+    .eq('order_id', orderId);
+
+  const orderLines = (items || []).map(
+    (item) => `- ${item.product_name} x ${item.quantity} = LKR ${Number(item.line_total).toFixed(2)}`
+  );
+
+  const body = [
+    'A new order was paid online via PayHere.',
+    '',
+    ...orderLines,
+    '',
+    `Subtotal: LKR ${Number(order.subtotal).toFixed(2)}`,
+    `Shipping: LKR ${Number(order.shipping_cost).toFixed(2)}`,
+    `Grand Total: LKR ${Number(order.grand_total).toFixed(2)}`,
+    '',
+    `Customer: ${order.customer_name}`,
+    `Phone: ${order.customer_phone}`,
+    `Email: ${order.customer_email}`,
+    `Delivery Address: ${order.delivery_address}`,
+    `Order ID: ${orderId}`,
+  ].join('\n');
+
+  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(orderEmail)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      _subject: `New PayHere Order Paid - ${order.customer_name}`,
+      _captcha: 'false',
+      _template: 'table',
+      name: order.customer_name,
+      phone: order.customer_phone,
+      customer_email: order.customer_email,
+      payment_method: 'PayHere (Online)',
+      delivery_address: order.delivery_address,
+      grand_total: `LKR ${Number(order.grand_total).toFixed(2)}`,
+      order_items: orderLines.join('\n'),
+      order_message: body,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`formsubmit.co responded with ${response.status}`);
+  }
+}
+
+Deno.serve(async (req) => {
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  const merchantSecret = Deno.env.get('PAYHERE_MERCHANT_SECRET');
+  if (!merchantSecret) {
+    console.error('payhere-notify: missing PAYHERE_MERCHANT_SECRET secret.');
+    // Still 200 — this is a config issue on our end, not something PayHere
+    // can fix by retrying, so there's no point letting it retry-storm us.
+    return new Response('OK', { status: 200 });
+  }
+
+  let form;
+  try {
+    // PayHere posts application/x-www-form-urlencoded, not JSON.
+    form = await req.formData();
+  } catch (err) {
+    console.error('payhere-notify: could not parse form body', err);
+    return new Response('OK', { status: 200 });
+  }
+
+  const merchantId = form.get('merchant_id')?.toString() ?? '';
+  const orderId = form.get('order_id')?.toString() ?? '';
+  const paymentId = form.get('payment_id')?.toString() ?? '';
+  const payhereAmount = form.get('payhere_amount')?.toString() ?? '';
+  const payhereCurrency = form.get('payhere_currency')?.toString() ?? '';
+  const statusCode = form.get('status_code')?.toString() ?? '';
+  const md5sig = form.get('md5sig')?.toString() ?? '';
+
+  if (!orderId || !statusCode || !md5sig) {
+    console.error('payhere-notify: missing required fields', { orderId, statusCode, hasSig: Boolean(md5sig) });
+    return new Response('OK', { status: 200 });
+  }
+
+  const isVerified = verifyNotifySignature({
+    merchantId,
+    orderId,
+    payhereAmount,
+    payhereCurrency,
+    statusCode,
+    merchantSecret,
+    md5sig,
+  });
+
+  if (!isVerified) {
+    // Signature mismatch — this notification did not genuinely come from
+    // PayHere (or the params were altered in transit). Do NOT touch the
+    // order. Still respond 200 so this doesn't trigger a PayHere retry
+    // storm — a real, correctly-signed notification (if any) will still
+    // come through and be processed normally.
+    console.error('payhere-notify: signature mismatch for order', orderId);
+    return new Response('OK', { status: 200 });
+  }
+
+  const paymentStatus = mapStatusCode(statusCode);
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL'),
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  );
+
+  let updateQuery = supabase
+    .from('orders')
+    .update({ payment_status: paymentStatus, payhere_payment_id: paymentId || null })
+    .eq('id', orderId);
+
+  if (paymentStatus === 'paid') {
+    // Guards against re-running inventory decrement / the confirmation email
+    // if PayHere retries an already-processed success notification — a
+    // second 'paid' notification for an order that's already 'paid' simply
+    // matches zero rows here instead of re-triggering side effects.
+    updateQuery = updateQuery.neq('payment_status', 'paid');
+  }
+
+  const { data: updatedOrder, error: updateError } = await updateQuery.select('id').maybeSingle();
+
+  if (updateError) {
+    console.error('payhere-notify: could not update order', orderId, updateError);
+    return new Response('OK', { status: 200 });
+  }
+
+  if (!updatedOrder) {
+    // Order not found, or (for 'paid') this was a duplicate/retried
+    // notification for an order already marked paid — nothing more to do.
+    return new Response('OK', { status: 200 });
+  }
+
+  if (paymentStatus === 'paid') {
+    try {
+      await supabase.rpc('decrement_inventory_for_order', { p_order_id: orderId });
+    } catch (err) {
+      console.error('payhere-notify: inventory decrement failed', orderId, err);
+    }
+
+    try {
+      await sendOrderConfirmationEmail(supabase, orderId);
+    } catch (err) {
+      console.error('payhere-notify: confirmation email failed', orderId, err);
+    }
+  }
+
+  return new Response('OK', { status: 200 });
+});
