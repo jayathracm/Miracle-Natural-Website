@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/shared/lib/supabaseClient';
+import { deriveRoleFlags } from '@/features/auth/authRoles';
 
 const AuthContext = createContext(undefined);
 
@@ -57,11 +58,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     profile,
     profileLoading,
-    role: profile?.role ?? 'customer',
-    // Superadmin counts as admin everywhere isAdmin is checked.
-    isAdmin: profile?.role === 'admin' || profile?.role === 'superadmin',
-    isSuperAdmin: profile?.role === 'superadmin',
-    isCorporatePartner: profile?.role === 'corporate_partner',
+    ...deriveRoleFlags(profile?.role),
     signOut: () => supabase.auth.signOut(),
     // Re-pulls the profile after an edit, without a full auth-state event.
     refreshProfile: () => loadProfile(session?.user?.id),
