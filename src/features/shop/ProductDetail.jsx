@@ -11,8 +11,7 @@ import { getShopCategory } from '@/features/shop/shopCategories';
 import { WholesalePricingPanel } from '@/features/shop/WholesalePricingPanel';
 import { BRAND_BY_SLUG, shopPathForSlug } from '@/shared/lib/brands';
 import NotFound from '@/shared/NotFound';
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
+import { formatCurrency } from '@/shared/lib/currency';
 
 // Dedicated, shareable product page — separate from the Shop grid's
 // quick-view modal, so other surfaces (Ritual Builder, chatbot) can link

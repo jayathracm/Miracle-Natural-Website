@@ -8,11 +8,10 @@ import { ProductGridSkeleton } from '@/shared/ui/Skeleton';
 import PRODUCT_IMAGES from '@/features/shop/productImages';
 import { createProduct, deleteProduct, fetchAllProductsForAdmin, updateProduct } from '@/features/shop/products';
 import { BRANDS, BRAND_BY_VALUE } from '@/shared/lib/brands';
+import { formatCurrency } from '@/shared/lib/currency';
 
 // Suggestions only, not an enum — category is a free-text column.
 const KNOWN_CATEGORIES = ['Face Care', 'Treatment', 'Weekly Care', 'Body Care', 'Hair Care', 'Lip Care'];
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
 const emptyForm = {
   id: '',

@@ -4,8 +4,7 @@ import { Heart, ImageOff, Plus, X } from 'lucide-react';
 import { Typography } from '@/shared/ui/Typography';
 import { Button } from '@/shared/ui/Button';
 import { shopPathForBrand } from '@/shared/lib/brands';
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
+import { formatCurrency } from '@/shared/lib/currency';
 
 export const ProductDetailModal = ({ product, category, isWishlisted, onClose, onToggleWishlist, onAddToCart }) => {
   const navigate = useNavigate();

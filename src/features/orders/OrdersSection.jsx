@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, PackageSearch } from 'lucide-react';
 import { Typography } from '@/shared/ui/Typography';
 import { RowSkeletonList } from '@/shared/ui/Skeleton';
 import { fetchMyOrders } from '@/features/orders/orders';
+import { formatCurrency } from '@/shared/lib/currency';
 
 const STATUS_STYLES = {
   pending: 'border-amber-300 bg-amber-50 text-amber-800',
@@ -11,8 +12,6 @@ const STATUS_STYLES = {
   delivered: 'border-emerald-300 bg-emerald-50 text-emerald-800',
   cancelled: 'border-red-300 bg-red-50 text-red-700',
 };
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
 const formatDate = (isoString) =>
   new Date(isoString).toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' });

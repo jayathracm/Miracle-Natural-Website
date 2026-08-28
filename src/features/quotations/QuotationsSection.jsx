@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { Typography } from '@/shared/ui/Typography';
 import { RowSkeletonList } from '@/shared/ui/Skeleton';
 import { fetchMyQuotations } from '@/features/quotations/quotations';
+import { formatCurrency } from '@/shared/lib/currency';
 
 const STATUS_STYLES = {
   requested: 'border-amber-300 bg-amber-50 text-amber-800',
@@ -17,8 +18,6 @@ const STATUS_LABELS = {
   accepted: 'Accepted',
   declined: 'Declined',
 };
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
 const formatDate = (isoString) =>
   new Date(isoString).toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' });

@@ -6,6 +6,7 @@ import { Input } from '@/shared/ui/Input';
 import { Textarea } from '@/shared/ui/Textarea';
 import { RowSkeletonList } from '@/shared/ui/Skeleton';
 import { fetchAllQuotations, submitQuote, updateQuotationStatus } from '@/features/quotations/quotations';
+import { formatCurrency } from '@/shared/lib/currency';
 
 const STATUS_OPTIONS = ['requested', 'quoted', 'accepted', 'declined'];
 
@@ -15,8 +16,6 @@ const STATUS_STYLES = {
   accepted: 'border-emerald-300 bg-emerald-50 text-emerald-800',
   declined: 'border-red-300 bg-red-50 text-red-700',
 };
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
 const formatDate = (isoString) =>
   new Date(isoString).toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' });

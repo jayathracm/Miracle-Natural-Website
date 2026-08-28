@@ -5,8 +5,7 @@ import { Heart, ImageOff, Plus } from 'lucide-react';
 import { Typography } from '@/shared/ui/Typography';
 import { TiltCard } from '@/shared/ui/TiltCard';
 import { fadeUpItem } from '@/shared/lib/motionVariants';
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
+import { formatCurrency } from '@/shared/lib/currency';
 
 // A single product tile: image, wishlist heart, name/size/price, add-to-cart.
 // `view` switches between the grid tile and a horizontal list row — same

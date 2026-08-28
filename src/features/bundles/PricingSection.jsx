@@ -10,8 +10,7 @@ import { BundleDetailModal } from '@/features/bundles/BundleDetailModal';
 import { fetchBundles } from '@/features/bundles/bundles';
 import { staggerContainer, fadeUpItem, viewportOnce } from '@/shared/lib/motionVariants';
 import { shopPathForBrand } from '@/shared/lib/brands';
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
+import { formatCurrency } from '@/shared/lib/currency';
 
 const PricingSection = () => {
   const navigate = useNavigate();

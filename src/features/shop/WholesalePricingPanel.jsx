@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Percent, TrendingUp } from 'lucide-react';
 import { Typography } from '@/shared/ui/Typography';
 import { calculateB2BPrice, fetchDiscountTiers } from '@/features/b2b/b2bPricing';
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
+import { formatCurrency } from '@/shared/lib/currency';
 
 // Only rendered for a signed-in corporate_partner/admin — the parent gates on role.
 export const WholesalePricingPanel = ({ productId, quantity }) => {

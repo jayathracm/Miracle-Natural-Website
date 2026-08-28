@@ -6,8 +6,9 @@ import { Input } from '@/shared/ui/Input';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { fetchSalesSummary } from '@/features/analytics/salesSummary';
 import { askBusinessAnalytics } from '@/features/analytics/businessAnalytics';
+import { formatCurrency as formatCurrencyBase } from '@/shared/lib/currency';
 
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK', { maximumFractionDigits: 0 })}`;
+const formatCurrency = (amount) => formatCurrencyBase(amount, { maximumFractionDigits: 0 });
 
 const StatCard = ({ icon: Icon, label, value, hint }) => (
   <div className="rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-card-bg)] p-5 shadow-[0_10px_24px_rgba(31,44,35,0.06)]">

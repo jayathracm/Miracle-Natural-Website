@@ -5,6 +5,7 @@ import { Button } from '@/shared/ui/Button';
 import { RowSkeletonList } from '@/shared/ui/Skeleton';
 import { supabase } from '@/shared/lib/supabaseClient';
 import { BRANDS, BRAND_BY_VALUE } from '@/shared/lib/brands';
+import { formatCurrency } from '@/shared/lib/currency';
 
 const STATUS_OPTIONS = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
 
@@ -15,8 +16,6 @@ const STATUS_STYLES = {
   delivered: 'border-emerald-300 bg-emerald-50 text-emerald-800',
   cancelled: 'border-red-300 bg-red-50 text-red-700',
 };
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
 const formatDate = (isoString) =>
   new Date(isoString).toLocaleString('en-LK', {

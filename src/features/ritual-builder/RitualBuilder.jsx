@@ -12,6 +12,7 @@ import { fetchProducts } from '@/features/shop/products';
 import PRODUCT_IMAGES from '@/features/shop/productImages';
 import { staggerContainer, fadeUpItem, fadeUpEmphasis } from '@/shared/lib/motionVariants';
 import { shopPathForBrand } from '@/shared/lib/brands';
+import { formatCurrency } from '@/shared/lib/currency';
 
 const SKIN_TYPES = [
   { value: 'normal', label: 'Normal' },
@@ -37,8 +38,6 @@ const SENSITIVITY_LEVELS = [
   { value: 'medium', label: 'Medium — sometimes reacts' },
   { value: 'high', label: 'High — reacts easily, needs gentle formulas' },
 ];
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
 
 const RitualBuilder = () => {
   const navigate = useNavigate();

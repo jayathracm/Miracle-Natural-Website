@@ -8,8 +8,7 @@ import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { Textarea } from '@/shared/ui/Textarea';
 import DELIVERY_ZONES from '@/features/addresses/deliveryZones';
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
+import { formatCurrency } from '@/shared/lib/currency';
 
 // Shared by the desktop sidebar and mobile drawer so they never drift out
 // of sync. Switches between "cart" and "checkout" views via mode state.

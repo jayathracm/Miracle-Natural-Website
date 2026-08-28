@@ -3,8 +3,7 @@ import { ImageOff, ShoppingBag, Sparkles, X } from 'lucide-react';
 import { Typography } from '@/shared/ui/Typography';
 import { Button } from '@/shared/ui/Button';
 import PRODUCT_IMAGES from '@/features/shop/productImages';
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
+import { formatCurrency } from '@/shared/lib/currency';
 
 export const BundleDetailModal = ({ bundle, onClose, onBuy }) => {
   useEffect(() => {

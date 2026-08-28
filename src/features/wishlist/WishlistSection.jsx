@@ -7,8 +7,7 @@ import { ProductGridSkeleton } from '@/shared/ui/Skeleton';
 import { fetchWishlist, removeFromWishlist } from '@/features/wishlist/wishlist';
 import { shopPathForBrand } from '@/shared/lib/brands';
 import PRODUCT_IMAGES from '@/features/shop/productImages';
-
-const formatCurrency = (amount) => `LKR ${Number(amount).toLocaleString('en-LK')}`;
+import { formatCurrency } from '@/shared/lib/currency';
 
 const WishlistSection = () => {
   const [items, setItems] = useState([]);

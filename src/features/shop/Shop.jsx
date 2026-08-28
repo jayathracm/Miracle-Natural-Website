@@ -32,6 +32,7 @@ import {
   computeEffectiveSubtotal,
   computeEffectiveGrandTotal,
 } from '@/features/shop/cartPricing';
+import { formatCurrency } from '@/shared/lib/currency';
 
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 const PRODUCTS_PER_PAGE = 12;
@@ -48,8 +49,6 @@ const PRICE_FILTERS = [
   { value: '1501_3000', label: 'LKR 1,501 - 3,000' },
   { value: 'above_3000', label: 'Above LKR 3,000' },
 ];
-
-const formatCurrency = (amount) => `LKR ${amount.toLocaleString('en-LK')}`;
 
 // Used by both the desktop sidebar and the mobile filter drawer so the
 // search/category/price controls only exist in one place.
