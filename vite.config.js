@@ -27,8 +27,10 @@ export default defineConfig({
   },
   test: {
     // No DOM needed yet — these are pure logic tests. Switch a file to
-    // jsdom individually if a later test renders a component.
+    // jsdom individually if a later test renders a component (add
+    // `// @vitest-environment jsdom` as the first line of that file).
     environment: 'node',
     globals: false,
+    setupFiles: ['./src/test/setup.js'],
   },
 })
