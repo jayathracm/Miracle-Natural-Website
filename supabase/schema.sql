@@ -1125,3 +1125,44 @@ create policy "Users manage their own cart"
   on public.cart_items for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- ----------------------------------------------------------------------------
+-- 20. GUEST QUOTE REQUESTS — wholesale quote requests with no account needed
+-- /corporate-partner is a public lead form: anyone can submit a request for
+-- wholesale pricing/quantities without signing up. Staff follow up manually
+-- (by phone/email) and, if it becomes an ongoing account, set up the
+-- customer's corporate_partner role themselves — this table has no
+-- role-granting RPC of its own, unlike corporate_partner_applications.
+-- ----------------------------------------------------------------------------
+create table if not exists public.guest_quote_requests (
+  id uuid primary key default gen_random_uuid(),
+  business_name text not null,
+  contact_person text not null,
+  contact_phone text not null,
+  contact_email text not null,
+  delivery_region text not null,
+  request_details text not null,
+  status text not null default 'new' check (status in ('new', 'contacted', 'closed')),
+  admin_notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.guest_quote_requests enable row level security;
+
+drop policy if exists "Anyone can submit a guest quote request" on public.guest_quote_requests;
+create policy "Anyone can submit a guest quote request"
+  on public.guest_quote_requests for insert
+  to anon, authenticated
+  with check (true);
+
+drop policy if exists "Admins can view guest quote requests" on public.guest_quote_requests;
+create policy "Admins can view guest quote requests"
+  on public.guest_quote_requests for select
+  using (private.is_admin());
+
+drop policy if exists "Admins can update guest quote requests" on public.guest_quote_requests;
+create policy "Admins can update guest quote requests"
+  on public.guest_quote_requests for update
+  using (private.is_admin())
+  with check (private.is_admin());
