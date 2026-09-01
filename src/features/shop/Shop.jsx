@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.div>)
 import { motion } from 'framer-motion';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ImageOff, LayoutGrid, List, Search, ShoppingBag, SlidersHorizontal, Sparkles, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, LayoutGrid, List, Search, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { Input } from '@/shared/ui/Input';
 import { Typography } from '@/shared/ui/Typography';
 import { Button } from '@/shared/ui/Button';
@@ -10,7 +10,6 @@ import { ProductGridSkeleton, Skeleton } from '@/shared/ui/Skeleton';
 import { ProductCard } from '@/features/shop/ProductCard';
 import { ProductDetailModal } from '@/features/shop/ProductDetailModal';
 import { ShopCart } from '@/features/shop/ShopCart';
-import PRODUCT_IMAGES from '@/features/shop/productImages';
 import { supabase } from '@/shared/lib/supabaseClient';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useBrandCart } from '@/features/shop/CartContext';
@@ -18,7 +17,6 @@ import { useWishlist } from '@/features/wishlist/useWishlist';
 import DELIVERY_ZONES from '@/features/addresses/deliveryZones';
 import { fetchAddresses } from '@/features/addresses/addresses';
 import { calculateB2BPrice } from '@/features/b2b/b2bPricing';
-import { fetchBundles } from '@/features/bundles/bundles';
 import { decrementInventoryForOrder } from '@/features/inventory/inventory';
 import { submitQuotation } from '@/features/quotations/quotations';
 import { staggerContainer } from '@/shared/lib/motionVariants';
@@ -28,7 +26,6 @@ import NotFound from '@/shared/NotFound';
 import {
   computeEffectiveCartItems,
   computeMoqViolations,
-  computeBundleSavings,
   computeEffectiveSubtotal,
   computeEffectiveGrandTotal,
 } from '@/features/shop/cartPricing';
@@ -149,7 +146,6 @@ const ShopPage = () => {
     cartItems,
     totalItems,
     addToCart,
-    addManyToCart,
     changeQuantity,
     clearCart,
   } = useBrandCart(brand);
@@ -180,10 +176,8 @@ const ShopPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('manual');
-  const [bundlePopup, setBundlePopup] = useState(null);
   const [cartOpenSignal, setCartOpenSignal] = useState(0);
   const [wholesalePricing, setWholesalePricing] = useState({});
-  const [bundles, setBundles] = useState([]);
 
   const removeToast = (id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -201,20 +195,13 @@ const ShopPage = () => {
     onError: (message) => pushToast('error', message),
   });
 
-  // Coming from a bundle's "Buy This Bundle" button adds those products to
-  // the cart and shows a confirmation, then clears the nav state so a
-  // refresh doesn't re-add them. Also handles ProductDetail's "View Cart"
-  // (openCart) opening the cart drawer on arrival.
+  // Handles ProductDetail's "View Cart" (openCart) opening the cart drawer
+  // on arrival, then clears the nav state so a refresh doesn't reopen it.
   useEffect(() => {
     const state = location.state;
     if (!state) return;
 
-    if (state.bundlePurchase) {
-      addManyToCart(
-        state.bundlePurchase.items.map(({ product, quantity }) => ({ productId: product.id, quantity }))
-      );
-      setBundlePopup(state.bundlePurchase);
-    } else if (state.openCart) {
+    if (state.openCart) {
       setCartOpenSignal(Date.now());
     }
 
@@ -222,22 +209,6 @@ const ShopPage = () => {
     // Only ever meant to run for the navigation that carried this state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
-
-  // Load bundles so a cart that happens to cover one gets credited, even
-  // if the items weren't added via "Buy This Bundle".
-  useEffect(() => {
-    let isMounted = true;
-    fetchBundles()
-      .then((rows) => {
-        if (isMounted) setBundles(rows);
-      })
-      .catch(() => {
-        // Non-fatal — cart just won't surface bundle savings this session.
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   // Load PayHere's checkout SDK up front so the popup opens instantly on
   // submit instead of waiting on a script fetch. Safe to call every mount.
@@ -349,15 +320,9 @@ const ShopPage = () => {
     [isWholesaleEligible, cartItems, wholesalePricing]
   );
 
-  // Credits the bundle price if the cart covers a bundle's full item set.
-  const bundleSavings = useMemo(
-    () => computeBundleSavings(bundles, cartItems, isWholesaleEligible),
-    [bundles, cartItems, isWholesaleEligible]
-  );
-
   const effectiveSubtotal = useMemo(
-    () => computeEffectiveSubtotal(effectiveCartItems, bundleSavings),
-    [effectiveCartItems, bundleSavings]
+    () => computeEffectiveSubtotal(effectiveCartItems),
+    [effectiveCartItems]
   );
 
   const effectiveGrandTotal = useMemo(
@@ -506,17 +471,12 @@ const ShopPage = () => {
         `- ${item.name} (${item.size}) x ${item.quantity} = ${formatCurrency(item.effectiveLineTotal)}${item.wholesaleDiscountPercent > 0 ? ` (wholesale -${item.wholesaleDiscountPercent}%)` : ''}`
     );
 
-    const bundleLines = bundleSavings.matches.map(
-      (match) => `- Bundle savings: ${match.bundleName}${match.count > 1 ? ` x${match.count}` : ''} = -${formatCurrency(match.savings)}`
-    );
-
     const body = [
       'Hello,',
       '',
       `I would like to place ${isWholesaleEligible ? 'a wholesale/bulk' : 'an'} order with the following products:`,
       '',
       ...orderLines,
-      ...(bundleLines.length > 0 ? ['', ...bundleLines] : []),
       '',
       `Total Items: ${totalItems}`,
       `Subtotal: ${formatCurrency(effectiveSubtotal)}`,
@@ -541,13 +501,6 @@ const ShopPage = () => {
 
     setIsSendingOrder(true);
 
-    // No discount column on `orders`, so bundle savings go into `notes`
-    // instead — subtotal/grand_total already reflect what's actually paid.
-    const bundleNoteLines = bundleSavings.matches.map(
-      (match) => `Bundle savings: ${match.bundleName}${match.count > 1 ? ` x${match.count}` : ''} (-${formatCurrency(match.savings)})`
-    );
-    const combinedNotes = [customerNotes.trim(), ...bundleNoteLines].filter(Boolean).join('\n') || null;
-
     const { data: orderRow, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -561,7 +514,7 @@ const ShopPage = () => {
         subtotal: effectiveSubtotal,
         shipping_cost: shippingCost,
         grand_total: effectiveGrandTotal,
-        notes: combinedNotes,
+        notes: customerNotes.trim() || null,
         channel: isWholesaleEligible ? 'b2b' : 'retail',
         brand,
       })
@@ -752,11 +705,6 @@ const ShopPage = () => {
       // Retrying after a failed/cancelled payment reuses the same order
       // instead of creating a duplicate.
       if (!orderId) {
-        const bundleNoteLines = bundleSavings.matches.map(
-          (match) => `Bundle savings: ${match.bundleName}${match.count > 1 ? ` x${match.count}` : ''} (-${formatCurrency(match.savings)})`
-        );
-        const combinedNotes = [customerNotes.trim(), ...bundleNoteLines].filter(Boolean).join('\n') || null;
-
         const { data: orderRow, error: orderError } = await supabase
           .from('orders')
           .insert({
@@ -771,7 +719,7 @@ const ShopPage = () => {
             subtotal: effectiveSubtotal,
             shipping_cost: shippingCost,
             grand_total: effectiveGrandTotal,
-            notes: combinedNotes,
+            notes: customerNotes.trim() || null,
             channel: isWholesaleEligible ? 'b2b' : 'retail',
             brand,
           })
@@ -906,7 +854,6 @@ const ShopPage = () => {
     shippingCost,
     deliveryZoneLabel,
     grandTotal: effectiveGrandTotal,
-    bundleSavings,
     isWholesaleEligible,
     moqViolations,
     onChangeQuantity: changeQuantity,
@@ -1327,75 +1274,6 @@ const ShopPage = () => {
           onToggleWishlist={toggleWishlist}
           onAddToCart={addToCart}
         />
-      )}
-
-      {bundlePopup && (
-        <div
-          className="fixed inset-0 z-[95] bg-[rgba(13,20,16,0.58)] backdrop-blur-sm px-4 py-8 sm:px-6 sm:py-12"
-          onClick={() => setBundlePopup(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Bundle added to cart"
-        >
-          <div
-            className="relative mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-[var(--color-card-border)] bg-[linear-gradient(160deg,rgba(255,253,248,0.98),rgba(248,243,232,0.96))] p-6 sm:p-7 shadow-[0_30px_80px_rgba(8,14,10,0.35)]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-primary/12 border border-primary/25 inline-flex items-center justify-center">
-              <ShoppingBag size={28} className="text-primary" />
-            </div>
-
-            <Typography variant="h4" className="text-center text-foreground mb-1.5">
-              {bundlePopup.bundleName} added to your cart
-            </Typography>
-            <p className="text-center text-[0.86rem] text-muted-foreground mb-5">
-              {bundlePopup.items.length} products are ready — check out whenever you're set.
-            </p>
-
-            <div className="space-y-2 mb-6">
-              {bundlePopup.items.map(({ product, quantity }) => {
-                const image = PRODUCT_IMAGES[product.id] || product.image_url || null;
-                return (
-                  <div key={product.id} className="flex items-center gap-3 rounded-xl border border-[var(--color-border-light)] bg-white/70 px-3 py-2.5">
-                    <div className="h-10 w-10 rounded-lg overflow-hidden bg-[rgba(247,241,227,0.5)] shrink-0">
-                      {image ? (
-                        <img src={image} alt={product.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-text-tertiary">
-                          <ImageOff size={12} />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[0.82rem] font-semibold text-foreground truncate">{product.name}</p>
-                    </div>
-                    {quantity > 1 && <span className="text-[0.76rem] text-muted-foreground shrink-0">x{quantity}</span>}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex flex-col sm:flex-row justify-center gap-2.5">
-              <Button
-                icon={ShoppingBag}
-                className="px-6 py-2.5 text-[0.74rem]"
-                onClick={() => {
-                  setBundlePopup(null);
-                  setCartOpenSignal(Date.now());
-                }}
-              >
-                Checkout Now
-              </Button>
-              <Button
-                variant="ghost"
-                className="px-6 py-2.5 text-[0.74rem]"
-                onClick={() => setBundlePopup(null)}
-              >
-                Continue Shopping
-              </Button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

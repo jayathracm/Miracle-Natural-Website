@@ -4,7 +4,6 @@ import ProductSection from '@/features/landing/sections/ProductSection';
 import IngredientsSection from '@/features/landing/sections/IngredientsSection';
 import MadeForSection from '@/features/landing/sections/MadeForSection';
 import TestimonialSection from '@/features/landing/sections/TestimonialSection';
-import PricingSection from '@/features/bundles/PricingSection';
 import QnASection from '@/features/landing/sections/QnASection';
 import CTASection from '@/features/landing/sections/CTASection';
 import SectionBand from '@/features/landing/sections/SectionBand';
@@ -36,8 +35,6 @@ const MiracleNatural = () => {
       <TestimonialSection />
 
       <SectionBand>
-        <PricingSection />
-        <ChapterDivider />
         <QnASection />
       </SectionBand>
 

@@ -39,9 +39,9 @@ const sections = [
         <p>
           We make every effort to display accurate product descriptions, images, ingredients, and
           pricing, but we do not guarantee that all information is complete or error-free. Prices
-          are listed in Sri Lankan Rupees (LKR) and may change without notice. Promotions, bundle
-          pricing, and wholesale/corporate discount tiers are subject to their own terms and may
-          be withdrawn or amended at any time.
+          are listed in Sri Lankan Rupees (LKR) and may change without notice. Promotions and
+          wholesale/corporate discount tiers are subject to their own terms and may be withdrawn
+          or amended at any time.
         </p>
       </>
     )

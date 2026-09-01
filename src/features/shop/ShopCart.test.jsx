@@ -21,7 +21,6 @@ function baseProps(overrides = {}) {
     shippingCost: 300,
     deliveryZoneLabel: 'Colombo 1-15',
     grandTotal: 2800,
-    bundleSavings: null,
     isWholesaleEligible: false,
     moqViolations: [],
     onChangeQuantity: vi.fn(),

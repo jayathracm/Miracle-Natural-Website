@@ -29,7 +29,6 @@ export const SEO_CONFIG = {
       'clean beauty Sri Lanka',
       'hydrating skincare',
       'natural face wash',
-      'moisturizer bundle',
     ],
   },
   '/laira': {
@@ -90,15 +89,15 @@ export const SEO_CONFIG = {
     keywords: ['Miracle Natural account'],
   },
   '/pricing': {
-    title: 'Shop Bundles | Miracle Natural',
+    title: 'Shop Miracle Natural',
     description:
-      'Browse Miracle Natural care bundles for face, body, and hair routines with clear pricing and curated combinations.',
+      'Browse the full Miracle Natural range for face, body, and hair routines, crafted with botanical ingredients.',
     canonical: '/pricing',
     keywords: [
-      'Miracle Natural bundles',
+      'Miracle Natural shop',
       'personal care prices',
-      'skincare bundle Sri Lanka',
-      'hair care bundle',
+      'skincare Sri Lanka',
+      'hair care products',
       'body care set',
     ],
   },

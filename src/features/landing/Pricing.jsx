@@ -6,8 +6,8 @@ const PricingPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Bundles live inside the Shop page itself now; this route only exists
-    // for old links. Miracle Natural is the only brand with bundles today.
+    // Legacy /pricing route from before pricing lived on the Shop page.
+    // Kept as a redirect so old links still land somewhere useful.
     navigate(shopPathForBrand('miracle_natural'), { replace: true });
   }, [navigate]);
 

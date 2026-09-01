@@ -39,7 +39,7 @@ const CTASection = () => {
         </Typography>
 
         <Typography variant="p" className="mb-7 sm:mb-8 max-w-xl mx-auto">
-          Shop your first bundle and feel the difference of gentle, botanical personal care.
+          Feel the difference of gentle, botanical personal care, crafted for your everyday ritual.
         </Typography>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -50,13 +50,6 @@ const CTASection = () => {
             className="w-full sm:w-auto px-8 py-3"
           >
             Shop The Collection
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
-            className="w-full sm:w-auto px-8 py-3"
-          >
-            View Bundles
           </Button>
         </div>
       </motion.div>

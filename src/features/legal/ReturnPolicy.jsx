@@ -38,7 +38,7 @@ const sections = [
         <p>Certain items cannot be returned or refunded once delivered, including:</p>
         <ul>
           <li>Opened, used, or seal-broken personal-care and cosmetic products (for hygiene reasons).</li>
-          <li>Items marked as final sale, clearance, or part of a limited promotional bundle.</li>
+          <li>Items marked as final sale or clearance.</li>
           <li>Products damaged, misused, or altered after delivery through no fault of ours.</li>
         </ul>
         <p>
