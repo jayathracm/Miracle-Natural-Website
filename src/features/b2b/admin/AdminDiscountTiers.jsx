@@ -168,11 +168,6 @@ const AdminDiscountTiers = () => {
               )}
             </div>
           </div>
-          <p className="mt-3 text-[0.82rem] text-muted-foreground max-w-prose">
-            Applies to Corporate Partner accounts ordering at or above each tier's minimum
-            quantity. The highest qualifying tier is used automatically — no stacking. Inactive
-            tiers are kept but ignored by the pricing calculation.
-          </p>
         </div>
 
         {formOpen && (

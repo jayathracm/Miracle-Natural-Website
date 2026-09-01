@@ -81,10 +81,6 @@ const AdminAnalytics = () => {
               Refresh
             </Button>
           </div>
-          <p className="mt-3 text-[0.82rem] text-muted-foreground max-w-prose">
-            Revenue figures exclude cancelled orders. Order counts include every order placed,
-            regardless of status.
-          </p>
         </div>
 
         {error ? (

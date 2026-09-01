@@ -345,12 +345,6 @@ const AdminInventory = () => {
               Refresh
             </Button>
           </div>
-          <p className="mt-3 text-[0.82rem] text-muted-foreground max-w-prose">
-            Retail and wholesale stock are tracked separately per product — a retail sale only
-            draws from the retail pool, a B2B order only from wholesale. Stock decrements
-            automatically as orders come in; adjust it here after a restock. Raw materials
-            (manufacturing ingredients) are a separate, manually-tracked pool below.
-          </p>
         </div>
 
         {/* ---------------- Product inventory ---------------- */}
