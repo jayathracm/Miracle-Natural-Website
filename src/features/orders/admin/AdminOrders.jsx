@@ -136,6 +136,10 @@ const AdminOrders = () => {
       setOrders((prev) =>
         prev.map((order) => (order.id === orderId ? { ...order, status: nextStatus } : order))
       );
+      // Best-effort — the status change itself already succeeded.
+      supabase.functions
+        .invoke('send-order-status-email', { body: { orderId, status: nextStatus } })
+        .catch(() => {});
     }
     setUpdatingOrderId(null);
   };

@@ -10,17 +10,36 @@
 // sending domain — see the Resend dashboard).
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { orderConfirmationEmail, sendEmail } from '../_shared/resendEmail.js';
+import { orderConfirmationEmail, adminNewOrderEmail, sendEmail } from '../_shared/resendEmail.js';
+
+// Browsers preflight cross-origin calls with an OPTIONS request before the
+// real POST — without these headers (and handling OPTIONS below) the
+// preflight gets a bare 405 and the browser never sends the actual request.
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+  });
+}
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS_HEADERS });
+  }
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    return jsonResponse({ error: 'Method not allowed.' }, 405);
   }
 
   const apiKey = Deno.env.get('RESEND_API_KEY');
   if (!apiKey) {
     console.error('send-order-email: missing RESEND_API_KEY secret.');
-    return new Response(JSON.stringify({ error: 'Email service not configured.' }), { status: 503 });
+    return jsonResponse({ error: 'Email service not configured.' }, 503);
   }
 
   const fromAddress = Deno.env.get('RESEND_FROM_EMAIL') || 'Miracle Natural <onboarding@resend.dev>';
@@ -29,12 +48,12 @@ Deno.serve(async (req) => {
   try {
     payload = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid request body.' }), { status: 400 });
+    return jsonResponse({ error: 'Invalid request body.' }, 400);
   }
 
   const { orderId } = payload;
   if (!orderId) {
-    return new Response(JSON.stringify({ error: 'orderId is required.' }), { status: 400 });
+    return jsonResponse({ error: 'orderId is required.' }, 400);
   }
 
   const supabase = createClient(
@@ -44,13 +63,13 @@ Deno.serve(async (req) => {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, customer_name, customer_email, delivery_address, subtotal, shipping_cost, grand_total')
+    .select('id, customer_name, customer_email, customer_phone, delivery_address, subtotal, shipping_cost, grand_total')
     .eq('id', orderId)
     .single();
 
-  if (!order || !order.customer_email) {
+  if (!order) {
     // Nothing to email — not an error worth failing checkout over.
-    return new Response(JSON.stringify({ skipped: true }), { status: 200 });
+    return jsonResponse({ skipped: true });
   }
 
   const { data: items } = await supabase
@@ -58,16 +77,29 @@ Deno.serve(async (req) => {
     .select('product_name, quantity, line_total')
     .eq('order_id', orderId);
 
-  const { subject, html } = orderConfirmationEmail(order, items || []);
+  let sent = false;
 
-  try {
-    await sendEmail({ apiKey, from: fromAddress, to: order.customer_email, subject, html });
-  } catch (err) {
-    console.error('send-order-email: Resend send failed', orderId, err);
-    // Still 200 — the order itself already succeeded, an email hiccup
-    // shouldn't read as a checkout failure to the frontend.
-    return new Response(JSON.stringify({ sent: false }), { status: 200 });
+  if (order.customer_email) {
+    const { subject, html } = orderConfirmationEmail(order, items || []);
+    try {
+      await sendEmail({ apiKey, from: fromAddress, to: order.customer_email, subject, html });
+      sent = true;
+    } catch (err) {
+      console.error('send-order-email: Resend send failed', orderId, err);
+    }
   }
 
-  return new Response(JSON.stringify({ sent: true }), { status: 200 });
+  // Admin alert — independent of whether the customer email above worked,
+  // and additive alongside the existing formsubmit.co alert in Shop.jsx.
+  const adminEmail = Deno.env.get('ORDER_NOTIFICATION_EMAIL') || 'dinisha@lanmic.com';
+  try {
+    const { subject, html } = adminNewOrderEmail(order, items || [], 'Cash on Delivery');
+    await sendEmail({ apiKey, from: fromAddress, to: adminEmail, subject, html });
+  } catch (err) {
+    console.error('send-order-email: admin alert failed', orderId, err);
+  }
+
+  // Still 200 either way — the order itself already succeeded, an email
+  // hiccup shouldn't read as a checkout failure to the frontend.
+  return jsonResponse({ sent });
 });

@@ -3,17 +3,17 @@
 // Keep verify_jwt off — PayHere calls this with no Supabase session, so
 // turning JWT checks on would just 401 every real notification.
 // Needs PAYHERE_MERCHANT_SECRET. ORDER_NOTIFICATION_EMAIL and
-// RESEND_API_KEY (customer emails) are optional — each is skipped
+// RESEND_API_KEY (customer + admin emails) are optional — each is skipped
 // independently if its secret isn't set.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { verifyNotifySignature, mapStatusCode } from '../_shared/payhereLogic.js';
-import { paymentSuccessEmail, paymentFailedEmail, sendEmail } from '../_shared/resendEmail.js';
+import { paymentSuccessEmail, paymentFailedEmail, adminNewOrderEmail, sendEmail } from '../_shared/resendEmail.js';
 
 async function fetchOrderWithItems(supabase, orderId) {
   const { data: order } = await supabase
     .from('orders')
-    .select('id, customer_name, customer_email, delivery_address, subtotal, shipping_cost, grand_total')
+    .select('id, customer_name, customer_email, customer_phone, delivery_address, subtotal, shipping_cost, grand_total')
     .eq('id', orderId)
     .single();
 
@@ -45,6 +45,26 @@ async function sendCustomerEmail(supabase, orderId, kind) {
     await sendEmail({ apiKey, from: fromAddress, to: order.customer_email, subject, html });
   } catch (err) {
     console.error('payhere-notify: customer email failed', orderId, kind, err);
+  }
+}
+
+// Additive alongside the existing formsubmit.co alert (sendOrderConfirmationEmail
+// below) — gives a Resend-tracked copy of the same "new paid order" alert.
+async function sendAdminAlert(supabase, orderId) {
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+  if (!apiKey) return;
+
+  const fromAddress = Deno.env.get('RESEND_FROM_EMAIL') || 'Miracle Natural <onboarding@resend.dev>';
+  const adminEmail = Deno.env.get('ORDER_NOTIFICATION_EMAIL') || 'dinisha@lanmic.com';
+
+  try {
+    const { order, items } = await fetchOrderWithItems(supabase, orderId);
+    if (!order) return;
+
+    const { subject, html } = adminNewOrderEmail(order, items, 'Online Payment (PayHere)');
+    await sendEmail({ apiKey, from: fromAddress, to: adminEmail, subject, html });
+  } catch (err) {
+    console.error('payhere-notify: admin alert failed', orderId, err);
   }
 }
 
@@ -199,6 +219,7 @@ Deno.serve(async (req) => {
       console.error('payhere-notify: confirmation email failed', orderId, err);
     }
 
+    await sendAdminAlert(supabase, orderId);
     await sendCustomerEmail(supabase, orderId, 'paid');
   }
 

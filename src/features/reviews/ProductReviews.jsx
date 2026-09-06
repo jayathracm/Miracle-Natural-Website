@@ -184,7 +184,7 @@ const ProductReviews = ({ productId }) => {
   };
 
   return (
-    <div className="mt-10 pt-8 border-t border-[var(--color-border-light)]">
+    <div id="reviews" className="mt-10 pt-8 border-t border-[var(--color-border-light)]">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <Typography variant="h4" className="text-foreground mb-1">Customer Reviews</Typography>
