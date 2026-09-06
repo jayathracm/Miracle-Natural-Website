@@ -14,7 +14,7 @@ import NotFound from '@/shared/NotFound';
 import MainLayout from '@/shared/layout/MainLayout';
 import ScrollProgressBar from '@/shared/layout/ScrollProgressBar';
 import ChatWidget from '@/features/chat/ChatWidget';
-import { Landing, MiracleNatural, Laira, About, Pricing, Shop, ProductDetail, RitualBuilder, CorporatePartnerApply, Login, Signup, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from '@/routes';
+import { Landing, MiracleNatural, Laira, About, Pricing, Shop, ProductDetail, RitualBuilder, CorporatePartnerApply, Login, Signup, ForgotPassword, ResetPassword, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from '@/routes';
 import AdminOrders from '@/features/orders/admin/AdminOrders';
 import AdminMessages from '@/features/messages/admin/AdminMessages';
 import AdminProducts from '@/features/shop/admin/AdminProducts';
@@ -121,6 +121,8 @@ const App = () => {
 
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/account" element={<Account />} />
 
                   <Route

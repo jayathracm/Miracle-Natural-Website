@@ -93,12 +93,12 @@ const Login = () => {
             <label htmlFor="login-password" className="block text-[0.78rem] font-semibold tracking-[0.04em] text-text-secondary">
               Password
             </label>
-            <a
-              href="mailto:dinisha@lanmic.com?subject=Password%20Reset%20Request"
+            <Link
+              to="/forgot-password"
               className="text-[0.75rem] font-semibold text-primary hover:underline"
             >
               Forgot password?
-            </a>
+            </Link>
           </div>
           <div className="relative">
             <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
