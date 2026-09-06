@@ -17,6 +17,31 @@ const STATUS_STYLES = {
   cancelled: 'border-red-300 bg-red-50 text-red-700',
 };
 
+const PAYMENT_METHOD_LABELS = {
+  cash_on_delivery: 'Cash on Delivery',
+  payhere: 'Online Payment',
+};
+
+// payment_status is separate from fulfillment status — an order can be
+// confirmed/shipped while still unpaid (COD), or paid before it ships.
+const PAYMENT_STATUS_LABELS = {
+  not_required: 'COD',
+  pending: 'Payment Pending',
+  paid: 'Paid',
+  failed: 'Payment Failed',
+  cancelled: 'Payment Cancelled',
+  chargedback: 'Chargedback',
+};
+
+const PAYMENT_STATUS_STYLES = {
+  not_required: 'border-gray-300 bg-gray-50 text-gray-700',
+  pending: 'border-amber-300 bg-amber-50 text-amber-800',
+  paid: 'border-emerald-300 bg-emerald-50 text-emerald-800',
+  failed: 'border-red-300 bg-red-50 text-red-700',
+  cancelled: 'border-red-300 bg-red-50 text-red-700',
+  chargedback: 'border-red-300 bg-red-50 text-red-700',
+};
+
 const formatDate = (isoString) =>
   new Date(isoString).toLocaleString('en-LK', {
     dateStyle: 'medium',
@@ -221,6 +246,9 @@ const AdminOrders = () => {
                           B2B
                         </span>
                       )}
+                      <span className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] ${PAYMENT_STATUS_STYLES[order.payment_status] || 'border-gray-300 bg-gray-50 text-gray-700'}`}>
+                        {PAYMENT_STATUS_LABELS[order.payment_status] || order.payment_status}
+                      </span>
                       <span className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] ${STATUS_STYLES[order.status] || 'border-gray-300 bg-gray-50 text-gray-700'}`}>
                         {order.status}
                       </span>
@@ -231,7 +259,7 @@ const AdminOrders = () => {
 
                   {isExpanded && (
                     <div className="border-t border-[var(--color-border-light)] px-4 py-4 sm:px-5 bg-white/50">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <p className="text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-text-secondary mb-1.5">Items</p>
                           <div className="space-y-1.5">
@@ -248,10 +276,23 @@ const AdminOrders = () => {
                           <p className="text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-text-secondary mb-1.5">Delivery</p>
                           <p className="text-[0.84rem] text-foreground">{order.delivery_address}</p>
                           <p className="text-[0.78rem] text-muted-foreground">
-                            {order.delivery_zone === 'colombo_1_15' ? 'Colombo 1-15' : 'Other Areas'} · {order.payment_method === 'cash_on_delivery' ? 'Cash on Delivery' : 'Online Payment'}
+                            {order.delivery_zone === 'colombo_1_15' ? 'Colombo 1-15' : 'Other Areas'}
                           </p>
                           {order.notes && (
                             <p className="mt-1.5 text-[0.78rem] italic text-muted-foreground">Note: {order.notes}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-text-secondary mb-1.5">Payment</p>
+                          <p className="text-[0.84rem] text-foreground">
+                            {PAYMENT_METHOD_LABELS[order.payment_method] || order.payment_method}
+                          </p>
+                          <p className="text-[0.78rem] text-muted-foreground">
+                            {PAYMENT_STATUS_LABELS[order.payment_status] || order.payment_status}
+                          </p>
+                          {order.payhere_payment_id && (
+                            <p className="text-[0.72rem] text-text-tertiary mt-0.5">Ref: {order.payhere_payment_id}</p>
                           )}
                         </div>
                       </div>
