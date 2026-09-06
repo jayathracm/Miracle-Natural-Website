@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Beaker, Pencil, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { Typography } from '@/shared/ui/Typography';
 import { Button } from '@/shared/ui/Button';
@@ -98,7 +98,7 @@ const AdminInventory = () => {
     setDrafts(next);
   };
 
-  const loadInventory = () => {
+  const loadInventory = useCallback(() => {
     setIsLoadingInventory(true);
     setInventoryError(null);
     return fetchProductInventory()
@@ -108,11 +108,11 @@ const AdminInventory = () => {
       })
       .catch((fetchError) => setInventoryError(fetchError.message || 'Could not load inventory.'))
       .finally(() => setIsLoadingInventory(false));
-  };
+  }, []);
 
   useEffect(() => {
     loadInventory();
-  }, []);
+  }, [loadInventory]);
 
   const groupedProducts = useMemo(() => {
     const map = new Map();
