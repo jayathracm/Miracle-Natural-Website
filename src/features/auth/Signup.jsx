@@ -99,6 +99,28 @@ const Signup = () => {
       return;
     }
 
+    // Supabase deliberately returns a fake "success" for signups against an
+    // email that's already registered and confirmed, instead of an error —
+    // this stops attackers from using signup to check which emails exist.
+    // The one visible tell: `identities` comes back empty instead of holding
+    // the new identity. See: https://github.com/orgs/supabase/discussions/1282
+    const emailAlreadyRegistered = !data.session && data.user && data.user.identities?.length === 0;
+
+    if (emailAlreadyRegistered) {
+      setErrors({
+        form: (
+          <>
+            An account with this email already exists.{' '}
+            <Link to="/login" className="font-semibold underline">
+              Sign in instead
+            </Link>
+            .
+          </>
+        ),
+      });
+      return;
+    }
+
     // If email confirmation is required by your Supabase project settings,
     // signUp succeeds but no active session is returned yet.
     const needsEmailConfirmation = !data.session;
