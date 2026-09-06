@@ -39,6 +39,15 @@ const PAYMENT_STATUS_STYLES = {
 const formatDate = (isoString) =>
   new Date(isoString).toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' });
 
+// A single badge that names the method up front (Cash on Delivery vs Online
+// Payment) instead of just the payment status, so it's readable at a glance
+// without expanding the order.
+const getPaymentBadgeLabel = (order) => {
+  if (order.payment_method === 'cash_on_delivery') return 'Cash on Delivery';
+  if (order.payment_status === 'paid') return 'Paid Online';
+  return PAYMENT_STATUS_LABELS[order.payment_status] || 'Online Payment';
+};
+
 const OrdersSection = () => {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,16 +107,18 @@ const OrdersSection = () => {
               onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
               className="w-full flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5 text-left"
             >
-              <div>
+              <div className="min-w-0 flex-1 pr-3">
                 <p className="text-[0.72rem] text-text-tertiary">{formatDate(order.created_at)}</p>
-                <p className="text-[0.84rem] text-muted-foreground mt-0.5">
-                  {(order.order_items || []).length} item{(order.order_items || []).length === 1 ? '' : 's'}
+                <p className="text-[0.84rem] text-muted-foreground mt-0.5 truncate">
+                  {(order.order_items || [])
+                    .map((item) => (item.quantity > 1 ? `${item.product_name} ×${item.quantity}` : item.product_name))
+                    .join(', ')}
                 </p>
               </div>
 
               <div className="flex items-center gap-3">
                 <span className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] ${PAYMENT_STATUS_STYLES[order.payment_status] || 'border-gray-300 bg-gray-50 text-gray-700'}`}>
-                  {PAYMENT_STATUS_LABELS[order.payment_status] || order.payment_status}
+                  {getPaymentBadgeLabel(order)}
                 </span>
                 <span className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] ${STATUS_STYLES[order.status] || 'border-gray-300 bg-gray-50 text-gray-700'}`}>
                   {order.status}

@@ -33,6 +33,15 @@ const PAYMENT_STATUS_LABELS = {
   chargedback: 'Chargedback',
 };
 
+// Names the method up front (Cash on Delivery vs Paid/Pending Online)
+// instead of just the payment status, so the row badge is readable without
+// expanding the order.
+const getPaymentBadgeLabel = (order) => {
+  if (order.payment_method === 'cash_on_delivery') return 'Cash on Delivery';
+  if (order.payment_status === 'paid') return 'Paid Online';
+  return PAYMENT_STATUS_LABELS[order.payment_status] || 'Online Payment';
+};
+
 const PAYMENT_STATUS_STYLES = {
   not_required: 'border-gray-300 bg-gray-50 text-gray-700',
   pending: 'border-amber-300 bg-amber-50 text-amber-800',
@@ -247,7 +256,7 @@ const AdminOrders = () => {
                         </span>
                       )}
                       <span className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] ${PAYMENT_STATUS_STYLES[order.payment_status] || 'border-gray-300 bg-gray-50 text-gray-700'}`}>
-                        {PAYMENT_STATUS_LABELS[order.payment_status] || order.payment_status}
+                        {getPaymentBadgeLabel(order)}
                       </span>
                       <span className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em] ${STATUS_STYLES[order.status] || 'border-gray-300 bg-gray-50 text-gray-700'}`}>
                         {order.status}
