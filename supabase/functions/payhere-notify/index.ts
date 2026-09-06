@@ -13,7 +13,7 @@ import { paymentSuccessEmail, paymentFailedEmail, adminNewOrderEmail, sendEmail 
 async function fetchOrderWithItems(supabase, orderId) {
   const { data: order } = await supabase
     .from('orders')
-    .select('id, customer_name, customer_email, customer_phone, delivery_address, subtotal, shipping_cost, grand_total')
+    .select('id, brand, customer_name, customer_email, customer_phone, delivery_address, subtotal, shipping_cost, grand_total')
     .eq('id', orderId)
     .single();
 
