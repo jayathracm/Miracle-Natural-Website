@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { BarChart3, Boxes, Briefcase, FileText, LayoutDashboard, Leaf, Mail, Menu, Package, Percent, ShieldCheck, Sparkles, User, X } from 'lucide-react';
+import { BarChart3, Boxes, Briefcase, FileText, LayoutDashboard, Leaf, Mail, Menu, Package, Percent, ShieldCheck, Sparkles, Star, User, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
 import leoraIcon from '@/assets/branding/leora-wellness-icon-transparent.png';
 import { cn } from '@/shared/lib/utils';
@@ -207,6 +207,14 @@ const Navbar = () => {
                         Admin: Products
                       </Link>
                       <Link
+                        to="/admin/reviews"
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-[0.76rem] font-semibold tracking-[0.04em] uppercase text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors"
+                      >
+                        <Star size={14} />
+                        Admin: Reviews
+                      </Link>
+                      <Link
                         to="/admin/messages"
                         onClick={() => setIsAccountMenuOpen(false)}
                         className="flex items-center gap-2 px-4 py-2 text-[0.76rem] font-semibold tracking-[0.04em] uppercase text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors"
@@ -352,6 +360,14 @@ const Navbar = () => {
                     >
                       <Package size={18} />
                       Admin: Products
+                    </Link>
+                    <Link
+                      to="/admin/reviews"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="w-full rounded-lg border border-[var(--color-border-light)] bg-white/70 px-4 py-3 text-[0.95rem] font-sans font-semibold tracking-[0.08em] uppercase text-foreground text-left inline-flex items-center gap-2"
+                    >
+                      <Star size={18} />
+                      Admin: Reviews
                     </Link>
                     <Link
                       to="/admin/messages"

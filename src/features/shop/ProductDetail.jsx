@@ -9,6 +9,7 @@ import { useWishlist } from '@/features/wishlist/useWishlist';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getShopCategory } from '@/features/shop/shopCategories';
 import { WholesalePricingPanel } from '@/features/shop/WholesalePricingPanel';
+import ProductReviews from '@/features/reviews/ProductReviews';
 import { BRAND_BY_SLUG, shopPathForSlug } from '@/shared/lib/brands';
 import NotFound from '@/shared/NotFound';
 import { formatCurrency } from '@/shared/lib/currency';
@@ -79,6 +80,7 @@ const ProductDetail = () => {
             <Button onClick={() => navigate(shopPath)}>Return to Shop</Button>
           </div>
         ) : (
+          <>
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1.1fr] gap-8 sm:gap-10">
             <div className="relative rounded-2xl border border-[var(--color-border-light)] bg-[rgba(247,241,227,0.4)] overflow-hidden aspect-square">
               {product.image ? (
@@ -189,6 +191,9 @@ const ProductDetail = () => {
               )}
             </div>
           </div>
+
+          <ProductReviews productId={product.id} />
+          </>
         )}
       </div>
     </div>

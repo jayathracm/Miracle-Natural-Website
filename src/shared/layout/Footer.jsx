@@ -79,16 +79,6 @@ const Footer = () => {
               </li>
               <li>
                 <a
-                  href="/miracle-natural#testimonials"
-                  className="transition-colors duration-200"
-                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text-muted)'}
-                >
-                  Reviews
-                </a>
-              </li>
-              <li>
-                <a
                   href="/corporate-partner"
                   className="transition-colors duration-200"
                   onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}

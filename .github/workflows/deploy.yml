@@ -1,0 +1,56 @@
+name: Deploy
+
+# Runs the same checks as CI, then deploys to Cloudflare Workers — only on
+# pushes to main, so development and PRs never touch production.
+#
+# Required repo secrets (Settings -> Secrets and variables -> Actions):
+#   VITE_SUPABASE_URL       - same value as your local .env
+#   VITE_SUPABASE_ANON_KEY  - same value as your local .env (public/anon key,
+#                              safe to expose in the built bundle, but kept
+#                              as a secret here so it isn't hardcoded in git)
+#   CLOUDFLARE_API_TOKEN    - a Workers-scoped API token from the Cloudflare
+#                              dashboard (My Profile -> API Tokens)
+#   CLOUDFLARE_ACCOUNT_ID   - your Cloudflare account ID (dashboard sidebar)
+#
+# Database schema changes (supabase/schema.sql) are NOT applied here on
+# purpose — those stay a deliberate, manual step (Supabase SQL editor or
+# the MCP migration tool) rather than something CI runs unattended.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Build and deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy

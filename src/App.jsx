@@ -18,6 +18,7 @@ import { Landing, MiracleNatural, Laira, About, Pricing, Shop, ProductDetail, Ri
 import AdminOrders from '@/features/orders/admin/AdminOrders';
 import AdminMessages from '@/features/messages/admin/AdminMessages';
 import AdminProducts from '@/features/shop/admin/AdminProducts';
+import AdminProductReviews from '@/features/reviews/admin/AdminProductReviews';
 import AdminCorporatePartners from '@/features/b2b/admin/AdminCorporatePartners';
 import AdminDiscountTiers from '@/features/b2b/admin/AdminDiscountTiers';
 import AdminQuotations from '@/features/quotations/admin/AdminQuotations';
@@ -145,6 +146,15 @@ const App = () => {
                     element={(
                       <RequireAdmin>
                         <AdminProducts />
+                      </RequireAdmin>
+                    )}
+                  />
+
+                  <Route
+                    path="/admin/reviews"
+                    element={(
+                      <RequireAdmin>
+                        <AdminProductReviews />
                       </RequireAdmin>
                     )}
                   />

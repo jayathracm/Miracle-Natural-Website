@@ -34,8 +34,8 @@ import { formatCurrency } from '@/shared/lib/currency';
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 const PRODUCTS_PER_PAGE = 12;
 
-// Sandbox for now — flip to false once we go live with a real merchant account.
-const PAYHERE_SANDBOX = true;
+// Live merchant account — flip back to true only for local/sandbox testing.
+const PAYHERE_SANDBOX = false;
 const PAYHERE_POLL_INTERVAL_MS = 2000;
 const PAYHERE_POLL_MAX_ATTEMPTS = 15; // ~30s total
 

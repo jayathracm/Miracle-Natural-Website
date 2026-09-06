@@ -1166,3 +1166,105 @@ create policy "Admins can update guest quote requests"
   on public.guest_quote_requests for update
   using (private.is_admin())
   with check (private.is_admin());
+
+-- ----------------------------------------------------------------------------
+-- 21. PRODUCT REVIEWS
+-- Only a signed-in buyer with a delivered order containing the product can
+-- review it (enforced in the insert policy below via
+-- find_reviewable_order_id, not just in the app). One review per
+-- product/buyer; editing resets it to pending so it goes through moderation
+-- again. reviewer_name is copied from the profile at submit time — same
+-- reasoning as order_items copying product name/price: keeps the public
+-- review list readable without granting anonymous visitors a way to read
+-- other people's profiles.
+-- ----------------------------------------------------------------------------
+create table if not exists public.product_reviews (
+  id uuid primary key default gen_random_uuid(),
+  product_id text not null references public.products (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  order_id uuid references public.orders (id) on delete set null,
+  reviewer_name text not null,
+  rating integer not null check (rating between 1 and 5),
+  title text,
+  comment text not null,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  admin_notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint product_reviews_one_per_buyer unique (product_id, user_id)
+);
+
+create index if not exists product_reviews_product_idx on public.product_reviews (product_id);
+create index if not exists product_reviews_status_idx on public.product_reviews (status);
+
+alter table public.product_reviews enable row level security;
+
+-- Most recent delivered order (for this user) that contains the product, if
+-- any. Used both as the insert policy's eligibility check and, client-side,
+-- to attach the order_id to the review. Runs as the calling user (not
+-- security definer) — orders/order_items RLS already lets a user see their
+-- own rows, so this can't be used to probe other people's order history.
+create or replace function public.find_reviewable_order_id(p_product_id text)
+returns uuid
+language sql
+stable
+set search_path = public
+as $$
+  select o.id
+  from public.orders o
+  join public.order_items oi on oi.order_id = o.id
+  where o.user_id = auth.uid()
+    and oi.product_id = p_product_id
+    and o.status = 'delivered'
+  order by o.created_at desc
+  limit 1;
+$$;
+
+drop policy if exists "Anyone can view approved reviews" on public.product_reviews;
+create policy "Anyone can view approved reviews"
+  on public.product_reviews for select
+  using (status = 'approved');
+
+drop policy if exists "Users can view their own reviews" on public.product_reviews;
+create policy "Users can view their own reviews"
+  on public.product_reviews for select
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists "Admins can view all reviews" on public.product_reviews;
+create policy "Admins can view all reviews"
+  on public.product_reviews for select
+  using (private.is_admin());
+
+drop policy if exists "Verified buyers can add a review" on public.product_reviews;
+create policy "Verified buyers can add a review"
+  on public.product_reviews for insert
+  to authenticated
+  with check (
+    user_id = auth.uid()
+    and status = 'pending'
+    and public.find_reviewable_order_id(product_id) is not null
+  );
+
+drop policy if exists "Users can update their own review" on public.product_reviews;
+create policy "Users can update their own review"
+  on public.product_reviews for update
+  to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid() and status = 'pending');
+
+drop policy if exists "Admins can update review status" on public.product_reviews;
+create policy "Admins can update review status"
+  on public.product_reviews for update
+  using (private.is_admin());
+
+drop policy if exists "Users can delete their own review" on public.product_reviews;
+create policy "Users can delete their own review"
+  on public.product_reviews for delete
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists "Admins can delete reviews" on public.product_reviews;
+create policy "Admins can delete reviews"
+  on public.product_reviews for delete
+  using (private.is_admin());
