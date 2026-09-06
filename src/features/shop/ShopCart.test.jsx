@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, within, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ShopCart } from './ShopCart';
 
@@ -30,18 +30,23 @@ function baseProps(overrides = {}) {
   };
 }
 
+// ShopCart always mounts both the desktop panel and the mobile sheet at
+// once — only a CSS media query (which jsdom doesn't apply) picks which one
+// is actually visible. Every query is scoped to the desktop panel via its
+// data-testid so it matches one element instead of the same content twice.
 function renderCart(overrides = {}) {
   const props = baseProps(overrides);
   const utils = render(<ShopCart {...props} />);
-  return { ...utils, props };
+  const panel = within(utils.getByTestId('cart-panel-desktop'));
+  return { ...utils, props, panel };
 }
 
 describe('ShopCart — quantity buttons', () => {
   it('the + button calls onChangeQuantity(id, +1) for the right line', async () => {
     const user = userEvent.setup();
-    const { props } = renderCart();
+    const { props, panel } = renderCart();
 
-    await user.click(screen.getByLabelText('Increase quantity for Neem Face Oil'));
+    await user.click(panel.getByLabelText('Increase quantity for Neem Face Oil'));
 
     expect(props.onChangeQuantity).toHaveBeenCalledWith('p2', 1);
     expect(props.onChangeQuantity).toHaveBeenCalledTimes(1);
@@ -49,9 +54,9 @@ describe('ShopCart — quantity buttons', () => {
 
   it('the - button calls onChangeQuantity(id, -1) for the right line', async () => {
     const user = userEvent.setup();
-    const { props } = renderCart();
+    const { props, panel } = renderCart();
 
-    await user.click(screen.getByLabelText('Decrease quantity for Aloe Vera Gel'));
+    await user.click(panel.getByLabelText('Decrease quantity for Aloe Vera Gel'));
 
     expect(props.onChangeQuantity).toHaveBeenCalledWith('p1', -1);
   });
@@ -59,16 +64,17 @@ describe('ShopCart — quantity buttons', () => {
 
 describe('ShopCart — totals', () => {
   it('renders subtotal, shipping and grand total from props, formatted as currency', () => {
-    renderCart();
+    const { panel } = renderCart();
 
-    expect(screen.getByText('LKR 2,500')).toBeInTheDocument();
-    expect(screen.getByText('LKR 300')).toBeInTheDocument();
-    expect(screen.getByText('LKR 2,800')).toBeInTheDocument();
+    expect(panel.getByText('LKR 2,500')).toBeInTheDocument();
+    expect(panel.getByText('LKR 300')).toBeInTheDocument();
+    expect(panel.getByText('LKR 2,800')).toBeInTheDocument();
   });
 
   it('recomputes what it displays when the parent passes updated totals', () => {
-    const { rerender, props } = renderCart();
-    expect(screen.getByText('LKR 2,800')).toBeInTheDocument();
+    const { rerender, props, getByTestId } = renderCart();
+    let panel = within(getByTestId('cart-panel-desktop'));
+    expect(panel.getByText('LKR 2,800')).toBeInTheDocument();
 
     rerender(
       <ShopCart
@@ -80,27 +86,28 @@ describe('ShopCart — totals', () => {
       />
     );
 
-    expect(screen.queryByText('LKR 2,800')).not.toBeInTheDocument();
-    expect(screen.queryByText('LKR 2,500')).not.toBeInTheDocument();
-    expect(screen.getByText('LKR 3,500')).toBeInTheDocument();
-    expect(screen.getByText('LKR 3,800')).toBeInTheDocument();
+    panel = within(getByTestId('cart-panel-desktop'));
+    expect(panel.queryByText('LKR 2,800')).not.toBeInTheDocument();
+    expect(panel.queryByText('LKR 2,500')).not.toBeInTheDocument();
+    expect(panel.getByText('LKR 3,500')).toBeInTheDocument();
+    expect(panel.getByText('LKR 3,800')).toBeInTheDocument();
   });
 });
 
 describe('ShopCart — MOQ violations', () => {
   it('enables Checkout when there are no violations', () => {
-    renderCart();
-    expect(screen.getByRole('button', { name: 'Checkout' })).not.toBeDisabled();
+    const { panel } = renderCart();
+    expect(panel.getByRole('button', { name: 'Checkout' })).not.toBeDisabled();
   });
 
   it('disables Checkout and shows a warning when there is a violation', () => {
-    renderCart({
+    const { panel } = renderCart({
       moqViolations: [{ item: baseItems[0], pricing: { moq: 5 } }],
     });
 
-    const checkoutButton = screen.getByRole('button', { name: 'Adjust Quantities to Continue' });
+    const checkoutButton = panel.getByRole('button', { name: 'Adjust Quantities to Continue' });
     expect(checkoutButton).toBeDisabled();
-    expect(screen.getByText('Minimum order quantity not met')).toBeInTheDocument();
-    expect(screen.getByText('Aloe Vera Gel: need 5, have 2')).toBeInTheDocument();
+    expect(panel.getByText('Minimum order quantity not met')).toBeInTheDocument();
+    expect(panel.getByText('Aloe Vera Gel: need 5, have 2')).toBeInTheDocument();
   });
 });

@@ -462,8 +462,12 @@ export const ShopCart = (props) => {
               onClick={() => setIsOpen(false)}
             />
 
-            {/* Desktop: slide-in panel from the right edge. */}
+            {/* Desktop: slide-in panel from the right edge. Both this and the
+                mobile sheet below are always mounted (only CSS toggles which
+                one shows), so tests scope queries to this testid rather than
+                matching the same content twice. */}
             <motion.div
+              data-testid="cart-panel-desktop"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
@@ -475,6 +479,7 @@ export const ShopCart = (props) => {
 
             {/* Mobile: slide-up sheet from the bottom. */}
             <motion.div
+              data-testid="cart-panel-mobile"
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}

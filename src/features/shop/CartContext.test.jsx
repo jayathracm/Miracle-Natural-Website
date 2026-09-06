@@ -7,13 +7,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor, cleanup } from '@testing-library/react';
 import { CartProvider, useBrandCart } from './CartContext';
 
-const CATALOG = [
-  { id: 'p1', name: 'Aloe Vera Gel', price: 1000, brand: 'miracle_natural', category: 'Face Care' },
-  { id: 'p2', name: 'Neem Face Oil', price: 500, brand: 'miracle_natural', category: 'Face Care' },
-];
-
+// vi.mock(...) is hoisted above this file's own top-level declarations, so
+// the catalog has to be built inside the factory rather than referenced
+// from a module-level const (that would throw "Cannot access before
+// initialization" — the const doesn't exist yet when the hoisted mock runs).
 vi.mock('@/features/shop/products', () => ({
-  fetchProducts: vi.fn().mockResolvedValue(CATALOG),
+  fetchProducts: vi.fn().mockResolvedValue([
+    { id: 'p1', name: 'Aloe Vera Gel', price: 1000, brand: 'miracle_natural', category: 'Face Care' },
+    { id: 'p2', name: 'Neem Face Oil', price: 500, brand: 'miracle_natural', category: 'Face Care' },
+  ]),
 }));
 
 vi.mock('@/features/shop/cart', () => ({
