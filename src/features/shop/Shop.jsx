@@ -580,6 +580,10 @@ const ShopPage = () => {
       // Non-fatal — order's already saved, admins will still see it.
     }
 
+    // Best-effort customer confirmation email — a hiccup here shouldn't
+    // block the success screen, the order is already saved regardless.
+    supabase.functions.invoke('send-order-email', { body: { orderId: orderRow.id } }).catch(() => {});
+
     setLastPaidWithPayHere(false);
     setShowOrderSuccessPopup(true);
     pushToast('success', 'Order placed successfully.');

@@ -2,10 +2,51 @@
 // trusting anything, then updates the order's payment_status.
 // Keep verify_jwt off — PayHere calls this with no Supabase session, so
 // turning JWT checks on would just 401 every real notification.
-// Needs PAYHERE_MERCHANT_SECRET. ORDER_NOTIFICATION_EMAIL is optional.
+// Needs PAYHERE_MERCHANT_SECRET. ORDER_NOTIFICATION_EMAIL and
+// RESEND_API_KEY (customer emails) are optional — each is skipped
+// independently if its secret isn't set.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { verifyNotifySignature, mapStatusCode } from '../_shared/payhereLogic.js';
+import { paymentSuccessEmail, paymentFailedEmail, sendEmail } from '../_shared/resendEmail.js';
+
+async function fetchOrderWithItems(supabase, orderId) {
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, customer_name, customer_email, delivery_address, subtotal, shipping_cost, grand_total')
+    .eq('id', orderId)
+    .single();
+
+  if (!order) return { order: null, items: [] };
+
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('product_name, quantity, line_total')
+    .eq('order_id', orderId);
+
+  return { order, items: items || [] };
+}
+
+// Best-effort — an email hiccup should never make the webhook look like it
+// failed to PayHere (which would trigger unnecessary retries).
+async function sendCustomerEmail(supabase, orderId, kind) {
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+  if (!apiKey) return;
+
+  const fromAddress = Deno.env.get('RESEND_FROM_EMAIL') || 'Miracle Natural <onboarding@resend.dev>';
+
+  try {
+    const { order, items } = await fetchOrderWithItems(supabase, orderId);
+    if (!order || !order.customer_email) return;
+
+    const { subject, html } =
+      kind === 'paid' ? paymentSuccessEmail(order, items) : paymentFailedEmail(order);
+
+    await sendEmail({ apiKey, from: fromAddress, to: order.customer_email, subject, html });
+  } catch (err) {
+    console.error('payhere-notify: customer email failed', orderId, kind, err);
+  }
+}
 
 async function sendOrderConfirmationEmail(supabase, orderId) {
   const orderEmail = Deno.env.get('ORDER_NOTIFICATION_EMAIL') || 'dinisha@lanmic.com';
@@ -128,9 +169,9 @@ Deno.serve(async (req) => {
     .update({ payment_status: paymentStatus, payhere_payment_id: paymentId || null })
     .eq('id', orderId);
 
-  if (paymentStatus === 'paid') {
+  if (paymentStatus === 'paid' || paymentStatus === 'failed') {
     // Stops a retried notification from double-decrementing stock/emailing twice.
-    updateQuery = updateQuery.neq('payment_status', 'paid');
+    updateQuery = updateQuery.neq('payment_status', paymentStatus);
   }
 
   const { data: updatedOrder, error: updateError } = await updateQuery.select('id').maybeSingle();
@@ -157,6 +198,12 @@ Deno.serve(async (req) => {
     } catch (err) {
       console.error('payhere-notify: confirmation email failed', orderId, err);
     }
+
+    await sendCustomerEmail(supabase, orderId, 'paid');
+  }
+
+  if (paymentStatus === 'failed') {
+    await sendCustomerEmail(supabase, orderId, 'failed');
   }
 
   return new Response('OK', { status: 200 });
