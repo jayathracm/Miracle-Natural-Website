@@ -545,7 +545,7 @@ const AdminProducts = () => {
                 >
                   <div className="aspect-[4/3] bg-[rgba(255,251,243,0.9)] overflow-hidden flex items-center justify-center">
                     {image ? (
-                      <img src={image} alt={product.name} className="h-full w-full object-cover object-center" loading="lazy" />
+                      <img src={image} alt={product.name} className="h-full w-full object-contain object-center" loading="lazy" />
                     ) : (
                       <ImageOff size={24} className="text-text-tertiary" />
                     )}

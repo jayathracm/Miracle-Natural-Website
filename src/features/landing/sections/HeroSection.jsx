@@ -7,7 +7,7 @@ import { Typography } from '@/shared/ui/Typography';
 import { Button } from '@/shared/ui/Button';
 import { ArrowRight } from 'lucide-react';
 import { shopPathForBrand } from '@/shared/lib/brands';
-import miracleNaturalIcon from '@/assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
+import brightBlossomGroupImg from '@/assets/catalog/bright blossom range/WhatsApp Image 2026-09-10 at 13.40.36.jpeg';
 
 // import.meta.glob resolves relative to this file's own location, not the
 // @ alias — path has an extra '../../' since this file moved deeper in the reorg.
@@ -19,6 +19,23 @@ const catalogImageModules = import.meta.glob('../../../assets/catalog/*.{png,jpg
 const formatImageLabel = (path) => {
   const fileName = path.split('/').pop()?.replace(/\.[^.]+$/, '') ?? 'product image';
   return fileName.replace(/[-_]+/g, ' ').trim();
+};
+
+// When set, the hero swaps its usual rotating product panel for a dedicated
+// "just launched" spotlight — set to null to fall back to the standard
+// carousel once a range isn't new anymore, or update the fields (including
+// `image`, optional — omit it to fall back to a text-only card) for the
+// next launch.
+const LAUNCH_SPOTLIGHT = {
+  eyebrow: 'New Arrival',
+  title: 'Bright Blossom',
+  tagline: 'Brightening, botanical, made for every day.',
+  description:
+    "Five new essentials built around Manjishta and botanical actives — face wash, serum, day cream, night cream, and body lotion — formulated to brighten and even skin tone.",
+  products: ['Face Wash', 'Face Serum', 'Day Cream', 'Night Cream', 'Body Lotion'],
+  image: brightBlossomGroupImg,
+  ctaLabel: 'Shop Bright Blossom',
+  ctaLink: `${shopPathForBrand('miracle_natural')}?q=Blossom`,
 };
 
 const HeroSection = () => {
@@ -135,13 +152,16 @@ const HeroSection = () => {
         {/* Text Content */}
         <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 sm:space-y-5 lg:space-y-7 z-10">
           <div ref={textRef} className="space-y-1.5 sm:space-y-3 md:space-y-4 w-full">
-            <div className="flex items-center justify-center lg:justify-start gap-2.5 sm:gap-3 mb-1">
-              <img src={miracleNaturalIcon} alt="" aria-hidden="true" className="h-14 sm:h-16 w-auto object-contain" />
-              <div className="flex flex-col items-center lg:items-start">
-                <span className="font-display text-foreground text-[1.4rem] sm:text-[1.65rem] tracking-tight leading-tight">Miracle Natural</span>
-                <span className="font-display italic text-muted-foreground text-[0.82rem] sm:text-[0.92rem] tracking-tight leading-tight">For Those Who Know Better</span>
-              </div>
-            </div>
+            {LAUNCH_SPOTLIGHT && (
+              <button
+                type="button"
+                onClick={() => navigate(LAUNCH_SPOTLIGHT.ctaLink)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[0.68rem] font-bold tracking-[0.08em] uppercase text-primary transition-colors hover:bg-primary/16"
+              >
+                New: {LAUNCH_SPOTLIGHT.title} Range
+              </button>
+            )}
+
             <Typography variant="label" className="mb-2 block text-primary">Herbal Care by Leora Wellness</Typography>
             <Typography
               variant="h1"
@@ -194,37 +214,90 @@ const HeroSection = () => {
 
         {/* Visual/Abstract Content */}
         <motion.div style={{ y: imageY }} className="relative hidden lg:block justify-self-end w-full max-w-[460px] xl:max-w-[520px]">
-          <div className="relative z-10 aspect-[4/5] w-full rounded-[2.1rem] overflow-hidden border border-[var(--color-border-light)] shadow-[0_20px_44px_rgba(31,44,35,0.2)] bg-[rgba(255,252,245,0.95)]">
-            {slides.map((slide, index) => (
-              <img
-                key={slide.src}
-                src={slide.src}
-                alt={slide.alt}
-                width="820"
-                height="1200"
-                className={`absolute inset-0 h-full w-full object-cover object-center mix-blend-normal transition-opacity duration-700 ${index === activeSlide ? 'opacity-96' : 'opacity-0'}`}
-                loading={index === 0 ? 'eager' : 'lazy'}
-                fetchPriority={index === 0 ? 'high' : 'auto'}
-              />
-            ))}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[rgba(255,248,234,0.55)] to-transparent" />
-            {slides.length > 1 && (
-              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2.5 z-20">
-                {slides.map((slide, index) => (
-                  <button
-                    key={`dot-${slide.src}`}
-                    type="button"
-                    onClick={() => setActiveSlide(index)}
-                    aria-label={`View product ${index + 1}`}
-                    className={`h-2.5 rounded-full transition-all duration-300 ${index === activeSlide ? 'w-6 bg-white/95 shadow-[0_0_0_1px_rgba(31,44,35,0.14)]' : 'w-2.5 bg-white/55 hover:bg-white/80'}`}
-                  />
-                ))}
+          {LAUNCH_SPOTLIGHT ? (
+            <div className="relative z-10 aspect-[4/5] w-full rounded-[2.1rem] overflow-hidden border border-[var(--color-border-light)] shadow-[0_20px_44px_rgba(31,44,35,0.2)] bg-gradient-to-br from-[rgba(255,252,245,0.97)] via-[rgba(247,241,227,0.95)] to-[rgba(238,242,234,0.95)]">
+              <div className="pointer-events-none absolute -top-10 -right-10 h-44 w-44 rounded-full bg-secondary/30 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-14 -left-10 h-52 w-52 rounded-full bg-primary/20 blur-3xl" />
+              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[rgba(79,113,84,0.6)] via-[rgba(184,111,67,0.4)] to-transparent" />
+
+              <div className="relative z-10 flex h-full flex-col p-7 sm:p-8">
+                <span className="self-start rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[0.65rem] font-bold tracking-[0.12em] uppercase text-primary">
+                  {LAUNCH_SPOTLIGHT.eyebrow}
+                </span>
+
+                <Typography variant="h2" className="mt-5 text-foreground text-[2.1rem] sm:text-[2.4rem] leading-tight">
+                  {LAUNCH_SPOTLIGHT.title}
+                </Typography>
+                <p className="mt-1 font-display italic text-muted-foreground text-[0.95rem]">{LAUNCH_SPOTLIGHT.tagline}</p>
+
+                <p className="mt-4 text-[0.9rem] leading-relaxed text-text-secondary">{LAUNCH_SPOTLIGHT.description}</p>
+
+                <div className="mt-5 flex flex-wrap gap-1.5">
+                  {LAUNCH_SPOTLIGHT.products.map((label) => (
+                    <span
+                      key={label}
+                      className="rounded-full border border-[var(--color-border-light)] bg-white/75 px-2.5 py-1 text-[0.68rem] font-semibold text-text-secondary"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+
+                {LAUNCH_SPOTLIGHT.image && (
+                  <div className="relative mt-5 min-h-0 flex-1 overflow-hidden rounded-xl border border-[var(--color-border-light)] bg-white/50">
+                    <img
+                      src={LAUNCH_SPOTLIGHT.image}
+                      alt={`${LAUNCH_SPOTLIGHT.title} range`}
+                      className="absolute inset-0 h-full w-full object-cover object-center"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+
+                <div className="mt-auto pt-6">
+                  <Button
+                    icon={ArrowRight}
+                    className="w-full sm:w-auto"
+                    onClick={() => navigate(LAUNCH_SPOTLIGHT.ctaLink)}
+                  >
+                    {LAUNCH_SPOTLIGHT.ctaLabel}
+                  </Button>
+                </div>
               </div>
-            )}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-white/45 bg-[rgba(255,252,245,0.82)] backdrop-blur-sm px-4 py-1.5">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-text-secondary whitespace-nowrap">ISO & GMP Certified</p>
             </div>
-          </div>
+          ) : (
+            <div className="relative z-10 aspect-[4/5] w-full rounded-[2.1rem] overflow-hidden border border-[var(--color-border-light)] shadow-[0_20px_44px_rgba(31,44,35,0.2)] bg-[rgba(255,252,245,0.95)]">
+              {slides.map((slide, index) => (
+                <img
+                  key={slide.src}
+                  src={slide.src}
+                  alt={slide.alt}
+                  width="820"
+                  height="1200"
+                  className={`absolute inset-0 h-full w-full object-cover object-center mix-blend-normal transition-opacity duration-700 ${index === activeSlide ? 'opacity-96' : 'opacity-0'}`}
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={index === 0 ? 'high' : 'auto'}
+                />
+              ))}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[rgba(255,248,234,0.55)] to-transparent" />
+              {slides.length > 1 && (
+                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2.5 z-20">
+                  {slides.map((slide, index) => (
+                    <button
+                      key={`dot-${slide.src}`}
+                      type="button"
+                      onClick={() => setActiveSlide(index)}
+                      aria-label={`View product ${index + 1}`}
+                      className={`h-2.5 rounded-full transition-all duration-300 ${index === activeSlide ? 'w-6 bg-white/95 shadow-[0_0_0_1px_rgba(31,44,35,0.14)]' : 'w-2.5 bg-white/55 hover:bg-white/80'}`}
+                    />
+                  ))}
+                </div>
+              )}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-white/45 bg-[rgba(255,252,245,0.82)] backdrop-blur-sm px-4 py-1.5">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-text-secondary whitespace-nowrap">ISO & GMP Certified</p>
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
 

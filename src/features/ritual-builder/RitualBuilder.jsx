@@ -178,7 +178,7 @@ const RitualBuilder = () => {
                   >
                     <div className="relative aspect-[4/3] bg-[rgba(255,251,243,0.9)] overflow-hidden">
                       {image ? (
-                        <img src={image} alt={item.product.name} className="h-full w-full object-cover object-center" loading="lazy" />
+                        <img src={image} alt={item.product.name} className="h-full w-full object-contain object-center" loading="lazy" />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center text-text-tertiary">
                           <ImageOff size={26} />

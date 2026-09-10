@@ -170,7 +170,9 @@ const ShopPage = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [priceFilter, setPriceFilter] = useState('all');
   const [sortOption, setSortOption] = useState('featured');
-  const [searchTerm, setSearchTerm] = useState('');
+  // Seeds from ?q= so external links (e.g. the homepage "new release" CTA)
+  // can land directly on a filtered search instead of the full catalog.
+  const [searchTerm, setSearchTerm] = useState(() => new URLSearchParams(location.search).get('q') || '');
   const [viewMode, setViewMode] = useState('grid');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);

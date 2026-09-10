@@ -20,6 +20,12 @@ import hairOil50Img from '@/assets/catalog/hair-oil-set-50ml.png';
 import hairOil200Img from '@/assets/catalog/hair-oil-set-200ml.png';
 import underEyeGelImg from '@/assets/catalog/acne-treatment-gel.png';
 import lipBalmImg from '@/assets/catalog/pink-rose-lip-balm.png';
+// Bright Blossom range — filenames kept as-received (WhatsApp export names).
+import brightBlossomFaceSerumImg from '@/assets/catalog/bright blossom range/WhatsApp Image 2026-09-10 at 13.36.53.jpeg';
+import brightBlossomDayCreamImg from '@/assets/catalog/bright blossom range/WhatsApp Image 2026-09-10 at 13.37.04.jpeg';
+import brightBlossomNightCreamImg from '@/assets/catalog/bright blossom range/WhatsApp Image 2026-09-10 at 13.39.25.jpeg';
+import brightBlossomFaceWashImg from '@/assets/catalog/bright blossom range/WhatsApp Image 2026-09-10 at 13.39.25 (1).jpeg';
+import brightBlossomBodyLotionImg from '@/assets/catalog/bright blossom range/WhatsApp Image 2026-06-27 at 9.44.48 AM.jpeg';
 
 const PRODUCT_IMAGES = {
   'golden-glow-face-wash': faceWashImg,
@@ -41,6 +47,11 @@ const PRODUCT_IMAGES = {
   'hair-oil-set-200ml': hairOil200Img,
   'under-eye-gel': underEyeGelImg,
   'pink-rose-lip-balm': lipBalmImg,
+  'bright-blossom-face-serum': brightBlossomFaceSerumImg,
+  'bright-blossom-day-cream': brightBlossomDayCreamImg,
+  'bright-blossom-night-cream': brightBlossomNightCreamImg,
+  'bright-blossom-face-wash': brightBlossomFaceWashImg,
+  'bright-blossom-body-lotion': brightBlossomBodyLotionImg,
 };
 
 export default PRODUCT_IMAGES;

@@ -127,7 +127,7 @@ const CartInner = ({
                 <div key={item.id} className="flex items-center gap-3">
                   <div className="h-12 w-12 rounded-lg overflow-hidden bg-[rgba(247,241,227,0.5)] shrink-0">
                     {item.image ? (
-                      <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                      <img src={item.image} alt={item.name} className="h-full w-full object-contain object-center" />
                     ) : (
                       <div className="h-full w-full flex items-center justify-center text-text-tertiary">
                         <ImageOff size={13} />

@@ -65,7 +65,7 @@ export const ProductCard = ({ product, category, quantity, isWishlisted, onAddTo
     <img
       src={product.image}
       alt={product.name}
-      className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.03]"
+      className="h-full w-full object-contain object-center transition-transform duration-300 group-hover:scale-[1.03]"
       loading="lazy"
     />
   ) : (

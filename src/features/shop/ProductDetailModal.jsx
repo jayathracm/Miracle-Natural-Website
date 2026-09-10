@@ -62,7 +62,7 @@ export const ProductDetailModal = ({ product, category, isWishlisted, onClose, o
         <div className="grid grid-cols-1 md:grid-cols-[1fr_1.1fr] gap-5 px-5 py-5 sm:px-6 sm:py-6">
           <div className="rounded-xl border border-[var(--color-border-light)] bg-[rgba(247,241,227,0.4)] overflow-hidden">
             {product.image ? (
-              <img src={product.image} alt={product.name} className="block w-full h-full object-cover" />
+              <img src={product.image} alt={product.name} className="block w-full h-full object-contain object-center" />
             ) : (
               <div className="aspect-square w-full flex items-center justify-center text-text-tertiary">
                 <ImageOff size={36} />

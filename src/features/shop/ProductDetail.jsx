@@ -84,7 +84,7 @@ const ProductDetail = () => {
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1.1fr] gap-8 sm:gap-10">
             <div className="relative rounded-2xl border border-[var(--color-border-light)] bg-[rgba(247,241,227,0.4)] overflow-hidden aspect-square">
               {product.image ? (
-                <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+                <img src={product.image} alt={product.name} className="h-full w-full object-contain object-center" />
               ) : (
                 <div className="h-full w-full flex items-center justify-center text-text-tertiary">
                   <ImageOff size={40} />
