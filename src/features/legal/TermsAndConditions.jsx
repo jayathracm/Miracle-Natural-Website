@@ -66,8 +66,8 @@ const sections = [
     content: (
       <>
         <p>
-          We currently deliver within Sri Lanka. Standard delivery charges are LKR 300 for
-          Colombo 1–15 and LKR 350 for other areas island-wide, shown at checkout before you
+          We currently deliver within Sri Lanka. Standard delivery charges are LKR 400 for
+          Colombo 1–15 and LKR 450 for other areas island-wide, shown at checkout before you
           confirm your order. Delivery timelines are estimates and may vary due to your location,
           courier conditions, or circumstances outside our control; we are not liable for delays
           caused by such circumstances.

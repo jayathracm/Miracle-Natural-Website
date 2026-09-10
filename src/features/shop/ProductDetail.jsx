@@ -35,9 +35,10 @@ const ProductDetail = () => {
   const product = productById.get(productId);
   const isWishlisted = product ? wishlistIds.has(product.id) : false;
   const hasSale = Boolean(product?.compare_at_price) && Number(product?.compare_at_price) > Number(product?.price);
+  const isOutOfStock = Boolean(product?.is_out_of_stock);
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || isOutOfStock) return;
     addToCart(product.id, quantity);
     setNotice({ type: 'success', message: `${product.name} added to your cart.` });
   };
@@ -108,7 +109,11 @@ const ProductDetail = () => {
               {product.size && <p className="text-[0.86rem] text-muted-foreground mb-3">{product.size}</p>}
               <div className="flex items-baseline gap-3 mb-5">
                 <p className="font-display text-[1.9rem] text-primary">{formatCurrency(product.price)}</p>
-                {hasSale && (
+                {isOutOfStock ? (
+                  <span className="rounded-md border border-gray-400 bg-white px-2 py-1 text-[0.62rem] font-bold tracking-[0.12em] uppercase text-gray-700">
+                    Out of Stock
+                  </span>
+                ) : hasSale && (
                   <>
                     <p className="text-[1.1rem] text-text-tertiary line-through">{formatCurrency(product.compare_at_price)}</p>
                     <span className="rounded-md border border-[var(--color-border-medium)] bg-[var(--color-card-bg)] px-2 py-1 text-[0.62rem] font-bold tracking-[0.12em] uppercase text-foreground">
@@ -143,8 +148,9 @@ const ProductDetail = () => {
                 <div className="inline-flex items-center rounded-lg border border-[var(--color-border-medium)] overflow-hidden">
                   <button
                     type="button"
+                    disabled={isOutOfStock}
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    className="h-10 w-10 inline-flex items-center justify-center text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors"
+                    className="h-10 w-10 inline-flex items-center justify-center text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
                     aria-label="Decrease quantity"
                   >
                     <Minus size={14} />
@@ -152,16 +158,22 @@ const ProductDetail = () => {
                   <span className="w-10 text-center text-[0.9rem] font-semibold">{quantity}</span>
                   <button
                     type="button"
+                    disabled={isOutOfStock}
                     onClick={() => setQuantity((q) => q + 1)}
-                    className="h-10 w-10 inline-flex items-center justify-center text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors"
+                    className="h-10 w-10 inline-flex items-center justify-center text-foreground hover:bg-[var(--color-hover-overlay)] transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
                     aria-label="Increase quantity"
                   >
                     <Plus size={14} />
                   </button>
                 </div>
 
-                <Button icon={ShoppingBag} className="px-6 py-2.5 text-[0.76rem]" onClick={handleAddToCart}>
-                  Add To Cart
+                <Button
+                  icon={ShoppingBag}
+                  className="px-6 py-2.5 text-[0.76rem] disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleAddToCart}
+                  disabled={isOutOfStock}
+                >
+                  {isOutOfStock ? 'Out of Stock' : 'Add To Cart'}
                 </Button>
               </div>
 

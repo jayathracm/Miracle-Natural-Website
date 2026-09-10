@@ -12,6 +12,7 @@ import { formatCurrency } from '@/shared/lib/currency';
 // data and handlers, just a different layout.
 export const ProductCard = ({ product, category, quantity, isWishlisted, onAddToCart, onToggleWishlist, onOpenDetail, view = 'grid' }) => {
   const hasSale = Boolean(product.compare_at_price) && Number(product.compare_at_price) > Number(product.price);
+  const isOutOfStock = Boolean(product.is_out_of_stock);
 
   const wishlistButton = (
     <button
@@ -27,9 +28,15 @@ export const ProductCard = ({ product, category, quantity, isWishlisted, onAddTo
     </button>
   );
 
-  const saleBadge = hasSale && (
+  const saleBadge = hasSale && !isOutOfStock && (
     <span className="absolute top-2 left-2 rounded-md border border-[var(--color-border-medium)] bg-[var(--color-card-bg)]/95 backdrop-blur-sm px-2 py-1 text-[0.6rem] font-bold tracking-[0.12em] uppercase text-foreground shadow-sm">
       Sale
+    </span>
+  );
+
+  const outOfStockBadge = isOutOfStock && (
+    <span className="absolute top-2 left-2 rounded-md border border-gray-400 bg-white/95 backdrop-blur-sm px-2 py-1 text-[0.6rem] font-bold tracking-[0.12em] uppercase text-gray-700 shadow-sm">
+      Out of Stock
     </span>
   );
 
@@ -42,7 +49,14 @@ export const ProductCard = ({ product, category, quantity, isWishlisted, onAddTo
     </div>
   );
 
-  const addToCartButton = (
+  const addToCartButton = isOutOfStock ? (
+    <span
+      aria-label={`${product.name} is out of stock`}
+      className="shrink-0 h-8 w-8 rounded-full bg-gray-200 text-gray-400 inline-flex items-center justify-center cursor-not-allowed"
+    >
+      <Plus size={15} />
+    </span>
+  ) : (
     <button
       type="button"
       onClick={(event) => {
@@ -65,7 +79,7 @@ export const ProductCard = ({ product, category, quantity, isWishlisted, onAddTo
     <img
       src={product.image}
       alt={product.name}
-      className="h-full w-full object-contain object-center transition-transform duration-300 group-hover:scale-[1.03]"
+      className={`h-full w-full object-contain object-center transition-transform duration-300 group-hover:scale-[1.03] ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
       loading="lazy"
     />
   ) : (
@@ -97,6 +111,7 @@ export const ProductCard = ({ product, category, quantity, isWishlisted, onAddTo
           <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-lg bg-[rgba(247,241,227,0.5)] overflow-hidden">
             {image}
             {saleBadge}
+            {outOfStockBadge}
           </div>
 
           <div className="flex flex-1 min-w-0 flex-col justify-center gap-1.5">
@@ -134,6 +149,7 @@ export const ProductCard = ({ product, category, quantity, isWishlisted, onAddTo
         <div className="relative aspect-square bg-[rgba(247,241,227,0.5)] overflow-hidden">
           {image}
           {saleBadge}
+          {outOfStockBadge}
           {wishlistButton}
         </div>
 

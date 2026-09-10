@@ -8,6 +8,7 @@ import { cn } from '@/shared/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/features/auth/AuthContext';
 import { shopPathForBrand } from '@/shared/lib/brands';
+import AnnouncementTicker from '@/shared/layout/AnnouncementTicker';
 
 // Kept visually separate from NAV_SECTIONS so the two storefronts stand
 // out as their own button-like links.
@@ -83,17 +84,19 @@ const Navbar = () => {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className={cn(
-        "fixed w-full top-0 z-50 transition-all duration-300",
-        scrolled ? "py-2" : "py-3 sm:py-4"
-      )}
+      className="fixed w-full top-0 z-50 transition-all duration-300"
       style={scrolled ? {
         backgroundColor: 'rgba(247, 241, 227, 0.78)'
       } : {
         backgroundColor: 'transparent'
       }}
     >
-      <div className="max-w-[1320px] mx-auto px-4 sm:px-6">
+      <AnnouncementTicker />
+
+      <div className={cn(
+        "max-w-[1320px] mx-auto px-4 sm:px-6 transition-all duration-300",
+        scrolled ? "py-2" : "py-3 sm:py-4"
+      )}>
         <div className={cn(
           "flex justify-between items-center px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl border transition-all duration-300",
           scrolled ? "bg-[rgba(255,251,242,0.94)] border-[var(--color-border-medium)] shadow-[0_12px_25px_rgba(31,44,35,0.1)]" : "bg-[rgba(255,251,242,0.76)] border-[var(--color-border-light)]"

@@ -28,6 +28,7 @@ const emptyForm = {
   ingredients: '',
   benefits: '',
   isActive: true,
+  isOutOfStock: false,
 };
 
 const slugify = (value) =>
@@ -107,6 +108,7 @@ const AdminProducts = () => {
       ingredients: product.ingredients || '',
       benefits: product.benefits || '',
       isActive: product.is_active,
+      isOutOfStock: product.is_out_of_stock || false,
     });
     setFormError(null);
     setFormOpen(true);
@@ -191,6 +193,7 @@ const AdminProducts = () => {
       ingredients: form.ingredients.trim(),
       benefits: form.benefits.trim(),
       isActive: form.isActive,
+      isOutOfStock: form.isOutOfStock,
     };
 
     setIsSaving(true);
@@ -219,6 +222,31 @@ const AdminProducts = () => {
     }
   };
 
+  const handleToggleOutOfStock = async (product) => {
+    try {
+      await updateProduct(product.id, {
+        brand: product.brand,
+        name: product.name,
+        category: product.category,
+        size: product.size,
+        price: Number(product.price),
+        compareAtPrice: product.compare_at_price === null || product.compare_at_price === undefined ? null : Number(product.compare_at_price),
+        moq: product.moq === null || product.moq === undefined ? null : Number(product.moq),
+        imageUrl: product.image_url,
+        description: product.description,
+        ingredients: product.ingredients,
+        benefits: product.benefits,
+        isActive: product.is_active,
+        isOutOfStock: !product.is_out_of_stock,
+      });
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, is_out_of_stock: !p.is_out_of_stock } : p))
+      );
+    } catch {
+      // Ignore — a stale row corrects itself on next refresh.
+    }
+  };
+
   const handleToggleActive = async (product) => {
     try {
       await updateProduct(product.id, {
@@ -234,6 +262,7 @@ const AdminProducts = () => {
         ingredients: product.ingredients,
         benefits: product.benefits,
         isActive: !product.is_active,
+        isOutOfStock: product.is_out_of_stock,
       });
       setProducts((prev) =>
         prev.map((p) => (p.id === product.id ? { ...p, is_active: !p.is_active } : p))
@@ -498,7 +527,7 @@ const AdminProducts = () => {
 
             {formError && <p className="text-[0.82rem] text-red-600">{formError}</p>}
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+            <div className="flex flex-col gap-2 pt-1">
               <label className="inline-flex items-center gap-2 text-[0.84rem] text-foreground">
                 <input
                   type="checkbox"
@@ -507,7 +536,17 @@ const AdminProducts = () => {
                 />
                 Active (visible in the storefront)
               </label>
+              <label className="inline-flex items-center gap-2 text-[0.84rem] text-foreground">
+                <input
+                  type="checkbox"
+                  checked={form.isOutOfStock}
+                  onChange={(event) => setForm((prev) => ({ ...prev, isOutOfStock: event.target.checked }))}
+                />
+                Mark as Out of Stock (still visible, but customers can't add it to cart)
+              </label>
+            </div>
 
+            <div className="flex items-center justify-end pt-1">
               <Button type="submit" className="px-5 py-2.5 text-[0.74rem] shrink-0" disabled={isSaving}>
                 {isSaving ? 'Saving...' : editingId ? 'Save Changes' : 'Add Product'}
               </Button>
@@ -557,9 +596,16 @@ const AdminProducts = () => {
                         {product.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
-                    <span className="mb-1.5 inline-flex w-fit rounded-full border border-[var(--color-border-light)] bg-white/70 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.06em] text-text-secondary">
-                      {BRAND_BY_VALUE[product.brand]?.label || product.brand}
-                    </span>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="inline-flex w-fit rounded-full border border-[var(--color-border-light)] bg-white/70 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.06em] text-text-secondary">
+                        {BRAND_BY_VALUE[product.brand]?.label || product.brand}
+                      </span>
+                      {product.is_out_of_stock && (
+                        <span className="inline-flex w-fit rounded-full border border-gray-400 bg-gray-100 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.06em] text-gray-700">
+                          Out of Stock
+                        </span>
+                      )}
+                    </div>
                     <Typography variant="h4" className="text-foreground text-[0.92rem] mb-1 leading-snug">{product.name}</Typography>
                     <p className="text-[0.76rem] text-muted-foreground mb-2">{product.size}</p>
                     <div className="flex items-center gap-2 mb-1">
@@ -593,7 +639,8 @@ const AdminProducts = () => {
                         </button>
                       </div>
                     ) : (
-                      <div className="mt-auto flex items-center gap-2">
+                      <div className="mt-auto space-y-2">
+                      <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => openEditForm(product)}
@@ -617,6 +664,14 @@ const AdminProducts = () => {
                         >
                           <Trash2 size={14} />
                         </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleOutOfStock(product)}
+                        className={`w-full rounded-lg border px-3 py-2 text-[0.72rem] font-semibold transition-colors ${product.is_out_of_stock ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                      >
+                        {product.is_out_of_stock ? 'Mark Back In Stock' : 'Mark as Out of Stock'}
+                      </button>
                       </div>
                     )}
                   </div>

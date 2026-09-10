@@ -322,6 +322,14 @@ const ShopPage = () => {
     [isWholesaleEligible, cartItems, wholesalePricing]
   );
 
+  // Catches the edge case where a product already sitting in someone's cart
+  // gets marked out of stock afterward — addToCart blocks new additions, but
+  // an existing line needs its own checkout block.
+  const outOfStockItems = useMemo(
+    () => cartItems.filter((item) => item.is_out_of_stock),
+    [cartItems]
+  );
+
   const effectiveSubtotal = useMemo(
     () => computeEffectiveSubtotal(effectiveCartItems),
     [effectiveCartItems]
@@ -464,6 +472,13 @@ const ShopPage = () => {
       );
       return;
     }
+    if (outOfStockItems.length > 0) {
+      pushToast(
+        'error',
+        `Remove out-of-stock items before placing your order: ${outOfStockItems.map((item) => item.name).join(', ')}.`
+      );
+      return;
+    }
 
     if (isSendingOrder) return;
 
@@ -495,8 +510,8 @@ const ShopPage = () => {
       `Notes: ${customerNotes || 'None'}`,
       '',
       'Delivery Charges:',
-      '- Colombo (1-15) - Rs.300/-',
-      '- Other Areas - Rs.350/-',
+      '- Colombo (1-15) - Rs.400/-',
+      '- Other Areas - Rs.450/-',
       '',
       `Order Date: ${new Date().toLocaleString()}`,
     ].join('\n');
@@ -696,6 +711,13 @@ const ShopPage = () => {
       );
       return;
     }
+    if (outOfStockItems.length > 0) {
+      pushToast(
+        'error',
+        `Remove out-of-stock items before placing your order: ${outOfStockItems.map((item) => item.name).join(', ')}.`
+      );
+      return;
+    }
     if (!window.payhere) {
       pushToast('error', 'Online payment is still loading — please try again in a moment.');
       return;
@@ -862,6 +884,7 @@ const ShopPage = () => {
     grandTotal: effectiveGrandTotal,
     isWholesaleEligible,
     moqViolations,
+    outOfStockItems,
     onChangeQuantity: changeQuantity,
     onClearCart: clearCart,
     user,

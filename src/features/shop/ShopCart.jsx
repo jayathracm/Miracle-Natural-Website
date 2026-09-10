@@ -25,6 +25,7 @@ const CartInner = ({
   grandTotal,
   isWholesaleEligible,
   moqViolations = [],
+  outOfStockItems = [],
   onChangeQuantity,
   onClearCart,
   user,
@@ -122,9 +123,20 @@ const CartInner = ({
                 ))}
               </div>
             )}
+            {outOfStockItems.length > 0 && (
+              <div className="mb-3 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-[0.74rem] text-gray-700">
+                <p className="flex items-center gap-1.5 font-semibold">
+                  <AlertTriangle size={13} />
+                  Remove out-of-stock items to continue
+                </p>
+                {outOfStockItems.map((item) => (
+                  <p key={item.id} className="mt-0.5 pl-[19px] text-[0.72rem] opacity-90">{item.name}</p>
+                ))}
+              </div>
+            )}
             <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1 -mr-1">
               {cartItems.map((item) => (
-                <div key={item.id} className="flex items-center gap-3">
+                <div key={item.id} className={`flex items-center gap-3 ${item.is_out_of_stock ? 'opacity-60' : ''}`}>
                   <div className="h-12 w-12 rounded-lg overflow-hidden bg-[rgba(247,241,227,0.5)] shrink-0">
                     {item.image ? (
                       <img src={item.image} alt={item.name} className="h-full w-full object-contain object-center" />
@@ -136,6 +148,9 @@ const CartInner = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[0.82rem] font-semibold text-foreground truncate">{item.name}</p>
+                    {item.is_out_of_stock && (
+                      <p className="text-[0.7rem] font-semibold text-gray-500 uppercase tracking-[0.06em]">Out of stock — remove to check out</p>
+                    )}
                     {item.wholesaleDiscountPercent > 0 ? (
                       <p className="text-[0.72rem] text-muted-foreground flex items-center gap-1.5">
                         <span className="line-through text-text-tertiary">{formatCurrency(item.price)}</span>
@@ -189,9 +204,13 @@ const CartInner = ({
             <Button
               className="w-full mt-4 py-2.5 text-[0.76rem]"
               onClick={() => setMode('checkout')}
-              disabled={moqViolations.length > 0}
+              disabled={moqViolations.length > 0 || outOfStockItems.length > 0}
             >
-              {moqViolations.length > 0 ? 'Adjust Quantities to Continue' : 'Checkout'}
+              {outOfStockItems.length > 0
+                ? 'Remove Out-of-Stock Items to Continue'
+                : moqViolations.length > 0
+                ? 'Adjust Quantities to Continue'
+                : 'Checkout'}
             </Button>
           </>
         )}
@@ -351,11 +370,23 @@ const CartInner = ({
           </div>
         )}
 
+        {outOfStockItems.length > 0 && (
+          <div className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-[0.74rem] text-gray-700">
+            <p className="flex items-center gap-1.5 font-semibold">
+              <AlertTriangle size={13} />
+              Remove out-of-stock items before placing this order
+            </p>
+            {outOfStockItems.map((item) => (
+              <p key={item.id} className="mt-0.5 pl-[19px] text-[0.72rem] opacity-90">{item.name}</p>
+            ))}
+          </div>
+        )}
+
         <Button
           type="submit"
           className="w-full py-2.5 text-[0.76rem]"
           icon={Mail}
-          disabled={isSendingOrder || paymentUiState === 'awaiting_payment' || moqViolations.length > 0}
+          disabled={isSendingOrder || paymentUiState === 'awaiting_payment' || moqViolations.length > 0 || outOfStockItems.length > 0}
         >
           {paymentUiState === 'awaiting_payment'
             ? 'Complete Payment in Popup…'

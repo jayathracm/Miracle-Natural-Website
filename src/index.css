@@ -143,6 +143,15 @@
   }
 }
 
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -162,6 +171,10 @@
 
   .animate-blob-drift-slow {
     animation: blob-drift 22s ease-in-out infinite reverse;
+  }
+
+  .animate-ticker-scroll {
+    animation: ticker-scroll 18s linear infinite;
   }
 
   .skeleton {
@@ -205,9 +218,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
+    *:not(.animate-ticker-scroll),
+    *:not(.animate-ticker-scroll)::before,
+    *:not(.animate-ticker-scroll)::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;

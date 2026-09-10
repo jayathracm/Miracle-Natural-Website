@@ -13,7 +13,7 @@ import { supabase } from '@/shared/lib/supabaseClient';
 export async function fetchProducts(brand) {
   let query = supabase
     .from('products')
-    .select('id, name, category, size, price, compare_at_price, image_url, description, ingredients, benefits, brand')
+    .select('id, name, category, size, price, compare_at_price, image_url, description, ingredients, benefits, brand, is_out_of_stock')
     .eq('is_active', true);
 
   if (brand) {
@@ -78,6 +78,7 @@ export async function createProduct(payload) {
       ingredients: payload.ingredients || null,
       benefits: payload.benefits || null,
       is_active: payload.isActive,
+      is_out_of_stock: payload.isOutOfStock ?? false,
       brand: payload.brand || 'miracle_natural',
     })
     .select('*')
@@ -126,6 +127,7 @@ export async function updateProduct(id, payload) {
       ingredients: payload.ingredients || null,
       benefits: payload.benefits || null,
       is_active: payload.isActive,
+      is_out_of_stock: payload.isOutOfStock ?? false,
       brand: payload.brand || 'miracle_natural',
       updated_at: new Date().toISOString(),
     })

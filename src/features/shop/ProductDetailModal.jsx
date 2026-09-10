@@ -20,6 +20,7 @@ export const ProductDetailModal = ({ product, category, isWishlisted, onClose, o
   if (!product) return null;
 
   const hasSale = Boolean(product.compare_at_price) && Number(product.compare_at_price) > Number(product.price);
+  const isOutOfStock = Boolean(product.is_out_of_stock);
 
   return (
     <div
@@ -73,7 +74,11 @@ export const ProductDetailModal = ({ product, category, isWishlisted, onClose, o
           <div className="space-y-4">
             <div className="flex items-baseline gap-3">
               <p className="font-display text-[1.6rem] leading-none text-primary">{formatCurrency(product.price)}</p>
-              {hasSale && (
+              {isOutOfStock ? (
+                <span className="rounded-md border border-gray-400 bg-white px-2 py-1 text-[0.62rem] font-bold tracking-[0.12em] uppercase text-gray-700">
+                  Out of Stock
+                </span>
+              ) : hasSale && (
                 <>
                   <p className="text-[1rem] text-text-tertiary line-through">{formatCurrency(product.compare_at_price)}</p>
                   <span className="rounded-md border border-[var(--color-border-medium)] bg-[var(--color-card-bg)] px-2 py-1 text-[0.62rem] font-bold tracking-[0.12em] uppercase text-foreground">
@@ -106,14 +111,16 @@ export const ProductDetailModal = ({ product, category, isWishlisted, onClose, o
 
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
               <Button
-                className="w-full sm:w-auto px-6 py-2.5 text-[0.76rem]"
+                className="w-full sm:w-auto px-6 py-2.5 text-[0.76rem] disabled:opacity-50 disabled:cursor-not-allowed"
                 icon={Plus}
+                disabled={isOutOfStock}
                 onClick={() => {
+                  if (isOutOfStock) return;
                   onAddToCart(product.id);
                   onClose();
                 }}
               >
-                Add To Cart
+                {isOutOfStock ? 'Out of Stock' : 'Add To Cart'}
               </Button>
               <button
                 type="button"

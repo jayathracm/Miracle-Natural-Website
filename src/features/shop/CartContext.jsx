@@ -145,7 +145,12 @@ export const CartProvider = ({ children }) => {
     return () => window.clearTimeout(timeoutId);
   }, [cartByBrand, user?.id]);
 
+  // Re-checked here (not just in the UI) so nothing can add an out-of-stock
+  // product to the cart no matter which screen calls addToCart/addManyToCart.
+  const isOutOfStock = (productId) => productById.get(productId)?.is_out_of_stock === true;
+
   const addToCart = (brand, productId, quantity = 1) => {
+    if (isOutOfStock(productId)) return;
     setCartByBrand((prev) => ({
       ...prev,
       [brand]: {
@@ -159,6 +164,7 @@ export const CartProvider = ({ children }) => {
     setCartByBrand((prev) => {
       const nextBrandCart = { ...prev[brand] };
       items.forEach(({ productId, quantity }) => {
+        if (isOutOfStock(productId)) return;
         nextBrandCart[productId] = (nextBrandCart[productId] || 0) + quantity;
       });
       return { ...prev, [brand]: nextBrandCart };

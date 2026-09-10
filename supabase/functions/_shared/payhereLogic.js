@@ -11,8 +11,8 @@ export function md5Upper(input) {
 
 // Sri Lanka only for now.
 export const DELIVERY_ZONE_RATES = {
-  colombo_1_15: 300,
-  island_wide: 350,
+  colombo_1_15: 400,
+  island_wide: 450,
 };
 
 export const CURRENCY = 'LKR';
