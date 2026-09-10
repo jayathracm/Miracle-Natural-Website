@@ -973,13 +973,8 @@ const ShopPage = () => {
   }
 
   return (
-    <div className="pt-28 sm:pt-30 md:pt-32 pb-14 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8">
+    <div className="pt-36 sm:pt-40 md:pt-44 pb-14 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-[1320px] mx-auto">
-        <div className="mb-6 sm:mb-8">
-          <Typography variant="label" className="mb-2 block">Shop</Typography>
-          <Typography variant="h2" className="text-foreground">{brandEntry.label}</Typography>
-        </div>
-
         {productsError ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-8 text-center text-[0.95rem] text-red-700">
             {productsError}
