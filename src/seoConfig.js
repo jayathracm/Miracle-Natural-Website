@@ -144,4 +144,4 @@ export const SEO_CONFIG = {
   },
 };
 
-export const SITE_URL = 'https://www.miraclenatural.com';
+export const SITE_URL = 'https://leorawellness.lk';

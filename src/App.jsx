@@ -13,6 +13,7 @@ import ErrorBoundary from '@/shared/ErrorBoundary';
 import NotFound from '@/shared/NotFound';
 import MainLayout from '@/shared/layout/MainLayout';
 import ScrollProgressBar from '@/shared/layout/ScrollProgressBar';
+import StructuredData from '@/shared/StructuredData';
 import ChatWidget from '@/features/chat/ChatWidget';
 import { Landing, MiracleNatural, Laira, About, Pricing, Shop, ProductDetail, RitualBuilder, CorporatePartnerApply, Login, Signup, ForgotPassword, ResetPassword, Account, ReturnPolicy, PrivacyPolicy, TermsAndConditions } from '@/routes';
 import AdminOrders from '@/features/orders/admin/AdminOrders';
@@ -98,6 +99,7 @@ const App = () => {
         <CartProvider>
           <Router>
             <SEOEffect />
+            <StructuredData />
             <ScrollToTop />
             <ScrollProgressBar />
             <ChatWidget />
