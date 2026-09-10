@@ -373,6 +373,28 @@ create trigger trg_ensure_product_inventory
   after insert on public.products
   for each row execute function private.ensure_product_inventory_rows();
 
+-- Lets the storefront show a "Low Stock" nudge without exposing exact
+-- counts to customers (product_inventory itself stays admin-only — see
+-- its RLS policies above). Security definer so it can read
+-- product_inventory despite the caller having no direct select grant on
+-- that table; only ever returns which retail-pool product ids are low,
+-- never numbers.
+create or replace function public.get_low_stock_product_ids()
+returns setof text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select product_id
+  from public.product_inventory
+  where pool = 'retail'
+    and stock_count > 0
+    and stock_count <= low_stock_threshold;
+$$;
+
+grant execute on function public.get_low_stock_product_ids() to anon, authenticated;
+
 -- Raw materials: separate, simpler stock tracking for manufacturing
 -- ingredients. Admin-managed, manual adjustments only.
 create table if not exists public.raw_materials (

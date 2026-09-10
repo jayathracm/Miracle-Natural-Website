@@ -19,6 +19,8 @@ import { fetchAddresses } from '@/features/addresses/addresses';
 import { calculateB2BPrice } from '@/features/b2b/b2bPricing';
 import { decrementInventoryForOrder } from '@/features/inventory/inventory';
 import { submitQuotation } from '@/features/quotations/quotations';
+import { fetchLowStockProductIds } from '@/features/shop/products';
+import { fetchRatingsSummary } from '@/features/reviews/reviewsApi';
 import { staggerContainer } from '@/shared/lib/motionVariants';
 import { SHOP_CATEGORY_ORDER, getShopCategory } from '@/features/shop/shopCategories';
 import { BRAND_BY_SLUG } from '@/shared/lib/brands';
@@ -33,6 +35,8 @@ import { formatCurrency } from '@/shared/lib/currency';
 
 const ORDER_EMAIL = import.meta.env.VITE_ORDER_EMAIL || 'dinisha@lanmic.com';
 const PRODUCTS_PER_PAGE = 12;
+// A product counts as "New" on its card for this many days after created_at.
+const NEW_WITHIN_DAYS = 30;
 
 // Live merchant account — flip back to true only for local/sandbox testing.
 const PAYHERE_SANDBOX = false;
@@ -139,9 +143,10 @@ const ShopPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const {
-    productCatalog,
+    productCatalog: rawProductCatalog,
     isLoadingProducts,
     productsError,
+    refreshProducts,
     cart,
     cartItems,
     totalItems,
@@ -149,6 +154,38 @@ const ShopPage = () => {
     changeQuantity,
     clearCart,
   } = useBrandCart(brand);
+
+  // Ratings and low-stock status aren't part of the shared cart catalog —
+  // they're display-only extras this grid needs, so they're fetched here
+  // rather than bloating CartContext. Best-effort: a failed fetch just
+  // means badges/stars don't show, not a broken shop.
+  const [ratingsSummary, setRatingsSummary] = useState({});
+  const [lowStockIds, setLowStockIds] = useState(() => new Set());
+
+  useEffect(() => {
+    fetchRatingsSummary().then(setRatingsSummary).catch(() => {});
+    fetchLowStockProductIds().then(setLowStockIds).catch(() => {});
+  }, []);
+
+  const productCatalog = useMemo(() => {
+    const newCutoff = Date.now() - NEW_WITHIN_DAYS * 24 * 60 * 60 * 1000;
+    return rawProductCatalog.map((product) => ({
+      ...product,
+      ratingAverage: ratingsSummary[product.id]?.average ?? null,
+      ratingCount: ratingsSummary[product.id]?.count ?? 0,
+      isLowStock: lowStockIds.has(product.id),
+      isNew: Boolean(product.created_at) && new Date(product.created_at).getTime() >= newCutoff,
+    }));
+  }, [rawProductCatalog, ratingsSummary, lowStockIds]);
+
+  // The catalog is otherwise only fetched once for this tab's whole
+  // session (in CartProvider), so without this an admin toggling a
+  // product's stock/active status elsewhere wouldn't show up here until a
+  // hard refresh. Quiet background refetch — doesn't flash the skeleton.
+  useEffect(() => {
+    refreshProducts?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only on mount/brand change, not on every refreshProducts identity change.
+  }, [brand]);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');

@@ -13,7 +13,7 @@ import { supabase } from '@/shared/lib/supabaseClient';
 export async function fetchProducts(brand) {
   let query = supabase
     .from('products')
-    .select('id, name, category, size, price, compare_at_price, image_url, description, ingredients, benefits, brand, is_out_of_stock')
+    .select('id, name, category, size, price, compare_at_price, image_url, description, ingredients, benefits, brand, is_out_of_stock, created_at')
     .eq('is_active', true);
 
   if (brand) {
@@ -31,6 +31,17 @@ export async function fetchProducts(brand) {
     price: Number(product.price),
     compare_at_price: product.compare_at_price === null ? null : Number(product.compare_at_price),
   }));
+}
+
+/**
+ * Which product ids are running low on retail stock — a boolean nudge for
+ * the shop grid's "Low Stock" badge, not the actual count (product_inventory
+ * stays admin-only; see get_low_stock_product_ids in schema.sql).
+ */
+export async function fetchLowStockProductIds() {
+  const { data, error } = await supabase.rpc('get_low_stock_product_ids');
+  if (error) throw error;
+  return new Set(data || []);
 }
 
 /**

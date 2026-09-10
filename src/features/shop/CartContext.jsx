@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchProducts } from '@/features/shop/products';
 import { BRANDS } from '@/shared/lib/brands';
 import PRODUCT_IMAGES from '@/features/shop/productImages';
@@ -44,32 +44,44 @@ export const CartProvider = ({ children }) => {
   // guest's cart.
   const previousUserIdRef = useRef(undefined);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    // Fetch the whole catalog once, split by brand client-side below.
-    fetchProducts()
+  // Split into its own callback (not just an effect body) so screens that
+  // need up-to-date stock/active status — e.g. Shop.jsx on every visit —
+  // can force a refetch instead of relying on the one-time fetch below,
+  // which otherwise only happens once for this tab's whole session and goes
+  // stale the moment an admin changes something elsewhere.
+  const loadProductCatalog = useCallback(({ isBackground = false } = {}) => {
+    if (!isBackground) setIsLoadingProducts(true);
+    return fetchProducts()
       .then((rows) => {
-        if (!isMounted) return;
         const withImages = rows.map((product) => ({
           ...product,
           image: PRODUCT_IMAGES[product.id] || product.image_url || null,
         }));
         setProductCatalog(withImages);
+        setProductsError(null);
       })
       .catch((error) => {
-        if (!isMounted) return;
-        setProductsError(error.message || 'Could not load products. Please refresh the page.');
+        // A background refresh failing shouldn't blow away already-loaded
+        // products or show an error banner over a working page.
+        if (!isBackground) {
+          setProductsError(error.message || 'Could not load products. Please refresh the page.');
+        }
       })
       .finally(() => {
-        if (!isMounted) return;
-        setIsLoadingProducts(false);
+        if (!isBackground) setIsLoadingProducts(false);
       });
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  // CartProvider wraps the whole app for its entire lifetime (never
+  // unmounts), so there's no stale-update risk to guard against here.
+  useEffect(() => {
+    loadProductCatalog();
+  }, [loadProductCatalog]);
+
+  // Exposed so a screen can pull fresh data without waiting for a full page
+  // reload — refetches quietly (isBackground) so it doesn't flash a loading
+  // skeleton over products the visitor is already looking at.
+  const refreshProducts = useCallback(() => loadProductCatalog({ isBackground: true }), [loadProductCatalog]);
 
   useEffect(() => {
     try {
@@ -213,6 +225,7 @@ export const CartProvider = ({ children }) => {
     productById,
     isLoadingProducts,
     productsError,
+    refreshProducts,
     cartByBrand,
     addToCart,
     addManyToCart,
@@ -276,6 +289,7 @@ export const useBrandCart = (brand) => {
     productById,
     isLoadingProducts: ctx.isLoadingProducts,
     productsError: ctx.productsError,
+    refreshProducts: ctx.refreshProducts,
     cart,
     cartItems,
     totalItems,

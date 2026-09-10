@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft, Heart, ImageOff, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { Typography } from '@/shared/ui/Typography';
@@ -23,10 +23,18 @@ const ProductDetail = () => {
   const brand = brandEntry?.brand;
   const shopPath = shopPathForSlug(brandSlug);
   const navigate = useNavigate();
-  const { productById, isLoadingProducts, productsError, addToCart } = useBrandCart(brand);
+  const { productById, isLoadingProducts, productsError, refreshProducts, addToCart } = useBrandCart(brand);
   const { isCorporatePartner, isAdmin } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [notice, setNotice] = useState(null);
+
+  // Same reasoning as Shop.jsx: the catalog only loads once per tab
+  // session otherwise, so a direct/shared link could show stale stock or
+  // sale status. Quiet background refetch.
+  useEffect(() => {
+    refreshProducts?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only on mount/product change, not on every refreshProducts identity change.
+  }, [productId]);
 
   const { wishlistIds, toggleWishlist } = useWishlist({
     onError: (message) => setNotice({ type: 'error', message }),

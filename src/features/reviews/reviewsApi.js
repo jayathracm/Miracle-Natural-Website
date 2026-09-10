@@ -18,6 +18,37 @@ export async function fetchApprovedReviews(productId) {
 }
 
 /**
+ * Average rating + review count per product, across the whole catalog in
+ * one query — what the shop grid's star ratings are built from. RLS
+ * already limits this to approved reviews for anon/other users, same as
+ * fetchApprovedReviews. Aggregated client-side rather than via a DB view
+ * since the catalog is small enough that one lightweight query is simpler
+ * than adding a schema object.
+ */
+export async function fetchRatingsSummary() {
+  const { data, error } = await supabase
+    .from('product_reviews')
+    .select('product_id, rating')
+    .eq('status', 'approved');
+
+  if (error) throw error;
+
+  const totals = new Map();
+  (data || []).forEach(({ product_id, rating }) => {
+    const entry = totals.get(product_id) || { sum: 0, count: 0 };
+    entry.sum += rating;
+    entry.count += 1;
+    totals.set(product_id, entry);
+  });
+
+  const summary = {};
+  totals.forEach((entry, productId) => {
+    summary[productId] = { average: entry.sum / entry.count, count: entry.count };
+  });
+  return summary;
+}
+
+/**
  * The signed-in user's own review for this product, whatever its status —
  * lets the product page show "your review is pending" or let them edit it,
  * instead of just letting them submit a second one.
