@@ -216,52 +216,52 @@ const HeroSection = () => {
         <motion.div style={{ y: imageY }} className="relative hidden lg:block justify-self-end w-full max-w-[460px] xl:max-w-[520px]">
           {LAUNCH_SPOTLIGHT ? (
             <div className="relative z-10 aspect-[4/5] w-full rounded-[2.1rem] overflow-hidden border border-[var(--color-border-light)] shadow-[0_20px_44px_rgba(31,44,35,0.2)] bg-gradient-to-br from-[rgba(255,252,245,0.97)] via-[rgba(247,241,227,0.95)] to-[rgba(238,242,234,0.95)]">
-              <div className="pointer-events-none absolute -top-10 -right-10 h-44 w-44 rounded-full bg-secondary/30 blur-3xl" />
               <div className="pointer-events-none absolute -bottom-14 -left-10 h-52 w-52 rounded-full bg-primary/20 blur-3xl" />
-              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[rgba(79,113,84,0.6)] via-[rgba(184,111,67,0.4)] to-transparent" />
 
-              <div className="relative z-10 flex h-full flex-col p-7 sm:p-8">
-                <span className="self-start rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[0.65rem] font-bold tracking-[0.12em] uppercase text-primary">
-                  {LAUNCH_SPOTLIGHT.eyebrow}
-                </span>
-
-                <Typography variant="h2" className="mt-5 text-foreground text-[2.1rem] sm:text-[2.4rem] leading-tight">
-                  {LAUNCH_SPOTLIGHT.title}
-                </Typography>
-                <p className="mt-1 font-display italic text-muted-foreground text-[0.95rem]">{LAUNCH_SPOTLIGHT.tagline}</p>
-
-                <p className="mt-4 text-[0.9rem] leading-relaxed text-text-secondary">{LAUNCH_SPOTLIGHT.description}</p>
-
-                <div className="mt-5 flex flex-wrap gap-1.5">
-                  {LAUNCH_SPOTLIGHT.products.map((label) => (
-                    <span
-                      key={label}
-                      className="rounded-full border border-[var(--color-border-light)] bg-white/75 px-2.5 py-1 text-[0.68rem] font-semibold text-text-secondary"
-                    >
-                      {label}
-                    </span>
-                  ))}
-                </div>
-
+              <div className="relative z-10 flex h-full flex-col">
+                {/* Image is the star of the card — takes most of its height,
+                    edge-to-edge, instead of sharing space with the copy below. */}
                 {LAUNCH_SPOTLIGHT.image && (
-                  <div className="relative mt-5 min-h-0 flex-1 overflow-hidden rounded-xl border border-[var(--color-border-light)] bg-white/50">
+                  <div className="relative h-[58%] w-full shrink-0 overflow-hidden border-b border-[var(--color-border-light)] bg-white/50">
                     <img
                       src={LAUNCH_SPOTLIGHT.image}
                       alt={`${LAUNCH_SPOTLIGHT.title} range`}
                       className="absolute inset-0 h-full w-full object-cover object-center"
                       loading="lazy"
                     />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[rgba(31,44,35,0.28)] to-transparent" />
+                    <span className="absolute top-4 left-4 rounded-full border border-primary/30 bg-white/90 px-3 py-1 text-[0.65rem] font-bold tracking-[0.12em] uppercase text-primary shadow-sm">
+                      {LAUNCH_SPOTLIGHT.eyebrow}
+                    </span>
                   </div>
                 )}
 
-                <div className="mt-auto pt-6">
-                  <Button
-                    icon={ArrowRight}
-                    className="w-full sm:w-auto"
-                    onClick={() => navigate(LAUNCH_SPOTLIGHT.ctaLink)}
-                  >
-                    {LAUNCH_SPOTLIGHT.ctaLabel}
-                  </Button>
+                <div className="flex flex-1 min-h-0 flex-col p-6 sm:p-7">
+                  <Typography variant="h2" className="text-foreground text-[1.9rem] sm:text-[2.15rem] leading-tight">
+                    {LAUNCH_SPOTLIGHT.title}
+                  </Typography>
+                  <p className="mt-1 font-display italic text-muted-foreground text-[0.92rem]">{LAUNCH_SPOTLIGHT.tagline}</p>
+
+                  <div className="mt-3.5 flex flex-wrap gap-1.5">
+                    {LAUNCH_SPOTLIGHT.products.map((label) => (
+                      <span
+                        key={label}
+                        className="rounded-full border border-[var(--color-border-light)] bg-white/75 px-2.5 py-1 text-[0.66rem] font-semibold text-text-secondary"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="mt-auto pt-5">
+                    <Button
+                      icon={ArrowRight}
+                      className="w-full sm:w-auto"
+                      onClick={() => navigate(LAUNCH_SPOTLIGHT.ctaLink)}
+                    >
+                      {LAUNCH_SPOTLIGHT.ctaLabel}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
