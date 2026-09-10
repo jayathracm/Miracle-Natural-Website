@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { BarChart3, Boxes, Briefcase, FileText, LayoutDashboard, Leaf, Mail, Menu, Package, Percent, ShieldCheck, Sparkles, Star, User, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, Boxes, Briefcase, FileText, LayoutDashboard, Leaf, Mail, Menu, Package, Percent, ShieldCheck, Sparkles, Star, User, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
 import leoraIcon from '@/assets/branding/leora-wellness-icon-transparent.png';
+import miracleNaturalIcon from '@/assets/branding-from-pdf/miracle-natural-logo-icon-transparent.png';
 import { cn } from '@/shared/lib/utils';
 // eslint-disable-next-line no-unused-vars -- motion is used via JSX (<motion.nav>, <motion.div>)
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +28,10 @@ const Navbar = () => {
   const location = useLocation();
   const { user, isAdmin, isSuperAdmin, isCorporatePartner } = useAuth();
   const accountMenuRef = useRef(null);
+
+  // Miracle Natural pages read as their own standalone storefront — swapped
+  // logo, and a way back to the parent brand instead of sibling-brand links.
+  const isMiracleNatural = location.pathname.startsWith('/miracle-natural');
 
   // "Shop Now" routes to whatever brand's shop matches the current page,
   // defaulting to Miracle Natural everywhere else.
@@ -95,13 +100,13 @@ const Navbar = () => {
         )}>
         {/* Logo */}
         <Link
-          to="/"
-          aria-label="Leora Wellness Home"
+          to={isMiracleNatural ? '/miracle-natural' : '/'}
+          aria-label={isMiracleNatural ? 'Miracle Natural Home' : 'Leora Wellness Home'}
           className="relative z-50 flex items-center flex-shrink-0"
         >
           <div className="flex items-center gap-2 sm:gap-2.5">
             <img
-              src={leoraIcon}
+              src={isMiracleNatural ? miracleNaturalIcon : leoraIcon}
               alt=""
               aria-hidden="true"
               className={cn(
@@ -113,7 +118,7 @@ const Navbar = () => {
               "font-display text-foreground whitespace-nowrap transition-all duration-300",
               scrolled ? "text-[1.05rem] sm:text-[1.15rem]" : "text-[1.15rem] sm:text-[1.3rem]"
             )}>
-              Leora Wellness
+              {isMiracleNatural ? 'Miracle Natural' : 'Leora Wellness'}
             </span>
           </div>
         </Link>
@@ -121,16 +126,26 @@ const Navbar = () => {
         {/* Desktop Menu - Only show on lg+ (1024px) */}
         <div className="hidden lg:flex items-center gap-3.5 xl:gap-5">
           <div className="flex items-center gap-1.5 xl:gap-2">
-            {BRAND_LINKS.map((link) => (
+            {isMiracleNatural ? (
               <Link
-                key={link.to}
-                to={link.to}
+                to="/"
                 className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/8 px-3 xl:px-3.5 py-1.5 text-[0.7rem] xl:text-[0.76rem] font-bold tracking-[0.06em] uppercase text-primary transition-colors hover:border-primary/45 hover:bg-primary/14 whitespace-nowrap"
               >
-                <link.icon size={13} strokeWidth={2.25} aria-hidden="true" />
-                {link.label}
+                <ArrowLeft size={13} strokeWidth={2.25} aria-hidden="true" />
+                Leora Wellness
               </Link>
-            ))}
+            ) : (
+              BRAND_LINKS.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/8 px-3 xl:px-3.5 py-1.5 text-[0.7rem] xl:text-[0.76rem] font-bold tracking-[0.06em] uppercase text-primary transition-colors hover:border-primary/45 hover:bg-primary/14 whitespace-nowrap"
+                >
+                  <link.icon size={13} strokeWidth={2.25} aria-hidden="true" />
+                  {link.label}
+                </Link>
+              ))
+            )}
           </div>
 
           <div className="h-5 w-px bg-[var(--color-border-medium)]" aria-hidden="true" />
@@ -305,17 +320,28 @@ const Navbar = () => {
             >
               <div className="mx-auto w-full max-w-sm flex flex-col items-stretch gap-3">
                 <div className="flex flex-col gap-2">
-                  {BRAND_LINKS.map((link) => (
+                  {isMiracleNatural ? (
                     <Link
-                      key={link.to}
-                      to={link.to}
+                      to="/"
                       onClick={() => setIsMenuOpen(false)}
                       className="w-full rounded-lg border border-primary/30 bg-primary/8 px-4 py-3 text-[0.95rem] font-sans font-bold tracking-[0.08em] uppercase text-primary text-left inline-flex items-center gap-2.5"
                     >
-                      <link.icon size={18} strokeWidth={2.25} aria-hidden="true" />
-                      {link.label}
+                      <ArrowLeft size={18} strokeWidth={2.25} aria-hidden="true" />
+                      Back to Leora Wellness
                     </Link>
-                  ))}
+                  ) : (
+                    BRAND_LINKS.map((link) => (
+                      <Link
+                        key={link.to}
+                        to={link.to}
+                        onClick={() => setIsMenuOpen(false)}
+                        className="w-full rounded-lg border border-primary/30 bg-primary/8 px-4 py-3 text-[0.95rem] font-sans font-bold tracking-[0.08em] uppercase text-primary text-left inline-flex items-center gap-2.5"
+                      >
+                        <link.icon size={18} strokeWidth={2.25} aria-hidden="true" />
+                        {link.label}
+                      </Link>
+                    ))
+                  )}
                 </div>
 
                 <div className="h-px w-full bg-[var(--color-border-light)]" aria-hidden="true" />
